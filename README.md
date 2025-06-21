@@ -6,7 +6,7 @@ Fully-functional standalone Windows/Mac/Linux/[Android*](#android) client for [A
 
 This project has a dependency to [Emik.Morsels](https://github.com/Emik03/Emik.Morsels), if you are building this project, refer to its [README](https://github.com/Emik03/Emik.Morsels/blob/main/README.md) first.
 
-### [Download](https://github.com/Emik03/Remote/releases/download/latest/Remote.zip) (click me!)
+### [Latest Release (click me!)](https://github.com/Emik03/Remote/releases/latest)
 
 ---
 
