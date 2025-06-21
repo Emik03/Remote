@@ -7,6 +7,10 @@ public sealed class RemoteGame : Game
     /// <summary>The amount of <see cref="Client"/> instances that can run at once.</summary>
     const int Limit = 1024;
 
+    /// <summary>Provides the path to the ini file. Must be kept as instance to prevent GC.</summary>
+    [UsedImplicitly]
+    readonly byte[] _iniPath;
+
     /// <summary>The bridge between <see cref="ImGui"/> and SDL.</summary>
     readonly ImGuiRenderer _renderer;
 
@@ -16,8 +20,8 @@ public sealed class RemoteGame : Game
     /// <summary>The current user preferences.</summary>
     readonly Preferences _preferences = Preferences.Load();
 
-    /// <summary>The pointer to the byte string on the ini location.</summary>
-    nint _ini;
+    /// <summary>Keeps <see cref="_iniPath"/> pinned.</summary>
+    GCHandle _iniPathPin;
 
     /// <summary>Initializes a new instance of the <see cref="Game"/> class.</summary>
     public RemoteGame()
@@ -32,7 +36,7 @@ public sealed class RemoteGame : Game
         _renderer = new(this);
         var io = ImGui.GetIO();
         AddFont(io);
-        SpecifyIniFilePath(io);
+        (_iniPath, _iniPathPin) = SpecifyIniFilePath(io);
         _renderer.RebuildFontAtlas();
         IsFixedTimeStep = false;
         IsMouseVisible = true;
@@ -43,18 +47,18 @@ public sealed class RemoteGame : Game
     }
 
     /// <inheritdoc />
-    protected override void Dispose(bool disposing)
+    protected override unsafe void Dispose(bool disposing)
     {
         if (disposing)
         {
             _renderer.Dispose();
             _preferences.Save();
-
-            if (_ini is not 0)
-                Marshal.FreeHGlobal(_ini);
-
-            _ini = 0;
         }
+
+        ImGui.GetIO().NativePtr->IniFilename = null;
+
+        if (_iniPathPin.IsAllocated)
+            _iniPathPin.Free();
 
         base.Dispose(disposing);
     }
@@ -103,9 +107,13 @@ public sealed class RemoteGame : Game
 
     /// <summary>Sets <see cref="ImGuiIO.IniFilename"/></summary>
     /// <param name="io">The IO.</param>
-    unsafe void SpecifyIniFilePath(ImGuiIOPtr io) =>
-        io.NativePtr->IniFilename = (byte*)(_ini =
-            Marshal.StringToHGlobalAnsi(Path.Join(Path.GetDirectoryName(Preferences.FilePath), "imgui.ini")));
+    static unsafe (byte[], GCHandle) SpecifyIniFilePath(ImGuiIOPtr io)
+    {
+        var arr = Encoding.UTF8.GetBytes(Path.Join(Path.GetDirectoryName(Preferences.FilePath), "imgui.ini"));
+        var pin = GCHandle.Alloc(arr, GCHandleType.Pinned);
+        io.NativePtr->IniFilename = (byte*)pin.AddrOfPinnedObject();
+        return (arr, pin);
+    }
 
     /// <summary>Attempts to add a new client.</summary>
     /// <param name="client">The client to add.</param>
