@@ -1,0 +1,5 @@
+# NOTE
+
+These are not the distributions! Go [here](https://github.com/Emik03/Remote/releases) if you're looking for those.
+
+These are instead plain executables that do nothing other than starting up the main app, which requires the compiled project alongside them.
