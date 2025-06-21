@@ -18,15 +18,7 @@ public sealed partial class Preferences
     public const float MinUiScale = 0.5f, MaxUiScale = 2.5f;
 
     /// <summary>The default host address that hosts Archipelago games.</summary>
-    const string DefaultAddress = "archipelago.gg";
-
-    /// <summary>Contains the path to the preferences file to read and write from.</summary>
-    static readonly string s_path = Environment.GetEnvironmentVariable("REMOTE_PREFERENCES_PATH") ??
-        Path.Join(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            typeof(Preferences).Assembly.GetName().Name,
-            "preferences.cfg"
-        );
+    const string DefaultAddress = "archipelago.gg", PreferencesFile = "preferences.cfg";
 
     /// <summary>Contains the current port.</summary>
     int _port;
@@ -62,6 +54,16 @@ public sealed partial class Preferences
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
         "Archipelago"
     );
+
+    /// <summary>Contains the path to the preferences file to read and write from.</summary>
+    public static string FilePath { get; } =
+        Environment.GetEnvironmentVariable("REMOTE_PREFERENCES_PATH") is { } preferences
+            ? System.IO.Directory.Exists(preferences) ? Path.Join(preferences, PreferencesFile) : preferences
+            : Path.Join(
+                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                typeof(Preferences).Assembly.GetName().Name,
+                PreferencesFile
+            );
 
     /// <summary>Gets or sets the UI scaling.</summary>
     public float UiScale
@@ -121,18 +123,18 @@ public sealed partial class Preferences
     /// <returns>The preferences.</returns>
     public static Preferences Load()
     {
-        if (File.Exists(s_path) && Kvp.Deserialize<Preferences>(File.ReadAllText(s_path)) is var fromDisk)
+        if (File.Exists(FilePath) && Kvp.Deserialize<Preferences>(File.ReadAllText(FilePath)) is var fromDisk)
         {
             fromDisk.Sanitize();
             return fromDisk;
         }
 
-        var directory = Path.GetDirectoryName(s_path);
+        var directory = Path.GetDirectoryName(FilePath);
         Debug.Assert(directory is not null);
         System.IO.Directory.CreateDirectory(directory);
         Preferences fromMemory = new();
         fromMemory.Sanitize();
-        File.WriteAllText(s_path, Kvp.Serialize(fromMemory));
+        File.WriteAllText(FilePath, Kvp.Serialize(fromMemory));
         return fromMemory;
     }
 
@@ -168,7 +170,7 @@ public sealed partial class Preferences
     }
 
     /// <summary>Writes this instance to disk.</summary>
-    public void Save() => File.WriteAllText(s_path, Kvp.Serialize(this));
+    public void Save() => File.WriteAllText(FilePath, Kvp.Serialize(this));
 
     /// <summary>Shows the preferences window.</summary>
     /// <returns>Whether to create a new instance of <see cref="Client"/>.</returns>
