@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <FileVersion>1</FileVersion>
+        <OutputType>Exe</OutputType>
+        <PublishTrimmed>false</PublishTrimmed>
+        <TargetFramework>net10.0</TargetFramework>
+        <PackageIcon>Resources/Drawable/Icon.png</PackageIcon>
+        <ApplicationManifest>app.manifest</ApplicationManifest>
+        <ApplicationIcon>Resources/Drawable/Icon.ico</ApplicationIcon>
+        <DefineConstants>$(DefineConstants);IMGUI;XNA</DefineConstants>
+        <JsonSerializerIsReflectionEnabledByDefault>true</JsonSerializerIsReflectionEnabledByDefault>
+        <Description>Standalone Archipelago client, with dedicated feature-rich support for manual apworlds.</Description>
+        <PackageTags>Application MonoGame ImGui Archipelago MultiWorld MW MultiGame Multi Game Manual APWorld</PackageTags>
+    </PropertyGroup>
+    <ItemGroup>
+        <PackageReference Include="YamlDotNet" Version="16.3.0"/>
+        <PackageReference Include="ImGui.NET" Version="1.91.6.1"/>
+        <PackageReference Include="Archipelago.MultiClient.Net" Version="6.6.0"/>
+        <PackageReference Include="MonoGame.Framework.DesktopGL" Version="3.8.4"/>
+        <PackageReference Include="Archipelago.MultiClient.Net.Analyzers" Version="1.5.0" PrivateAssets="all"/>
+        <Content Include="Fonts/LICENSE" Link="Fonts/LICENSE" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest"/>
+        <Content Include="Fonts/main.ttf" Link="Fonts/main.ttf" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest"/>
+    </ItemGroup>
+</Project>

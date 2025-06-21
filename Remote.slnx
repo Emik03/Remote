@@ -1,0 +1,4 @@
+﻿<Solution>
+  <Project Path="Remote.Android.csproj" Type="Classic C#" />
+  <Project Path="Remote.csproj" Type="Classic C#" />
+</Solution>
