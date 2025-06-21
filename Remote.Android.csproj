@@ -1,7 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <OutputType>Exe</OutputType>
-        <FileVersion>1.0</FileVersion>
         <RootNamespace>Android</RootNamespace>
         <AndroidUseAapt2>false</AndroidUseAapt2>
         <ApplicationId>dev.emik.remote</ApplicationId>
@@ -10,7 +9,7 @@
         <TargetFramework>net10.0-android</TargetFramework>
         <AndroidEnableMultiDex>true</AndroidEnableMultiDex>
         <EmbedAssembliesIntoApk>true</EmbedAssembliesIntoApk>
-        <PackageIcon>Resources/Drawable/Icon.png</PackageIcon>
+        <PackageIcon>Resources/Drawable/Icon.512.png</PackageIcon>
         <ApplicationManifest>app.manifest</ApplicationManifest>
         <ApplicationVersion>$(FileVersion)</ApplicationVersion>
         <AndroidUseSharedRuntime>false</AndroidUseSharedRuntime>
@@ -23,12 +22,13 @@
         <PackageTags>Application MonoGame ImGui Archipelago MultiWorld MW MultiGame Multi Game Manual APWorld</PackageTags>
     </PropertyGroup>
     <ItemGroup>
-        <EmbeddedResource Include="Resources/Drawable/Icon.png"/>
+        <None Remove="Fonts/LICENSE"/>
         <PackageReference Include="YamlDotNet" Version="16.3.0"/>
         <PackageReference Include="ImGui.NET" Version="1.91.6.1"/>
+        <EmbeddedResource Include="Resources/Drawable/Icon.512.png"/>
         <PackageReference Include="MonoGame.Framework.Android" Version="3.8.4"/>
         <PackageReference Include="Archipelago.MultiClient.Net" Version="6.6.0"/>
         <PackageReference Include="Archipelago.MultiClient.Net.Analyzers" Version="1.5.0" PrivateAssets="all"/>
-        <Content Include="Fonts/main.ttf" Link="Fonts/main.ttf" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest"/>
+        <EmbeddedResource Include="Fonts/main.ttf" Link="main.ttf" CopyToOutputDirectory="Never" CopyToPublishDirectory="Never"/>
     </ItemGroup>
 </Project>

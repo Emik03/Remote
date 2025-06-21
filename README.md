@@ -31,6 +31,7 @@ It also includes other quality-of-life features to minimize setup time:
 - Remembers the last server you logged in, automatically filling in the details upon startup.
 - Highly customizable UI scaling and theming to ensure ease-of-use.
 - Window can be resized to any resolution.
+- Specify `REMOTE_PREFERENCES_PATH` to change the path of the `preferences.cfg` file.
 
 ## Screenshots
 
@@ -69,6 +70,7 @@ Thank you to the following projects that make this possible:
 - [ImGui.NET](https://github.com/ImGuiNET/ImGui.NET)
 - [ManualForArchipelago](https://github.com/ManualForArchipelago/Manual)
 - [MonoGame](https://monogame.net) (go [sponsor them](https://github.com/sponsors/MonoGame)!)
+- [PupNet Deploy](https://github.com/kuiperzone/PupNet-Deploy) (go [sponsor them](https://github.com/sponsors/MonoGame)!)
 - [YamlDotNet](https://github.com/aaubry/YamlDotNet/wiki) (go [sponsor Edward Cooke](https://github.com/sponsors/EdwardCooke)!)
 
 ## Contribute

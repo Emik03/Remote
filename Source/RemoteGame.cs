@@ -16,6 +16,9 @@ public sealed class RemoteGame : Game
     /// <summary>The current user preferences.</summary>
     readonly Preferences _preferences = Preferences.Load();
 
+    /// <summary>The pointer to the byte string on the ini location.</summary>
+    nint _ini;
+
     /// <summary>Initializes a new instance of the <see cref="Game"/> class.</summary>
     public RemoteGame()
     {
@@ -27,7 +30,9 @@ public sealed class RemoteGame : Game
         }.ApplyChanges();
 
         _renderer = new(this);
-        _ = ImGui.GetIO().Fonts.AddFontFromFileTTF("Fonts/main.ttf", 36);
+        var io = ImGui.GetIO();
+        AddFont(io);
+        SpecifyIniFilePath(io);
         _renderer.RebuildFontAtlas();
         IsFixedTimeStep = false;
         IsMouseVisible = true;
@@ -44,6 +49,11 @@ public sealed class RemoteGame : Game
         {
             _renderer.Dispose();
             _preferences.Save();
+
+            if (_ini is not 0)
+                Marshal.FreeHGlobal(_ini);
+
+            _ini = 0;
         }
 
         base.Dispose(disposing);
@@ -72,6 +82,17 @@ public sealed class RemoteGame : Game
         _renderer.AfterLayout();
     }
 
+    /// <summary>Attempts to add the font.</summary>
+    /// <param name="io">The IO.</param>
+    static unsafe void AddFont(ImGuiIOPtr io)
+    {
+        if (typeof(RemoteGame).Assembly.GetManifestResourceStream("Remote.main.ttf") is { } stream &&
+            new byte[285000] is var font &&
+            font.Length == stream.Read(font))
+            fixed (byte* ptr = font)
+                _ = io.Fonts.AddFontFromMemoryTTF((nint)ptr, font.Length, 36);
+    }
+
     /// <summary>
     /// Called when a file is dropped on the window. Adds <see cref="Client"/> for each slot deserialized.
     /// </summary>
@@ -79,6 +100,12 @@ public sealed class RemoteGame : Game
     /// <param name="e">The files that were dropped.</param>
     void OnFileDrop(object? __, FileDropEventArgs e) =>
         _ = e.Files.All(x => Client.FromFile(x, _preferences).All(Add));
+
+    /// <summary>Sets <see cref="ImGuiIO.IniFilename"/></summary>
+    /// <param name="io">The IO.</param>
+    unsafe void SpecifyIniFilePath(ImGuiIOPtr io) =>
+        io.NativePtr->IniFilename = (byte*)(_ini =
+            Marshal.StringToHGlobalAnsi(Path.Join(Path.GetDirectoryName(Preferences.FilePath), "imgui.ini")));
 
     /// <summary>Attempts to add a new client.</summary>
     /// <param name="client">The client to add.</param>
