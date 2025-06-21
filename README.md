@@ -37,15 +37,15 @@ It also includes other quality-of-life features to minimize setup time:
 
 ## Screenshots
 
-[![Confirmation UI](Images/preview1.png)](https://raw.githubusercontent.com/Emik03/Emik.Manual/refs/heads/main/Images/icon.svg)
+[![Confirmation UI](Images/preview1.png)](https://raw.githubusercontent.com/Emik03/Remote/refs/heads/main/Images/preview1.png)
 
-[![Locations UI](Images/preview2.png)](https://raw.githubusercontent.com/Emik03/Emik.Manual/refs/heads/main/Images/icon.svg)
+[![Locations UI](Images/preview2.png)](https://raw.githubusercontent.com/Emik03/Remote/refs/heads/main/Images/preview2.png)
 
-[![Items UI](Images/preview3.png)](https://raw.githubusercontent.com/Emik03/Emik.Manual/refs/heads/main/Images/icon.svg)
+[![Items UI](Images/preview3.png)](https://raw.githubusercontent.com/Emik03/Remote/refs/heads/main/Images/preview3.png)
 
-[![Chat UI](Images/preview4.png)](https://raw.githubusercontent.com/Emik03/Emik.Manual/refs/heads/main/Images/icon.svg)
+[![Chat UI](Images/preview4.png)](https://raw.githubusercontent.com/Emik03/Remote/refs/heads/main/Images/preview4.png)
 
-[![Configuration UI](Images/preview5.png)](https://raw.githubusercontent.com/Emik03/Emik.Manual/refs/heads/main/Images/icon.svg)
+[![Configuration UI](Images/preview5.png)](https://raw.githubusercontent.com/Emik03/Remote/refs/heads/main/Images/preview5.png)
 
 ## Android
 
