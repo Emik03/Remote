@@ -23,8 +23,16 @@ public sealed partial class Logic(
     /// <param name="tokens">The rented array.</param>
     struct RentedTokenArray(Token[] tokens) : ICollection<Token>, IDisposable, IReadOnlyList<Token>
     {
+        /// <summary>Initializes a new instance of the <see cref="RentedTokenArray"/> struct.</summary>
+        /// <param name="capacity">The minimum length of the array.</param>
+        public RentedTokenArray(int capacity)
+            : this(ArrayPool<Token>.Shared.Rent(capacity)) { }
+
         /// <inheritdoc />
         public readonly Token this[int index] => tokens[index];
+
+        /// <summary>Gets the segment of what was written.</summary>
+        public readonly ArraySegment<Token> Segment => new(tokens, 0, Count);
 
         /// <inheritdoc />
         readonly bool ICollection<Token>.IsReadOnly => false;
@@ -32,13 +40,10 @@ public sealed partial class Logic(
         /// <inheritdoc cref="IReadOnlyCollection{Token}.Count"/>
         public int Count { get; private set; }
 
-        /// <inheritdoc cref="ArrayPool{Token}.Rent"/>
-        public static RentedTokenArray Rent(int capacity) => new(ArrayPool<Token>.Shared.Rent(capacity));
-
         /// <inheritdoc />
         public void Add(Token item)
         {
-            if (tokens.Length < Count)
+            if (Count < tokens.Length)
                 tokens[Count++] = item;
         }
 
@@ -115,10 +120,12 @@ public sealed partial class Logic(
     {
         // Most compact valid logic possible is a repeated sequence of '|a:1%|OR|a:1%|OR|a:1%|OR|a:1%|…'.
         const int MinimumValidLogic = 8;
-        var array = RentedTokenArray.Rent(memory.Length - (memory.Length + 1) / MinimumValidLogic);
-        Token.Tokenize(memory, array);
-        var ret = Parse(array);
+        RentedTokenArray array = new(memory.Length - (memory.Length + 1) / MinimumValidLogic);
+        Token.Tokenize(memory, ref array);
+        var ret = Parse(array.Segment);
+#pragma warning disable IDISP017
         array.Dispose();
+#pragma warning restore IDISP017
         return ret;
     }
 

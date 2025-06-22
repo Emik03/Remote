@@ -38,7 +38,6 @@ public sealed partial class Preferences
         status switch
         {
             Client.LocationStatus.Checked => this[AppPalette.Checked],
-            Client.LocationStatus.Unmatched => this[AppPalette.Neutral],
             Client.LocationStatus.Reachable => this[AppPalette.Reachable],
             Client.LocationStatus.OutOfLogic => this[AppPalette.OutOfLogic],
             Client.LocationStatus.ProbablyReachable => this[AppPalette.Neutral],

@@ -107,9 +107,10 @@ public sealed partial record Evaluator(
         $"{yaml.Game}.apworld" is var apworld &&
         Path.Join(preferences.Directory, "worlds", apworld) is var first &&
         File.Exists(first) ? first :
-            Path.Join(preferences.Directory, "custom_worlds", $"{yaml.Game}.apworld") is var second &&
-            File.Exists(second) ?
-                second : null;
+        Path.Join(preferences.Directory, "custom_worlds", apworld) is var second &&
+        File.Exists(second) ? second :
+        Path.Join(preferences.Directory, apworld) is var third &&
+        File.Exists(third) ? third : null;
 
     /// <summary>Reads the path as a zip file. Can throw.</summary>
     /// <param name="helper">The list of items received.</param>
@@ -122,6 +123,7 @@ public sealed partial record Evaluator(
     static Evaluator? ReadZip(IReceivedItemsHelper helper, Yaml yaml, string path)
     {
         using ZipArchive zip = new(File.OpenRead(path));
+        yaml.CopyFrom(Extract<JsonObject>(zip, "/data/options.json"));
 
         return ExtractCategories(zip) is ({ } hiddenCategories, var categoryToYaml) &&
             ExtractItems(zip) is (var itemToCategories, { } itemCount, { } itemValues) &&

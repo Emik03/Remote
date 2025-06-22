@@ -15,9 +15,6 @@ public sealed partial class Client(Yaml? yaml = null)
         /// <summary>This location has already been checked and doesn't need to be sent again.</summary>
         Checked,
 
-        /// <summary>This location did not match the search result and should be hidden.</summary>
-        Unmatched,
-
         /// <summary>This location is reachable.</summary>
         Reachable,
 
@@ -75,6 +72,11 @@ public sealed partial class Client(Yaml? yaml = null)
 
             ImGui.PopStyleColor();
         }
+
+        /// <summary>Determines whether this instance matches the search result.</summary>
+        /// <param name="search">The filter.</param>
+        /// <returns>Whether this instance contains the parameter <paramref name="search"/> as a substring.</returns>
+        public bool IsMatch(string search) => DisplayName?.Contains(search, StringComparison.OrdinalIgnoreCase) is true;
     }
 
     /// <summary>Constant strings.</summary>
@@ -225,7 +227,9 @@ public sealed partial class Client(Yaml? yaml = null)
         var session = ArchipelagoSessionFactory.CreateSession(preferences.Address, preferences.Port);
         session.MessageLog.OnMessageReceived += OnMessageReceived;
         session.Items.ItemReceived += UpdateStatus;
-        var login = session.TryConnectAndLogin(_yaml.Game, _yaml.Name, Flags, password: preferences.Password);
+        string[] tags = ["AP", nameof(Remote)];
+        var password = preferences.Password;
+        var login = session.TryConnectAndLogin(_yaml.Game, _yaml.Name, Flags, tags: tags, password: password);
 
         if (login is LoginFailure failure)
         {
@@ -329,8 +333,6 @@ public sealed partial class Client(Yaml? yaml = null)
         void Update(string location, ILocationCheckHelper itemHelper) =>
             this[location].Status = 0 switch
             {
-                _ when !location.Contains(_locationSearch, StringComparison.OrdinalIgnoreCase) =>
-                    LocationStatus.Unmatched,
                 _ when itemHelper.GetLocationIdFromName(_yaml.Game, location) is var id &&
                     itemHelper.AllLocations.Contains(id) &&
                     !itemHelper.AllMissingLocations.Contains(id) =>
@@ -359,20 +361,20 @@ public sealed partial class Client(Yaml? yaml = null)
     }
 
     /// <summary>Whether the location should be visible based on the status given.</summary>
-    /// <param name="status">The status of the location.</param>
+    /// <param name="location">The location.</param>
     /// <returns>Whether to make the location visible.</returns>
     /// <exception cref="ArgumentOutOfRangeException">
-    /// The parameter <paramref name="status"/> is a value without a defined name.
+    /// The parameter <paramref name="location"/> has a status whose value is without a defined name.
     /// </exception>
-    bool ShouldBeVisible(LocationStatus status) =>
-        status switch
+    bool ShouldBeVisible(string location) =>
+        location.Contains(_locationSearch, StringComparison.OrdinalIgnoreCase) &&
+        this[location].Status switch
         {
             LocationStatus.Reachable => true,
-            LocationStatus.Unmatched => false,
             LocationStatus.ProbablyReachable => true,
             LocationStatus.OutOfLogic => _showOutOfLogic,
             LocationStatus.Checked => _showAlreadyChecked,
-            _ => throw new ArgumentOutOfRangeException(nameof(status), status, null),
+            _ => throw new ArgumentOutOfRangeException(nameof(location), this[location].Status, null),
         };
 
     /// <summary>Groups all items into sorted items with count.</summary>

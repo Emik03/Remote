@@ -19,8 +19,11 @@ public sealed class Yaml : IDictionary<string, object?>
 
     /// <summary>Retrieves the value from the yaml option.</summary>
     /// <param name="span">The yaml option to get.</param>
-    public int? this[ReadOnlySpan<char> span] =>
-        _options.GetAlternateLookup<ReadOnlySpan<char>>().TryGetValue(span, out var value) ? value : null;
+    public int? this[ReadOnlySpan<char> span]
+    {
+        get => _options.GetAlternateLookup<ReadOnlySpan<char>>().TryGetValue(span, out var value) ? value : null;
+        set => _options.GetAlternateLookup<ReadOnlySpan<char>>().TryAdd(span, value ?? 0);
+    }
 
     /// <inheritdoc />
     object? IDictionary<string, object?>.this[string key]
@@ -131,6 +134,25 @@ public sealed class Yaml : IDictionary<string, object?>
 
         foreach (var (key, value) in _options)
             array[++i] = new(key, value);
+    }
+
+    /// <summary>Extracts the keys from the <see cref="JsonObject"/> and copies its default values.</summary>
+    /// <param name="obj">The <see cref="JsonObject"/> to copy from.</param>
+    public void CopyFrom(JsonObject? obj)
+    {
+        if (obj?.TryGetPropertyValue("user", out var node) is false or null || node is not JsonObject options)
+            return;
+
+        foreach (var (key, value) in options)
+            this[key] = value is JsonObject v && v.TryGetPropertyValue("default", out var def)
+                ? def?.GetValueKind() switch
+                {
+                    JsonValueKind.True => 1,
+                    JsonValueKind.False => 0,
+                    JsonValueKind.Number => def.GetValue<int>(),
+                    _ => null,
+                }
+                : null;
     }
 
     /// <inheritdoc />

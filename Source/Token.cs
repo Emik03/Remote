@@ -29,7 +29,7 @@ public readonly partial struct Token
     /// <param name="memory">The sequences of characters to parse.</param>
     /// <param name="tokens">The list of tokens to write to.</param>
     /// <exception cref="ArgumentOutOfRangeException">A state thought to be unreachable was reached.</exception>
-    public static void Tokenize<T>(ReadOnlyMemory<char> memory, T tokens)
+    public static void Tokenize<T>(ReadOnlyMemory<char> memory, ref T tokens)
         where T : ICollection<Token>
     {
         int? start = null;
@@ -40,19 +40,19 @@ public readonly partial struct Token
             switch (state)
             {
                 case State.ReadingToken:
-                    ProcessToken(memory, tokens, ref state, ref start, i);
+                    ProcessToken(memory, ref tokens, ref state, ref start, i);
                     break;
                 case State.ReadingIdentifier:
-                    ProcessIdentifier(memory, tokens, ref state, ref start, i);
+                    ProcessIdentifier(memory, ref tokens, ref state, ref start, i);
                     break;
                 case State.ReadingIdentifierQuantity:
-                    ProcessIdentifierQuantity(memory, tokens, ref state, ref start, i);
+                    ProcessIdentifierQuantity(memory, ref tokens, ref state, ref start, i);
                     break;
                 case State.ReadingFunction:
-                    ProcessFunction(memory, tokens, ref state, ref start, i);
+                    ProcessFunction(memory, ref tokens, ref state, ref start, i);
                     break;
                 case State.ReadingFunctionArguments:
-                    ProcessFunctionArguments(memory, tokens, ref state, ref start, i);
+                    ProcessFunctionArguments(memory, ref tokens, ref state, ref start, i);
                     break;
                 default: throw new ArgumentOutOfRangeException(nameof(memory), state, null);
             }
@@ -66,7 +66,7 @@ public readonly partial struct Token
     public static IReadOnlyList<Token> Tokenize(ReadOnlyMemory<char> memory)
     {
         List<Token> tokens = [];
-        Tokenize(memory, tokens);
+        Tokenize(memory, ref tokens);
         return tokens;
     }
 
@@ -97,30 +97,30 @@ public readonly partial struct Token
     /// <param name="state">The current state.</param>
     /// <param name="start">The index to remember that indicates the start of a buffer.</param>
     /// <param name="i">The index to be looking in <paramref name="memory"/>.</param>
-    static void ProcessToken<T>(ReadOnlyMemory<char> memory, T tokens, ref State state, ref int? start, int i)
+    static void ProcessToken<T>(ReadOnlyMemory<char> memory, ref T tokens, ref State state, ref int? start, int i)
         where T : ICollection<Token>
     {
         switch (memory.Span[i])
         {
             case var c when char.IsWhiteSpace(c):
-                AddAndOr(memory, tokens, ref start, i);
+                AddAndOr(memory, ref tokens, ref start, i);
                 break;
             case '|':
-                AddAndOr(memory, tokens, ref start, i);
+                AddAndOr(memory, ref tokens, ref start, i);
                 tokens.Add(OfPipe());
                 state = State.ReadingIdentifier;
                 break;
             case '{':
-                AddAndOr(memory, tokens, ref start, i);
+                AddAndOr(memory, ref tokens, ref start, i);
                 tokens.Add(OfLeftCurly());
                 state = State.ReadingFunction;
                 break;
             case '(':
-                AddAndOr(memory, tokens, ref start, i);
+                AddAndOr(memory, ref tokens, ref start, i);
                 tokens.Add(OfLeftParen());
                 break;
             case ')':
-                AddAndOr(memory, tokens, ref start, i);
+                AddAndOr(memory, ref tokens, ref start, i);
                 tokens.Add(OfRightParen());
                 break;
             default:
@@ -136,7 +136,7 @@ public readonly partial struct Token
     /// <param name="state">The current state.</param>
     /// <param name="start">The index to remember that indicates the start of a buffer.</param>
     /// <param name="i">The index to be looking in <paramref name="memory"/>.</param>
-    static void ProcessIdentifier<T>(ReadOnlyMemory<char> memory, T tokens, ref State state, ref int? start, int i)
+    static void ProcessIdentifier<T>(ReadOnlyMemory<char> memory, ref T tokens, ref State state, ref int? start, int i)
         where T : ICollection<Token>
     {
         var span = memory.Span;
@@ -144,16 +144,16 @@ public readonly partial struct Token
         switch (span[i])
         {
             case '@' when span[i - 1] is '|':
-                AddIdentifier(memory, tokens, ref start, i);
+                AddIdentifier(memory, ref tokens, ref start, i);
                 tokens.Add(OfAt());
                 break;
             case ':':
-                AddIdentifier(memory, tokens, ref start, i);
+                AddIdentifier(memory, ref tokens, ref start, i);
                 tokens.Add(OfColon());
                 state = State.ReadingIdentifierQuantity;
                 break;
             case '|':
-                AddIdentifier(memory, tokens, ref start, i);
+                AddIdentifier(memory, ref tokens, ref start, i);
                 tokens.Add(OfPipe());
                 state = State.ReadingToken;
                 break;
@@ -172,7 +172,7 @@ public readonly partial struct Token
     /// <param name="i">The index to be looking in <paramref name="memory"/>.</param>
     static void ProcessIdentifierQuantity<T>(
         ReadOnlyMemory<char> memory,
-        T tokens,
+        ref T tokens,
         ref State state,
         ref int? start,
         int i
@@ -183,11 +183,11 @@ public readonly partial struct Token
         {
             case var c when char.IsWhiteSpace(c): break;
             case '%':
-                AddIdentifierQuantity(memory, tokens, ref start, i);
+                AddIdentifierQuantity(memory, ref tokens, ref start, i);
                 tokens.Add(OfPercent());
                 break;
             case '|':
-                AddIdentifierQuantity(memory, tokens, ref start, i);
+                AddIdentifierQuantity(memory, ref tokens, ref start, i);
                 tokens.Add(OfPipe());
                 state = State.ReadingToken;
                 break;
@@ -204,7 +204,7 @@ public readonly partial struct Token
     /// <param name="state">The current state.</param>
     /// <param name="start">The index to remember that indicates the start of a buffer.</param>
     /// <param name="i">The index to be looking in <paramref name="memory"/>.</param>
-    static void ProcessFunction<T>(ReadOnlyMemory<char> memory, T tokens, ref State state, ref int? start, int i)
+    static void ProcessFunction<T>(ReadOnlyMemory<char> memory, ref T tokens, ref State state, ref int? start, int i)
         where T : ICollection<Token>
     {
         switch (memory.Span[i])
@@ -215,7 +215,7 @@ public readonly partial struct Token
                 tokens.Add(OfRightCurly());
                 break;
             case '(':
-                AddIdentifier(memory, tokens, ref start, i);
+                AddIdentifier(memory, ref tokens, ref start, i);
                 state = State.ReadingFunctionArguments;
                 tokens.Add(OfLeftParen());
                 break;
@@ -234,7 +234,7 @@ public readonly partial struct Token
     /// <param name="i">The index to be looking in <paramref name="memory"/>.</param>
     static void ProcessFunctionArguments<T>(
         ReadOnlyMemory<char> memory,
-        T tokens,
+        ref T tokens,
         ref State state,
         ref int? start,
         int i
@@ -244,7 +244,7 @@ public readonly partial struct Token
         switch (memory.Span[i])
         {
             case ')':
-                AddIdentifier(memory, tokens, ref start, i);
+                AddIdentifier(memory, ref tokens, ref start, i);
                 state = State.ReadingFunction;
                 tokens.Add(OfRightParen());
                 break;
@@ -260,7 +260,7 @@ public readonly partial struct Token
     /// <param name="tokens">The list of tokens to write to.</param>
     /// <param name="start">The index to remember that indicates the start of a buffer.</param>
     /// <param name="i">The index to be looking in <paramref name="memory"/>.</param>
-    static void AddAndOr<T>(ReadOnlyMemory<char> memory, T tokens, ref int? start, int i)
+    static void AddAndOr<T>(ReadOnlyMemory<char> memory, ref T tokens, ref int? start, int i)
         where T : ICollection<Token>
     {
         if (start is not { } s)
@@ -282,7 +282,7 @@ public readonly partial struct Token
     /// <param name="tokens">The list of tokens to write to.</param>
     /// <param name="start">The index to remember that indicates the start of a buffer.</param>
     /// <param name="i">The index to be looking in <paramref name="memory"/>.</param>
-    static void AddIdentifier<T>(ReadOnlyMemory<char> memory, T tokens, ref int? start, int i)
+    static void AddIdentifier<T>(ReadOnlyMemory<char> memory, ref T tokens, ref int? start, int i)
         where T : ICollection<Token>
     {
         if (start is not { } s)
@@ -298,7 +298,7 @@ public readonly partial struct Token
     /// <param name="tokens">The list of tokens to write to.</param>
     /// <param name="start">The index to remember that indicates the start of a buffer.</param>
     /// <param name="i">The index to be looking in <paramref name="memory"/>.</param>
-    static void AddIdentifierQuantity<T>(ReadOnlyMemory<char> memory, T tokens, ref int? start, int i)
+    static void AddIdentifierQuantity<T>(ReadOnlyMemory<char> memory, ref T tokens, ref int? start, int i)
         where T : ICollection<Token>
     {
         if (start is not { } s)

@@ -343,10 +343,10 @@ public sealed partial class Client
         var locations = _showAlreadyChecked ? locationHelper.AllLocations : locationHelper.AllMissingLocations;
 
         foreach (var location in locations)
-            if (locationHelper.GetLocationNameFromId(location, _yaml.Game) is { } name)
+            if (locationHelper.GetLocationNameFromId(location, _yaml.Game) is { } name && ShouldBeVisible(name))
                 Checkbox(preferences, name, Evaluator.Uncategorized);
 
-        return locations.Count is 0;
+        return locationHelper.AllMissingLocations.Count is 0;
     }
 
     /// <summary>Shows the location list in a manual context.</summary>
@@ -378,7 +378,7 @@ public sealed partial class Client
                 else if (status is not LocationStatus.Checked && ret is true)
                     ret = null;
 
-                if (ShouldBeVisible(status))
+                if (ShouldBeVisible(location))
                     count++;
             }
 
@@ -387,7 +387,7 @@ public sealed partial class Client
 
             // ReSharper disable once ForeachCanBePartlyConvertedToQueryUsingAnotherGetEnumerator
             foreach (var location in locations)
-                if (ShouldBeVisible(this[location].Status))
+                if (ShouldBeVisible(location))
                     Checkbox(preferences, location, category);
         }
 
@@ -494,7 +494,8 @@ public sealed partial class Client
         ImGui.SeparatorText("List");
 
         foreach (var (item, count) in GroupItems(Evaluator.Uncategorized, default))
-            item.Show(preferences, count);
+            if (item.IsMatch(_itemSearch))
+                item.Show(preferences, count);
     }
 
     /// <summary>Shows manual items.</summary>
@@ -511,13 +512,14 @@ public sealed partial class Client
             if (_evaluator.HiddenCategories.Contains(category))
                 continue;
 
-            var sum = GroupItems(category, items).Sum(x => x.Count);
+            var sum = GroupItems(category, items).Where(x => x.Item.IsMatch(_itemSearch)).Sum(x => x.Count);
 
             if (sum is 0 || !ImGui.CollapsingHeader($"{category} ({sum})###{category}:|ItemCategory"))
                 continue;
 
             foreach (var (item, count) in GroupItems(category, items))
-                item.Show(preferences, count);
+                if (item.IsMatch(_itemSearch))
+                    item.Show(preferences, count);
         }
     }
 
