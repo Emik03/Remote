@@ -347,7 +347,8 @@ public sealed partial class Client(Yaml? yaml = null)
         if (_evaluator is null)
         {
             foreach (var location in locationHelper.AllLocations)
-                Update(locationHelper.GetLocationNameFromId(location, _yaml.Game), locationHelper);
+                if (locationHelper.GetLocationNameFromId(location, _yaml.Game) is { } name)
+                    Update(name, locationHelper);
 
             return;
         }

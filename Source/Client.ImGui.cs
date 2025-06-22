@@ -343,7 +343,8 @@ public sealed partial class Client
         var locations = _showAlreadyChecked ? locationHelper.AllLocations : locationHelper.AllMissingLocations;
 
         foreach (var location in locations)
-            Checkbox(preferences, locationHelper.GetLocationNameFromId(location, _yaml.Game), Evaluator.Uncategorized);
+            if (locationHelper.GetLocationNameFromId(location, _yaml.Game) is { } name)
+                Checkbox(preferences, name, Evaluator.Uncategorized);
 
         return locations.Count is 0;
     }
