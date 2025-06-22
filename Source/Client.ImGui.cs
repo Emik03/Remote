@@ -399,7 +399,7 @@ public sealed partial class Client
     /// <returns>Whether any locations released are out of logic.</returns>
     bool ShowReleasedOrReleasingLocations(Preferences preferences)
     {
-        if (!ImGui.BeginChild("Release", preferences.ChildSize(175)))
+        if (!ImGui.BeginChild("Release", preferences.ChildSize(200)))
         {
             ImGui.EndChild();
             return false;

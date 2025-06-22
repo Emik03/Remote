@@ -193,7 +193,7 @@ public sealed partial class Preferences
     /// <summary>Gets the size of a child window.</summary>
     /// <param name="margin">The margin.</param>
     /// <returns>The size to use.</returns>
-    public Vector2 ChildSize(int margin = 125) => ImGui.GetContentRegionAvail() - new Vector2(0, UiScale * margin);
+    public Vector2 ChildSize(int margin = 150) => ImGui.GetContentRegionAvail() - new Vector2(0, UiScale * margin);
 
     /// <summary>Displays the settings tab.</summary>
     void ShowSettings()
@@ -238,6 +238,7 @@ public sealed partial class Preferences
     {
         ImGui.SetNextItemWidth(Width(225));
         _ = ImGui.SliderFloat(title, ref amount, min, max, format);
+        amount = amount.Clamp(min, max);
     }
 
     /// <summary>Sanitizes the port and colors.</summary>
