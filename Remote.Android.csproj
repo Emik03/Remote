@@ -10,10 +10,10 @@
         <TargetFramework>net10.0-android</TargetFramework>
         <AndroidEnableMultiDex>true</AndroidEnableMultiDex>
         <EmbedAssembliesIntoApk>true</EmbedAssembliesIntoApk>
-        <PackageIcon>Resources/Drawable/Icon.512.png</PackageIcon>
         <ApplicationManifest>app.manifest</ApplicationManifest>
         <ApplicationVersion>$(FileVersion)</ApplicationVersion>
         <AndroidUseSharedRuntime>false</AndroidUseSharedRuntime>
+        <PackageIcon>Resources/Drawable/Icon.512.png</PackageIcon>
         <SupportedOSPlatformVersion>23</SupportedOSPlatformVersion>
         <AndroidCreatePackagePerAbi>true</AndroidCreatePackagePerAbi>
         <DefineConstants>$(DefineConstants);IMGUI;XNA</DefineConstants>
