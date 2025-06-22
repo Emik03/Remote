@@ -33,7 +33,7 @@ public sealed class RemoteGame : Game
             SynchronizeWithVerticalRetrace = false,
         }.ApplyChanges();
 
-        _renderer = new(this);
+        _renderer = new(this, true);
         var io = ImGui.GetIO();
         AddFont(io);
         (_iniPath, _iniPathPin) = SpecifyIniFilePath(io);
