@@ -94,8 +94,12 @@ public sealed class RemoteGame : Game
             new byte[285000] is var font &&
             font.Length == stream.Read(font))
             fixed (byte* ptr = font)
-                _ = io.Fonts.AddFontFromMemoryTTF((nint)ptr, font.Length, 36);
+                _ = io.Fonts.AddFontFromMemoryTTF((nint)ptr, font.Length, FontSize());
     }
+
+    /// <summary>Gets the font size.</summary>
+    /// <returns>The font size.</returns>
+    static float FontSize() => Environment.GetEnvironmentVariable("REMOTE_FONT_SIZE").TryInto<float>() ?? 36;
 
     /// <summary>
     /// Called when a file is dropped on the window. Adds <see cref="Client"/> for each slot deserialized.
