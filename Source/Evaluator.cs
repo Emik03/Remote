@@ -79,8 +79,7 @@ public sealed partial record Evaluator(
     /// parsing failed, or the <c>.apworld</c> doesn't exist.
     /// </returns>
     public static Evaluator? Read(IReceivedItemsHelper helper, Yaml yaml, Preferences preferences) =>
-        Path.Join(preferences.Directory, "worlds", $"{yaml.Game}.apworld") is var path && !File.Exists(path) ||
-        Go(ReadZip, helper, yaml, path, out _, out var ok)
+        FindApWorld(yaml, preferences) is not { } path || Go(ReadZip, helper, yaml, path, out _, out var ok)
             ? null
             : ok;
 
@@ -99,6 +98,18 @@ public sealed partial record Evaluator(
         value is JsonObject obj &&
         obj.TryGetPropertyValue("starting", out var starting) &&
         starting?.GetValueKind() is JsonValueKind.True;
+
+    /// <summary>Attempts to find the <c>.apworld</c>.</summary>
+    /// <param name="yaml">The yaml options.</param>
+    /// <param name="preferences">The user preferences.</param>
+    /// <returns>The path to the <c>.apworld</c>, or <see langword="null"/> if none found.</returns>
+    static string? FindApWorld(Yaml yaml, Preferences preferences) =>
+        $"{yaml.Game}.apworld" is var apworld &&
+        Path.Join(preferences.Directory, "worlds", apworld) is var first &&
+        File.Exists(first) ? first :
+            Path.Join(preferences.Directory, "custom_worlds", $"{yaml.Game}.apworld") is var second &&
+            File.Exists(second) ?
+                second : null;
 
     /// <summary>Reads the path as a zip file. Can throw.</summary>
     /// <param name="helper">The list of items received.</param>
