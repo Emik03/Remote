@@ -1,7 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <OutputType>Exe</OutputType>
-        <RootNamespace>Android</RootNamespace>
+        <FileVersion>1.0.1</FileVersion>
+        <RootNamespace>Remote</RootNamespace>
         <AndroidUseAapt2>false</AndroidUseAapt2>
         <ApplicationId>dev.emik.remote</ApplicationId>
         <AndroidPackageFormat>apk</AndroidPackageFormat>
