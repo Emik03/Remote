@@ -1,6 +1,4 @@
 // SPDX-License-Identifier: MPL-2.0
-using JsonSerializer = System.Text.Json.JsonSerializer;
-
 namespace Remote;
 
 /// <inheritdoc cref="Evaluator"/>
