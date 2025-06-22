@@ -215,7 +215,7 @@ public sealed partial class Preferences
         ImGui.Separator();
         Slider("UI Scale", ref _uiScale, 0.25f, 2, "%.2f");
         Slider("UI Padding", ref _uiPadding, 0, 20);
-        Slider("UI Rounding", ref _uiRounding, 0, 40);
+        Slider("UI Rounding", ref _uiRounding, 0, 30);
         ImGui.SeparatorText("Theming");
 
         if (ImGui.CollapsingHeader("Theme"))
