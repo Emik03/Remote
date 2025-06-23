@@ -275,12 +275,12 @@ public sealed partial class Preferences
             return false;
 
         ImGui.SeparatorText("Host");
-        ImGui.SetNextItemWidth(Width(500));
+        ImGui.SetNextItemWidth(Width(450));
         ImGuiRenderer.InputTextWithHint("Address", DefaultAddress, ref _address, ushort.MaxValue, TextFlags);
         ImGui.SameLine();
         ImGui.SetNextItemWidth(Width(100));
-        ImGui.InputInt("Port", ref _port, 1);
-        ImGui.SetNextItemWidth(Width(500));
+        ImGui.InputInt("Port", ref _port, 0);
+        ImGui.SetNextItemWidth(Width(450));
 
         var enter = ImGuiRenderer.InputText(
             "Password",
