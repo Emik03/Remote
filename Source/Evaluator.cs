@@ -103,14 +103,20 @@ public sealed partial record Evaluator(
     /// <param name="yaml">The yaml options.</param>
     /// <param name="preferences">The user preferences.</param>
     /// <returns>The path to the <c>.apworld</c>, or <see langword="null"/> if none found.</returns>
-    static string? FindApWorld(Yaml yaml, Preferences preferences) =>
-        $"{yaml.Game}.apworld" is var apworld &&
-        Path.Join(preferences.Directory, "worlds", apworld) is var first &&
-        File.Exists(first) ? first :
-        Path.Join(preferences.Directory, "custom_worlds", apworld) is var second &&
-        File.Exists(second) ? second :
-        Path.Join(preferences.Directory, apworld) is var third &&
-        File.Exists(third) ? third : null;
+    static string? FindApWorld(Yaml yaml, Preferences preferences)
+    {
+        var apWorld = $"{yaml.Game}.apworld";
+
+        string? Enumerate(string directory) =>
+            Directory.Exists(directory)
+                ? Directory.EnumerateFiles(directory)
+                   .FirstOrDefault(x => apWorld.Equals(x, StringComparison.OrdinalIgnoreCase))
+                : null;
+
+        return Enumerate(Path.Join(preferences.Directory, "worlds")) ??
+            Enumerate(Path.Join(preferences.Directory, "custom_worlds")) ??
+            Enumerate(preferences.Directory);
+    }
 
     /// <summary>Reads the path as a zip file. Can throw.</summary>
     /// <param name="helper">The list of items received.</param>
