@@ -316,7 +316,7 @@ public sealed partial class Client(Yaml? yaml = null)
         _session.Locations.CompleteLocationChecks([.._locations.Where(x => x.Value.Checked).Select(ToId).Filter()]);
         _isAttemptingToRelease = null;
 
-        if (_canGoal is false && _locations.Keys.Any(x => _yaml.Goal.Equals(x, StringComparison.Ordinal)))
+        if (_canGoal is false && _locations.Any(IsGoal))
             _canGoal = null;
 
         foreach (var key in _sortedKeys)
@@ -366,6 +366,12 @@ public sealed partial class Client(Yaml? yaml = null)
             foreach (var location in locations)
                 Update(location, locationHelper);
     }
+
+    /// <summary>Determines whether the pair matches the current goal.</summary>
+    /// <param name="kvp">The key-value pair.</param>
+    /// <returns>Whether the parameter <paramref name="kvp"/> matches the current goal.</returns>
+    bool IsGoal(KeyValuePair<string, CheckboxStatus> kvp) =>
+        kvp.Value.Status is LocationStatus.Checked && _yaml.Goal.Equals(kvp.Key, StringComparison.Ordinal);
 
     /// <summary>Whether the location should be visible based on the status given.</summary>
     /// <param name="location">The location.</param>
