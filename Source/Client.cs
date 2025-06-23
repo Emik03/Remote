@@ -192,12 +192,15 @@ public sealed partial class Client(Yaml? yaml = null)
     {
         get
         {
-            ref var value = ref CollectionsMarshal.GetValueRefOrAddDefault(_locations, key, out var exists);
+            lock (_locations)
+            {
+                ref var value = ref CollectionsMarshal.GetValueRefOrAddDefault(_locations, key, out var exists);
 
-            if (!exists && _sortedKeys.BinarySearch(key, FrozenSortedDictionary.Comparer) is < 0 and var i)
-                _sortedKeys.Insert(~i, key);
+                if (!exists && _sortedKeys.BinarySearch(key, FrozenSortedDictionary.Comparer) is < 0 and var i)
+                    _sortedKeys.Insert(~i, key);
 
-            return ref value;
+                return ref value;
+            }
         }
     }
 
