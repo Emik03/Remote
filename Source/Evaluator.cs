@@ -105,12 +105,12 @@ public sealed partial record Evaluator(
     /// <returns>The path to the <c>.apworld</c>, or <see langword="null"/> if none found.</returns>
     static string? FindApWorld(Yaml yaml, Preferences preferences)
     {
-        var apWorld = $"{yaml.Game}.apworld";
+        var world = $"{yaml.Game}.apworld";
 
         string? Enumerate(string directory) =>
             Directory.Exists(directory)
                 ? Directory.EnumerateFiles(directory)
-                   .FirstOrDefault(x => apWorld.Equals(x, StringComparison.OrdinalIgnoreCase))
+                   .FirstOrDefault(x => world.Equals(Path.GetFileName(x.AsSpan()), StringComparison.OrdinalIgnoreCase))
                 : null;
 
         return Enumerate(Path.Join(preferences.Directory, "worlds")) ??
