@@ -8,7 +8,7 @@ public sealed class RemoteGame : Game
     const int Limit = 1024;
 
     /// <summary>Gets the main window name.</summary>
-    static readonly string s_name = $"Remote (v{typeof(RemoteGame).Assembly.GetName().Version?.ToString()})";
+    static readonly string s_name = $"Remote ({typeof(RemoteGame).Assembly.GetName().Version?.ToConciseString()})";
 
     /// <summary>Provides the path to the ini file. Must be kept as instance to prevent GC.</summary>
     [UsedImplicitly]
