@@ -184,8 +184,6 @@ public sealed partial class Client
         if (!ImGui.BeginTabItem("Item Client"))
             return;
 
-        ImGui.SeparatorText("Filter");
-
         if (_evaluator is null)
             ShowNonManualItems(preferences);
         else
@@ -278,7 +276,7 @@ public sealed partial class Client
             _showConfirmationDialog = false;
 
         ImGui.SameLine();
-        _ = ImGui.Button("Release");
+        _ = ImGui.Button("Confirm");
 
         if (ImGui.IsItemActive())
             ShowCountdownToRelease(gameTime, preferences, outOfLogic);
@@ -291,7 +289,6 @@ public sealed partial class Client
     void ShowLocations(Preferences preferences)
     {
         Debug.Assert(_session is not null);
-        ImGui.SeparatorText("Filter");
         _ = ImGui.Checkbox("Show Already Checked Locations", ref _showAlreadyChecked);
         var stuck = _evaluator is null ? ShowNonManualLocations(preferences) : ShowManualLocations(preferences);
         ImGui.EndChild();
@@ -313,7 +310,7 @@ public sealed partial class Client
 
         var isAnyReleasable = _locations.Any(IsReleasable);
 
-        if (isAnyReleasable && ImGui.Button("Release"))
+        if (isAnyReleasable && ImGui.Button("Check"))
             _showConfirmationDialog = true;
 
         if (_canGoal is not null)
@@ -337,7 +334,6 @@ public sealed partial class Client
     {
         Debug.Assert(_session is not null);
         ShowLocationSearch();
-        ImGui.SeparatorText("List");
         ImGui.BeginChild("Locations", preferences.ChildSize());
         var locationHelper = _session.Locations;
         var locations = _showAlreadyChecked ? locationHelper.AllLocations : locationHelper.AllMissingLocations;
@@ -357,7 +353,6 @@ public sealed partial class Client
         Debug.Assert(_evaluator is not null);
         _ = ImGui.Checkbox("Show Out of Logic Locations", ref _showOutOfLogic);
         ShowLocationSearch();
-        ImGui.SeparatorText("List");
         ImGui.BeginChild("Locations", preferences.ChildSize());
         bool? ret = true;
 
@@ -489,7 +484,6 @@ public sealed partial class Client
     void ShowNonManualItems(Preferences preferences)
     {
         ShowItemSearch();
-        ImGui.SeparatorText("List");
 
         foreach (var (item, count) in GroupItems(Evaluator.Uncategorized, default))
             if (item.IsMatch(_itemSearch))
@@ -503,7 +497,6 @@ public sealed partial class Client
         Debug.Assert(_evaluator is not null);
         _ = ImGui.Checkbox("Show pending items", ref _showYetToReceive);
         ShowItemSearch();
-        ImGui.SeparatorText("List");
 
         foreach (var (category, items) in _evaluator.CategoryToItems)
         {
