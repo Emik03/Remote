@@ -87,8 +87,8 @@ public sealed partial class Client
 
         ImGui.SeparatorText("Create");
 
-        if (ImGui.Button("Connect") || enter)
-            _ = Connect(preferences);
+        if ((ImGui.Button("Connect") || enter) && Go(Connect, preferences, out var e, out _))
+            _errors = ToMessages(e);
     }
 
     /// <summary>Shows the components for having connected to the server.</summary>
@@ -310,13 +310,16 @@ public sealed partial class Client
 
         var isAnyReleasable = _locations.Any(IsReleasable);
 
+        if (isAnyReleasable && stuck is null or true)
+            ImGui.SameLine();
+
         if (isAnyReleasable && ImGui.Button("Check"))
             _showConfirmationDialog = true;
 
         if (_canGoal is not null)
             return;
 
-        if (isAnyReleasable)
+        if (isAnyReleasable || stuck is null or true)
             ImGui.SameLine();
 
         if (!ImGui.Button("Goal"))

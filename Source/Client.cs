@@ -207,7 +207,7 @@ public sealed partial class Client(Yaml? yaml = null)
     /// <returns>The components representing each player in the parameter <paramref name="path"/>.</returns>
     public static IEnumerable<Client> FromFile(string path, Preferences preferences) =>
         Go(Yaml.FromFile, path, out var error, out var yaml)
-            ? [new([..error.FindPathToNull(x => x.InnerException).Select(x => x.Message).Prepend(Fail).Prepend(path)])]
+            ? [new(ToMessages(error, Fail, path))]
             : yaml.Select(x => new Client(x)).Lazily(x => x.Connect(preferences));
 
     /// <summary>Connects to the archipelago server.</summary>
@@ -260,6 +260,13 @@ public sealed partial class Client(Yaml? yaml = null)
     /// <returns>Whether the parameter <paramref name="kvp"/> can be released.</returns>
     static bool IsReleasable(KeyValuePair<string, CheckboxStatus> kvp) =>
         kvp.Value is (LocationStatus.Reachable or LocationStatus.ProbablyReachable or LocationStatus.OutOfLogic, true);
+
+    /// <summary>Converts the exception to the <see cref="string"/> array.</summary>
+    /// <param name="e">The exception to convert.</param>
+    /// <param name="additions">The additional strings to add before-hand.</param>
+    /// <returns>The messages.</returns>
+    static string[] ToMessages(Exception e, params ReadOnlySpan<string> additions) =>
+        [..additions, ..e.FindPathToNull(x => x.InnerException).Select(x => x.Message)];
 
     /// <summary>Invoked when a new message is received, adds the message to the log.</summary>
     /// <param name="message">The new message.</param>
