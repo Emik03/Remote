@@ -34,6 +34,7 @@ It also includes other quality-of-life features to minimize setup time:
 - Highly customizable UI scaling and theming to ensure ease-of-use.
 - Window can be resized to any resolution.
 - Specify `REMOTE_PREFERENCES_PATH` to change the path of the `preferences.cfg` file.
+- Specify `REMOTE_FONT_SIZE` to change the font size.
 
 ## Screenshots
 
