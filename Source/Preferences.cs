@@ -50,7 +50,11 @@ public sealed partial class Preferences
 
     /// <summary>Gets the default installation path of Archipelago.</summary>
     public static string DefaultDirectory { get; } = Path.Join(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        Environment.GetFolderPath(
+            OperatingSystem.IsWindows()
+                ? Environment.SpecialFolder.CommonApplicationData
+                : Environment.SpecialFolder.LocalApplicationData
+        ),
         "Archipelago"
     );
 
@@ -214,7 +218,7 @@ public sealed partial class Preferences
         );
 
         ImGui.Separator();
-        Slider("UI Scale", ref _uiScale, 0.25f, 2, "%.2f");
+        Slider("UI Scale", ref _uiScale, 0.4f, 2, "%.2f");
         Slider("UI Padding", ref _uiPadding, 0, 20);
         Slider("UI Rounding", ref _uiRounding, 0, 30);
         ImGui.SeparatorText("Theming");
