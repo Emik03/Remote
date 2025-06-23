@@ -7,6 +7,9 @@ public sealed class RemoteGame : Game
     /// <summary>The amount of <see cref="Client"/> instances that can run at once.</summary>
     const int Limit = 1024;
 
+    /// <summary>Gets the main window name.</summary>
+    static readonly string s_name = $"Remote ({typeof(RemoteGame).Assembly.GetName().Version?.ToString()})";
+
     /// <summary>Provides the path to the ini file. Must be kept as instance to prevent GC.</summary>
     [UsedImplicitly]
     readonly byte[] _iniPath;
@@ -73,7 +76,7 @@ public sealed class RemoteGame : Game
         _renderer.BeforeLayout(gameTime);
         _preferences.PushStyling();
 
-        if (ImGui.Begin("Main", ImGuiWindowFlags.HorizontalScrollbar) && _preferences.Show())
+        if (ImGui.Begin(s_name, ImGuiWindowFlags.HorizontalScrollbar) && _preferences.Show())
             _ = Add(new());
 
         ImGui.End();
@@ -90,25 +93,30 @@ public sealed class RemoteGame : Game
     /// <param name="io">The IO.</param>
     static unsafe void AddFont(ImGuiIOPtr io)
     {
-        if (typeof(RemoteGame).Assembly.GetManifestResourceStream("Remote.main.ttf") is { } stream &&
-            new byte[285000] is var font &&
-            font.Length == stream.Read(font))
-            fixed (byte* ptr = font)
-                _ = io.Fonts.AddFontFromMemoryTTF((nint)ptr, font.Length, FontSize());
+        if (typeof(RemoteGame).Assembly.GetManifestResourceStream("Remote.main.ttf") is not { } stream)
+            return;
+
+        var font = new byte[285000];
+
+        if (font.Length != stream.Read(font))
+            return;
+
+        fixed (byte* ptr = font)
+            _ = io.Fonts.AddFontFromMemoryTTF((nint)ptr, font.Length, FontSize(), default, (nint)b);
     }
 
     /// <summary>Gets the font size.</summary>
     /// <returns>The font size.</returns>
     static float FontSize() => Environment.GetEnvironmentVariable("REMOTE_FONT_SIZE").TryInto<float>() ?? 36;
-
+#if !ANDROID
     /// <summary>
     /// Called when a file is dropped on the window. Adds <see cref="Client"/> for each slot deserialized.
     /// </summary>
     /// <param name="__">Discard.</param>
     /// <param name="e">The files that were dropped.</param>
-    void OnFileDrop(object? __, FileDropEventArgs e) =>
+    void OnFileDrop([UsedImplicitly] object? __, FileDropEventArgs e) =>
         _ = e.Files.All(x => Client.FromFile(x, _preferences).All(Add));
-
+#endif
     /// <summary>Sets <see cref="ImGuiIO.IniFilename"/></summary>
     /// <param name="io">The IO.</param>
     static unsafe (byte[], GCHandle) SpecifyIniFilePath(ImGuiIOPtr io)
