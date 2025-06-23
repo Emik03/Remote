@@ -337,7 +337,7 @@ public sealed partial class Client
     {
         Debug.Assert(_session is not null);
         ShowLocationSearch();
-        ImGui.BeginChild("Locations", preferences.ChildSize());
+        ImGui.BeginChild("Locations", preferences.ChildSize(100));
         var locationHelper = _session.Locations;
         var locations = _showAlreadyChecked ? locationHelper.AllLocations : locationHelper.AllMissingLocations;
 
@@ -356,7 +356,7 @@ public sealed partial class Client
         Debug.Assert(_evaluator is not null);
         _ = ImGui.Checkbox("Show Out of Logic Locations", ref _showOutOfLogic);
         ShowLocationSearch();
-        ImGui.BeginChild("Locations", preferences.ChildSize());
+        ImGui.BeginChild("Locations", preferences.ChildSize(100));
         bool? ret = true;
 
         foreach (var (category, locations) in _evaluator.CategoryToLocations)
