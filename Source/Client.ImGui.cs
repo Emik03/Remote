@@ -471,9 +471,7 @@ public sealed partial class Client
                     _ => AppPalette.Neutral,
                 }];
 
-                ImGui.PushStyleColor(ImGuiCol.Text, color);
-                ImGui.TextWrapped(part.Text);
-                ImGui.PopStyleColor();
+                ImGui.TextColored(color, part.Text);
             }
         }
     }
