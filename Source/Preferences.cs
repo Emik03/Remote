@@ -140,6 +140,8 @@ public sealed partial class Preferences
     /// <summary>Pushes all colors and styling variables.</summary>
     public void PushStyling()
     {
+        ImGui.PushStyleVar(ImGuiStyleVar.WindowMinSize, new Vector2(_uiScale * 600));
+
         for (var i = (int)AppPalette.Count; i < Colors.Count; i++)
             ImGui.PushStyleColor((ImGuiCol)(i - AppPalette.Count), Colors[i]);
 
@@ -165,7 +167,7 @@ public sealed partial class Preferences
         if (Colors.Count - (int)AppPalette.Count is > 0 and var count)
             ImGui.PopStyleColor(count);
 
-        ImGui.PopStyleVar(11);
+        ImGui.PopStyleVar(12);
     }
 
     /// <summary>Writes this instance to disk.</summary>
