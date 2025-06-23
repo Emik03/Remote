@@ -102,7 +102,7 @@ public sealed class RemoteGame : Game
             return;
 
         fixed (byte* ptr = font)
-            _ = io.Fonts.AddFontFromMemoryTTF((nint)ptr, font.Length, FontSize(), default, (nint)b);
+            _ = io.Fonts.AddFontFromMemoryTTF((nint)ptr, font.Length, FontSize());
     }
 
     /// <summary>Gets the font size.</summary>
