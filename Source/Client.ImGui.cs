@@ -126,7 +126,7 @@ public sealed partial class Client
         const ImGuiInputTextFlags Flags = Preferences.TextFlags | ImGuiInputTextFlags.AllowTabInput;
         Debug.Assert(_session is not null);
 
-        if (!ImGui.BeginTabItem("Text Client"))
+        if (!ImGui.BeginTabItem("Chat"))
             return;
 
         ShowPlayers(preferences);
@@ -164,7 +164,7 @@ public sealed partial class Client
     {
         Debug.Assert(_session is not null);
 
-        if (!ImGui.BeginTabItem("Location Client"))
+        if (!ImGui.BeginTabItem("Locations"))
             return;
 
         if (_showConfirmationDialog)
@@ -181,7 +181,7 @@ public sealed partial class Client
     {
         Debug.Assert(_session is not null);
 
-        if (!ImGui.BeginTabItem("Item Client"))
+        if (!ImGui.BeginTabItem("Items"))
             return;
 
         if (_evaluator is null)
