@@ -2,7 +2,7 @@
 
 # Remote
 
-Fully-functional standalone Windows/Mac/Linux/[Android*](#android) client for [Archipelago](https://archipelago.gg/), specializing in [Manual for Archipelago](https://github.com/ManualForArchipelago).
+Fully-functional standalone Windows/Mac/Linux/[Android*](#android) client for [Archipelago](https://archipelago.gg/), specializing in [Manual for Archipelago](https://github.com/ManualForArchipelago). **Ensure that [.NET 10](https://dotnet.microsoft.com/en-us/download/dotnet/10.0) is installed** prior to opening the application.
 
 This project has a dependency to [Emik.Morsels](https://github.com/Emik03/Emik.Morsels), if you are building this project, refer to its [README](https://github.com/Emik03/Emik.Morsels/blob/main/README.md) first.
 
@@ -72,7 +72,7 @@ Thank you to the following projects that make this possible:
 - [ImGui.NET](https://github.com/ImGuiNET/ImGui.NET)
 - [ManualForArchipelago](https://github.com/ManualForArchipelago/Manual)
 - [MonoGame](https://monogame.net) (go [sponsor them](https://github.com/sponsors/MonoGame)!)
-- [PupNet Deploy](https://github.com/kuiperzone/PupNet-Deploy) (go [sponsor them](https://github.com/sponsors/MonoGame)!)
+- [PupNet Deploy](https://github.com/kuiperzone/PupNet-Deploy)
 - [YamlDotNet](https://github.com/aaubry/YamlDotNet/wiki) (go [sponsor Edward Cooke](https://github.com/sponsors/EdwardCooke)!)
 
 ## Contribute
