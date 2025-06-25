@@ -6,6 +6,25 @@ using Vector2 = System.Numerics.Vector2;
 /// <summary>Contains the preferences that are stored persistently.</summary>
 public sealed partial class Preferences
 {
+    /// <summary>Contains the font languages.</summary>
+    public enum Language
+    {
+        /// <summary>The default font.</summary>
+        Default,
+
+        /// <summary>The english font.</summary>
+        English,
+
+        /// <summary>The japanese font.</summary>
+        Japanese,
+
+        /// <summary>The korean font.</summary>
+        Korean,
+
+        /// <summary>The thai font.</summary>
+        Thai,
+    }
+
     /// <summary>The flags to use across any text field.</summary>
     [CLSCompliant(false)]
     public const ImGuiInputTextFlags TextFlags =
@@ -20,11 +39,14 @@ public sealed partial class Preferences
     /// <summary>The default host address that hosts Archipelago games.</summary>
     const string DefaultAddress = "archipelago.gg", PreferencesFile = "preferences.cfg";
 
+    /// <summary>Gets the languages.</summary>
+    static readonly string[] s_languages = Enum.GetNames<Language>();
+
     /// <summary>Contains the current port.</summary>
-    int _port;
+    int _language, _port;
 
     /// <summary>Contains the current UI settings.</summary>
-    float _uiScale = 0.75f, _uiPadding = 5, _uiRounding = 10;
+    float _fontSize = 36, _uiScale = 0.75f, _uiPadding = 5, _uiRounding = 10;
 
     /// <summary>Contains the current text field values.</summary>
     string _address = DefaultAddress, _directory = DefaultDirectory, _password = "";
@@ -69,24 +91,31 @@ public sealed partial class Preferences
             );
 
     /// <summary>Gets or sets the UI scaling.</summary>
+    public float FontSize
+    {
+        get => _fontSize;
+        [UsedImplicitly] private set => _fontSize = value;
+    }
+
+    /// <summary>Gets or sets the UI scaling.</summary>
     public float UiScale
     {
         get => _uiScale;
-        set => _uiScale = value;
+        [UsedImplicitly] private set => _uiScale = value;
     }
 
     /// <summary>Gets or sets the UI padding.</summary>
     public float UiPadding
     {
         get => _uiPadding;
-        set => _uiPadding = value;
+        [UsedImplicitly] private set => _uiPadding = value;
     }
 
     /// <summary>Gets or sets the UI rounding.</summary>
     public float UiRounding
     {
         get => _uiRounding;
-        set => _uiRounding = value;
+        [UsedImplicitly] private set => _uiRounding = value;
     }
 
     /// <summary>Gets or sets the port.</summary>
@@ -94,32 +123,42 @@ public sealed partial class Preferences
     public ushort Port
     {
         get => (ushort)_port;
-        set => _port = value;
+        [UsedImplicitly] private set => _port = value;
     }
 
     /// <summary>Gets or sets the address.</summary>
     public string Address
     {
         get => _address;
-        set => _address = value;
+        [UsedImplicitly] private set => _address = value;
     }
 
     /// <summary>Gets or sets the directory.</summary>
     public string Directory
     {
         get => _directory;
-        set => _directory = value;
+        [UsedImplicitly] private set => _directory = value;
     }
 
     /// <summary>Gets or sets the password.</summary>
     public string Password
     {
         get => _password;
-        set => _password = value;
+        [UsedImplicitly] private set => _password = value;
     }
 
-    /// <summary>The list of colors.</summary>
+    /// <summary>Gets or sets the font language.</summary>
+    public Language FontLanguage
+    {
+        get => (Language)_language;
+        [UsedImplicitly] private set => _language = (int)value;
+    }
+
+    /// <summary>Gets the history.</summary>
 #pragma warning disable MA0016
+    public List<string> History { get; private set; } = [];
+
+    /// <summary>Gets the list of colors.</summary>
     public List<AppColor> Colors { get; private set; } = [];
 #pragma warning restore MA0016
     /// <summary>Loads the preferences from disk.</summary>
@@ -165,6 +204,38 @@ public sealed partial class Preferences
         ImGui.PushStyleVar(ImGuiStyleVar.SeparatorTextPadding, padding);
     }
 
+    /// <summary>Adds the current font.</summary>
+    /// <returns>The created font, or <see langword="default"/> if the resource doesn't exist.</returns>
+    public unsafe ImFontPtr AddFont()
+    {
+        var resource = FontLanguage switch
+        {
+            Language.English => $"{nameof(Remote)}.alt.ttf",
+            Language.Japanese => $"{nameof(Remote)}.japanese.ttf",
+            Language.Korean => $"{nameof(Remote)}.korean.ttf",
+            Language.Thai => $"{nameof(Remote)}.thai.ttf",
+            _ => $"{nameof(Remote)}.main.ttf",
+        };
+
+        if (typeof(RemoteGame).Assembly.GetManifestResourceStream(resource) is not { } stream)
+            return default;
+
+        var font = Read(stream);
+        var io = ImGui.GetIO();
+        var fonts = io.Fonts;
+
+        var ranges = FontLanguage switch
+        {
+            Language.Japanese => fonts.GetGlyphRangesJapanese(),
+            Language.Korean => fonts.GetGlyphRangesKorean(),
+            Language.Thai => fonts.GetGlyphRangesThai(),
+            _ => fonts.GetGlyphRangesDefault(),
+        };
+
+        fixed (byte* ptr = font)
+            return io.Fonts.AddFontFromMemoryTTF((nint)ptr, font.Length, _fontSize.Clamp(8, 72), 0, ranges);
+    }
+
     /// <summary>Pops all colors and styling variables.</summary>
     public void PopStyling()
     {
@@ -201,6 +272,22 @@ public sealed partial class Preferences
     /// <returns>The size to use.</returns>
     public Vector2 ChildSize(int margin = 150) => ImGui.GetContentRegionAvail() - new Vector2(0, UiScale * margin);
 
+    /// <summary>Reads the stream into a byte array.</summary>
+    /// <param name="input">The stream to read.</param>
+    /// <returns>The byte array.</returns>
+    static byte[] Read(Stream input)
+    {
+        var buffer = ArrayPool<byte>.Shared.Rent(1 << 14);
+        using MemoryStream ms = new();
+
+        while (input.Read(buffer) is > 0 and var read)
+            ms.Write(buffer.AsSpan(0, read));
+
+        var ret = ms.ToArray();
+        ArrayPool<byte>.Shared.Return(buffer);
+        return ret;
+    }
+
     /// <summary>Displays the settings tab.</summary>
     void ShowSettings()
     {
@@ -221,6 +308,10 @@ public sealed partial class Preferences
         Slider("UI Scale", ref _uiScale, 0.4f, 2, "%.2f");
         Slider("UI Padding", ref _uiPadding, 0, 20);
         Slider("UI Rounding", ref _uiRounding, 0, 30);
+        ImGui.SeparatorText("Fonts (Requires Restart)");
+        Slider("Font Size", ref _fontSize, 8, 72);
+        ImGui.SetNextItemWidth(Width(0));
+        _ = ImGui.ListBox("Font Language", ref _language, s_languages, s_languages.Length);
         ImGui.SeparatorText("Theming");
 
         if (ImGui.CollapsingHeader("Theme"))

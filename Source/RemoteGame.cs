@@ -38,11 +38,11 @@ public sealed class RemoteGame : Game
 
         _renderer = new(this, true);
         var io = ImGui.GetIO();
-        AddFont(io);
         (_iniPath, _iniPathPin) = SpecifyIniFilePath(io);
+        _preferences.AddFont();
         _renderer.RebuildFontAtlas();
-        IsFixedTimeStep = false;
         IsMouseVisible = true;
+        IsFixedTimeStep = false;
         Window.AllowUserResizing = true;
 #if !ANDROID
         Window.FileDrop += OnFileDrop;
@@ -79,6 +79,7 @@ public sealed class RemoteGame : Game
         if (ImGui.Begin(s_name, ImGuiWindowFlags.HorizontalScrollbar) && _preferences.Show())
             _ = Add(new());
 
+        ImGui.Text("超☆超☆光☆速☆出☆前☆最☆速!!! スピード★スター★かなで by かめりあ feat. ななひら");
         ImGui.End();
 
         for (var i = _clients.Count - 1; i >= 0 && _clients[i] is var client; i--)
@@ -88,26 +89,6 @@ public sealed class RemoteGame : Game
         _preferences.PopStyling();
         _renderer.AfterLayout();
     }
-
-    /// <summary>Attempts to add the font.</summary>
-    /// <param name="io">The IO.</param>
-    static unsafe void AddFont(ImGuiIOPtr io)
-    {
-        if (typeof(RemoteGame).Assembly.GetManifestResourceStream("Remote.main.ttf") is not { } stream)
-            return;
-
-        var font = new byte[285000];
-
-        if (font.Length != stream.Read(font))
-            return;
-
-        fixed (byte* ptr = font)
-            _ = io.Fonts.AddFontFromMemoryTTF((nint)ptr, font.Length, FontSize());
-    }
-
-    /// <summary>Gets the font size.</summary>
-    /// <returns>The font size.</returns>
-    static float FontSize() => Environment.GetEnvironmentVariable("REMOTE_FONT_SIZE").TryInto<float>() ?? 36;
 #if !ANDROID
     /// <summary>
     /// Called when a file is dropped on the window. Adds <see cref="Client"/> for each slot deserialized.

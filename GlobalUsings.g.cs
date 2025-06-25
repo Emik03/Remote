@@ -249,6 +249,10 @@ global using global::DotNetProjectFile.Xml;
 global using global::Emik;
 global using global::Emik.Morsels;
 global using global::FxResources;
+global using global::FxResources.Microsoft;
+global using global::FxResources.Microsoft.Extensions;
+global using global::FxResources.Microsoft.Extensions.DependencyInjection;
+global using global::FxResources.Microsoft.Extensions.DependencyInjection.Abstractions;
 global using global::FxResources.System;
 global using global::FxResources.System.Composition;
 global using global::FxResources.System.Composition.Convention;
@@ -399,6 +403,10 @@ global using global::Microsoft.CodeAnalysis.Workspaces;
 global using global::Microsoft.CodeAnalysis.Workspaces.Diagnostics;
 global using global::Microsoft.CodeAnalysis.Workspaces.ProjectSystem;
 global using global::Microsoft.DiaSymReader;
+global using global::Microsoft.Extensions;
+global using global::Microsoft.Extensions.DependencyInjection;
+global using global::Microsoft.Extensions.DependencyInjection.Extensions;
+global using global::Microsoft.Extensions.Internal;
 global using global::Microsoft.SqlServer;
 global using global::Microsoft.SqlServer.Server;
 global using global::Microsoft.VisualBasic;
@@ -446,6 +454,7 @@ global using global::Scifa.CheckedExceptions;
 global using global::Scifa.CheckedExceptions.Attributes;
 global using global::StbImageSharp;
 global using global::StbImageWriteSharp;
+global using global::TextCopy;
 global using global::YamlDotNet;
 global using global::YamlDotNet.Core;
 global using global::YamlDotNet.Core.Events;
@@ -968,6 +977,14 @@ namespace Emik.Morsels { }
 
 namespace FxResources { }
 
+namespace FxResources.Microsoft { }
+
+namespace FxResources.Microsoft.Extensions { }
+
+namespace FxResources.Microsoft.Extensions.DependencyInjection { }
+
+namespace FxResources.Microsoft.Extensions.DependencyInjection.Abstractions { }
+
 namespace FxResources.System { }
 
 namespace FxResources.System.Composition { }
@@ -1268,6 +1285,14 @@ namespace Microsoft.CodeAnalysis.Workspaces.ProjectSystem { }
 
 namespace Microsoft.DiaSymReader { }
 
+namespace Microsoft.Extensions { }
+
+namespace Microsoft.Extensions.DependencyInjection { }
+
+namespace Microsoft.Extensions.DependencyInjection.Extensions { }
+
+namespace Microsoft.Extensions.Internal { }
+
 namespace Microsoft.SqlServer { }
 
 namespace Microsoft.SqlServer.Server { }
@@ -1361,6 +1386,8 @@ namespace Scifa.CheckedExceptions.Attributes { }
 namespace StbImageSharp { }
 
 namespace StbImageWriteSharp { }
+
+namespace TextCopy { }
 
 namespace YamlDotNet { }
 

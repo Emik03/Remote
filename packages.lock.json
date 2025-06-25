@@ -282,6 +282,15 @@
         "resolved": "5.0.0-1.25277.114",
         "contentHash": "nbYnMWteAF4lNvlqD24ejnmeEvmYW3tchdrymrhqhDbnsDqkUyg2N/uQY1FIyQNwLXX3eMwF7GQ+Z37rgtKxgw=="
       },
+      "TextCopy": {
+        "type": "Direct",
+        "requested": "[6.2.1, )",
+        "resolved": "6.2.1",
+        "contentHash": "ryejViUBmHQ2XMie2AiRBn7KVKu2Gh/hqrctGSAUf1BufwfPjr+MWuACNBaiG+40TMbWRDJZgV73Tpl9hggeRw==",
+        "dependencies": {
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "7.0.0"
+        }
+      },
       "YamlDotNet": {
         "type": "Direct",
         "requested": "[16.3.0, )",
@@ -316,6 +325,11 @@
           "Microsoft.CodeAnalysis.Common": "[4.13.0]",
           "System.Composition": "8.0.0"
         }
+      },
+      "Microsoft.Extensions.DependencyInjection.Abstractions": {
+        "type": "Transitive",
+        "resolved": "7.0.0",
+        "contentHash": "h3j/QfmFN4S0w4C2A6X7arXij/M/OVw3uQHSOFxnND4DyAzO1F9eMX7Eti7lU/OkSthEE0WzRsfT/Dmx86jzCw=="
       },
       "Microsoft.NETCore.Platforms": {
         "type": "Transitive",
@@ -400,24 +414,6 @@
           "System.Composition.Hosting": "8.0.0",
           "System.Composition.Runtime": "8.0.0"
         }
-      }
-    },
-    "net10.0/linux-x64": {
-      "ImGui.NET": {
-        "type": "Direct",
-        "requested": "[1.91.6.1, )",
-        "resolved": "1.91.6.1",
-        "contentHash": "Ph3j8pO6UM28PPJWP+5LEJSPVPkd8ivpVS8tRyY9b0IHn1HDIrMZ2o/FdiXaYW6YhNxMHmbevw6Jcfs+IDKi0Q=="
-      },
-      "MonoGame.Library.OpenAL": {
-        "type": "Transitive",
-        "resolved": "1.23.1.10",
-        "contentHash": "4/F4FFyt7OYhtEmgi/Qmv01eC6GfQ9dkIPsymgkwJ/tV7PewmWrHg/LvTKjd6R+5j/tlO8JkjsEb0Aje6bxfxw=="
-      },
-      "MonoGame.Library.SDL": {
-        "type": "Transitive",
-        "resolved": "2.32.2.1",
-        "contentHash": "T4E2ppGlSTC2L9US1rxtdg3qTbarRzNId31xZoumUW9cf9Nq8nRQPMu9GzvZGrhfSySf0+UWPEj1rlicps+P/w=="
       }
     }
   }

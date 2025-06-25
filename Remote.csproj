@@ -6,7 +6,7 @@
         <TargetFramework>net10.0</TargetFramework>
         <ApplicationManifest>app.manifest</ApplicationManifest>
         <PackageIcon>Resources/Drawable/Icon.512.png</PackageIcon>
-        <DefineConstants>$(DefineConstants);IMGUI;XNA</DefineConstants>
+        <DefineConstants>$(DefineConstants);IMGUI;TEXTCOPY;XNA</DefineConstants>
         <ApplicationIcon>Resources/Drawable/Icon.256.ico</ApplicationIcon>
         <JsonSerializerIsReflectionEnabledByDefault>true</JsonSerializerIsReflectionEnabledByDefault>
         <Description>Standalone Archipelago client, with dedicated feature-rich support for manual apworlds.</Description>
@@ -14,14 +14,20 @@
     </PropertyGroup>
     <ItemGroup>
         <None Remove="Fonts/LICENSE"/>
+        <PackageReference Include="TextCopy" Version="6.2.1"/>
         <PackageReference Include="YamlDotNet" Version="16.3.0"/>
         <PackageReference Include="ImGui.NET" Version="1.91.6.1"/>
         <PackageReference Include="Archipelago.MultiClient.Net" Version="6.6.0"/>
         <PackageReference Include="MonoGame.Framework.DesktopGL" Version="3.8.4"/>
         <PackageReference Include="Archipelago.MultiClient.Net.Analyzers" Version="1.5.0" PrivateAssets="all"/>
+        <EmbeddedResource Include="Fonts/alt.ttf" Link="alt.ttf" CopyToOutputDirectory="Never" CopyToPublishDirectory="Never"/>
         <Content Include="Binaries/Remote" Link="Remote" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Never"/>
         <EmbeddedResource Include="Fonts/main.ttf" Link="main.ttf" CopyToOutputDirectory="Never" CopyToPublishDirectory="Never"/>
+        <EmbeddedResource Include="Fonts/thai.ttf" Link="thai.ttf" CopyToOutputDirectory="Never" CopyToPublishDirectory="Never"/>
+        <EmbeddedResource Include="Fonts/korean.ttf" Link="korean.ttf" CopyToOutputDirectory="Never" CopyToPublishDirectory="Never"/>
+        <EmbeddedResource Include="Fonts/chinese.ttf" Link="chinese.ttf" CopyToOutputDirectory="Never" CopyToPublishDirectory="Never"/>
         <Content Include="Binaries/Remote.exe" Link="Remote.exe" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Never"/>
         <Content Include="Binaries/Remote-mac" Link="Remote-mac" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Never"/>
+        <EmbeddedResource Include="Fonts/japanese.ttf" Link="japanese.ttf" CopyToOutputDirectory="Never" CopyToPublishDirectory="Never"/>
     </ItemGroup>
 </Project>
