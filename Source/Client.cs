@@ -227,22 +227,22 @@ public sealed partial class Client(Yaml? yaml = null)
            .Replace("{number}", "1")
            .Replace("{NUMBER}", "");
 
-        var session = ArchipelagoSessionFactory.CreateSession(preferences.Address, preferences.Port);
-        session.MessageLog.OnMessageReceived += OnMessageReceived;
-        session.Items.ItemReceived += UpdateStatus;
+        _session = ArchipelagoSessionFactory.CreateSession(preferences.Address, preferences.Port);
+        _session.MessageLog.OnMessageReceived += OnMessageReceived;
+        _session.Items.ItemReceived += UpdateStatus;
         string[] tags = ["AP", nameof(Remote)];
         var password = preferences.Password;
-        var login = session.TryConnectAndLogin(_yaml.Game, _yaml.Name, Flags, tags: tags, password: password);
+        var login = _session.TryConnectAndLogin(_yaml.Game, _yaml.Name, Flags, tags: tags, password: password);
 
         if (login is LoginFailure failure)
         {
-            session.MessageLog.OnMessageReceived -= OnMessageReceived;
-            session.Items.ItemReceived -= UpdateStatus;
+            _session.MessageLog.OnMessageReceived -= OnMessageReceived;
+            _session.Items.ItemReceived -= UpdateStatus;
             _errors = failure.Errors;
+            _session = null;
             return false;
         }
 
-        _session = session;
         _windowName = $"{_yaml.Name}###{_instance}";
         _session.SetClientState(ArchipelagoClientState.ClientPlaying);
         _evaluator = Evaluator.Read(_session.Items, _yaml, preferences);
