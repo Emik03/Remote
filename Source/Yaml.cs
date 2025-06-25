@@ -15,7 +15,7 @@ public sealed class Yaml : IDictionary<string, object?>
     readonly Dictionary<string, int> _options = []; // ReSharper disable ReplaceWithFieldKeyword
 
     /// <summary>Contains the field that is contained within a slot.</summary>
-    string _description = "", _game = "", _goal = "", _name = "";
+    string _description = "", _game = "", _goal = "", _name = "", _path = "";
 
     /// <summary>Retrieves the value from the yaml option.</summary>
     /// <param name="span">The yaml option to get.</param>
@@ -67,6 +67,9 @@ public sealed class Yaml : IDictionary<string, object?>
 
     /// <summary>Gets the reference to the name <see langword="string"/>.</summary>
     public ref string Name => ref _name;
+
+    /// <summary>Gets the file path that was used to create this instance.</summary>
+    public ref string Path => ref _path;
 
     /// <inheritdoc />
     ICollection<string> IDictionary<string, object?>.Keys =>

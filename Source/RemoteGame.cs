@@ -76,10 +76,15 @@ public sealed class RemoteGame : Game
         _renderer.BeforeLayout(gameTime);
         _preferences.PushStyling();
 
-        if (ImGui.Begin(s_name, ImGuiWindowFlags.HorizontalScrollbar) && _preferences.Show())
-            _ = Add(new());
+        if (ImGui.Begin(s_name, ImGuiWindowFlags.HorizontalScrollbar))
+        {
+            if (_preferences.Show(out var fromHistory))
+                _ = Add(new());
 
-        ImGui.Text("超☆超☆光☆速☆出☆前☆最☆速!!! スピード★スター★かなで by かめりあ feat. ななひら");
+            if (fromHistory is not null)
+                Add(fromHistory);
+        }
+
         ImGui.End();
 
         for (var i = _clients.Count - 1; i >= 0 && _clients[i] is var client; i--)

@@ -243,9 +243,10 @@ public sealed partial class Client(Yaml? yaml = null)
         }
 
         _session = session;
-        _session.SetClientState(ArchipelagoClientState.ClientPlaying);
         _windowName = $"{_yaml.Name}###{_instance}";
-        _evaluator = Evaluator.Read(session.Items, _yaml, preferences);
+        _session.SetClientState(ArchipelagoClientState.ClientPlaying);
+        _evaluator = Evaluator.Read(_session.Items, _yaml, preferences);
+        preferences.History.Insert(0, new(_yaml.Name, password, preferences.Address, preferences.Port, _yaml.Path));
         return true;
     }
 

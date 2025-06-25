@@ -25,6 +25,62 @@ public sealed partial class Preferences
         Thai,
     }
 
+    /// <summary>Holds a previous connection info.</summary>
+    /// <param name="Name">The slot.</param>
+    /// <param name="Password">The password of the game.</param>
+    /// <param name="Host">The host.</param>
+    /// <param name="Port">The port of the host.</param>
+    public readonly record struct ConnectionInfo(string Name, string Password, string Host, ushort Port, string Path)
+        : ISpanParsable<ConnectionInfo>
+    {
+        /// <summary>Determines whether their values match.</summary>
+        /// <param name="yaml">The yaml to match against.</param>
+        /// <returns>Whether this instance matches the values in the parameter <paramref name="yaml"/>.</returns>
+        public bool IsMatch(Yaml yaml) => Name == yaml.Name && Path == yaml.Path;
+
+        /// <summary>Gets the string representation for displaying as text.</summary>
+        /// <returns>The string representation.</returns>
+        public string ToDisplayString() => $"{Name} ({Host})";
+
+        /// <inheritdoc />
+        public override string ToString() => $"{Name}@{Password}@{Host}:{Port}@{Path}";
+
+        /// <inheritdoc />
+        public static bool TryParse(
+            [NotNullWhen(true)] string? s,
+            IFormatProvider? provider,
+            out ConnectionInfo result
+        ) =>
+            TryParse(s.AsSpan(), provider, out result);
+
+        /// <inheritdoc />
+        public static bool TryParse(ReadOnlySpan<char> s, IFormatProvider? provider, out ConnectionInfo result)
+        {
+            var (first, (second, (path, _))) = s.SplitOn('@');
+            var (slot, (password, _)) = first.SplitOn(':');
+            var (host, (portSpan, _)) = second.SplitOn(':');
+
+            if (ushort.TryParse(portSpan, NumberStyles.Any, provider, out var port))
+            {
+                result = new(slot.ToString(), password.ToString(), host.ToString(), port, path.ToString());
+                return true;
+            }
+
+            result = default;
+            return false;
+        }
+
+        /// <inheritdoc />
+        public static ConnectionInfo Parse(string s, IFormatProvider? provider) => Parse(s.AsSpan(), provider);
+
+        /// <inheritdoc />
+        public static ConnectionInfo Parse(ReadOnlySpan<char> s, IFormatProvider? provider)
+        {
+            TryParse(s, provider, out var result);
+            return result;
+        }
+    }
+
     /// <summary>The flags to use across any text field.</summary>
     [CLSCompliant(false)]
     public const ImGuiInputTextFlags TextFlags =
@@ -156,7 +212,7 @@ public sealed partial class Preferences
 
     /// <summary>Gets the history.</summary>
 #pragma warning disable MA0016
-    public List<string> History { get; private set; } = [];
+    public List<ConnectionInfo> History { get; [UsedImplicitly] private set; } = [];
 
     /// <summary>Gets the list of colors.</summary>
     public List<AppColor> Colors { get; private set; } = [];
@@ -204,8 +260,43 @@ public sealed partial class Preferences
         ImGui.PushStyleVar(ImGuiStyleVar.SeparatorTextPadding, padding);
     }
 
+    /// <summary>Pops all colors and styling variables.</summary>
+    public void PopStyling()
+    {
+        if (Colors.Count - (int)AppPalette.Count is > 0 and var count)
+            ImGui.PopStyleColor(count);
+
+        ImGui.PopStyleVar(12);
+    }
+
+    /// <summary>Writes this instance to disk.</summary>
+    public void Save() => File.WriteAllText(FilePath, Kvp.Serialize(this));
+
+    /// <summary>Shows the preferences window.</summary>
+    /// <param name="client">The client created from history, or <see langword="null"/>.</param>
+    /// <returns>Whether to create a new instance of <see cref="Client"/>.</returns>
+    public bool Show(out Client? client)
+    {
+        client = null;
+
+        if (!ImGui.BeginTabBar("Tabs"))
+            return false;
+
+        ImGui.SetWindowFontScale(UiScale);
+        var ret = ShowConnectionTab(out client);
+        ShowSettings();
+        ImGui.EndTabBar();
+        return ret;
+    }
+
+    /// <summary>Gets the available width while conforming to the specified margin.</summary>
+    /// <param name="margin">The margin.</param>
+    /// <returns>The width to use.</returns>
+    public float Width(int margin) => ImGui.GetContentRegionAvail().X - UiScale * margin;
+
     /// <summary>Adds the current font.</summary>
     /// <returns>The created font, or <see langword="default"/> if the resource doesn't exist.</returns>
+    [CLSCompliant(false)]
     public unsafe ImFontPtr AddFont()
     {
         var resource = FontLanguage switch
@@ -235,37 +326,6 @@ public sealed partial class Preferences
         fixed (byte* ptr = font)
             return io.Fonts.AddFontFromMemoryTTF((nint)ptr, font.Length, _fontSize.Clamp(8, 72), 0, ranges);
     }
-
-    /// <summary>Pops all colors and styling variables.</summary>
-    public void PopStyling()
-    {
-        if (Colors.Count - (int)AppPalette.Count is > 0 and var count)
-            ImGui.PopStyleColor(count);
-
-        ImGui.PopStyleVar(12);
-    }
-
-    /// <summary>Writes this instance to disk.</summary>
-    public void Save() => File.WriteAllText(FilePath, Kvp.Serialize(this));
-
-    /// <summary>Shows the preferences window.</summary>
-    /// <returns>Whether to create a new instance of <see cref="Client"/>.</returns>
-    public bool Show()
-    {
-        if (!ImGui.BeginTabBar("Tabs"))
-            return false;
-
-        ImGui.SetWindowFontScale(UiScale);
-        var ret = ShowConnectionTab();
-        ShowSettings();
-        ImGui.EndTabBar();
-        return ret;
-    }
-
-    /// <summary>Gets the available width while conforming to the specified margin.</summary>
-    /// <param name="margin">The margin.</param>
-    /// <returns>The width to use.</returns>
-    public float Width(int margin) => ImGui.GetContentRegionAvail().X - UiScale * margin;
 
     /// <summary>Gets the size of a child window.</summary>
     /// <param name="margin">The margin.</param>
@@ -309,7 +369,7 @@ public sealed partial class Preferences
         Slider("UI Padding", ref _uiPadding, 0, 20);
         Slider("UI Rounding", ref _uiRounding, 0, 30);
         ImGui.SeparatorText("Fonts (Requires Restart)");
-        Slider("Font Size", ref _fontSize, 8, 72);
+        Slider("Font Size", ref _fontSize, 8, 72, "%.0f");
         ImGui.SetNextItemWidth(Width(0));
         _ = ImGui.ListBox("Font Language", ref _language, s_languages, s_languages.Length);
         ImGui.SeparatorText("Theming");
@@ -334,8 +394,7 @@ public sealed partial class Preferences
     void Slider(string title, ref float amount, float min, float max, string format = "%.1f")
     {
         ImGui.SetNextItemWidth(Width(225));
-        _ = ImGui.SliderFloat(title, ref amount, min, max, format);
-        amount = amount.Clamp(min, max);
+        _ = ImGui.SliderFloat(title, ref amount, min, max, format, ImGuiSliderFlags.AlwaysClamp);
     }
 
     /// <summary>Sanitizes the port and colors.</summary>
@@ -365,9 +424,12 @@ public sealed partial class Preferences
     }
 
     /// <summary>Shows the connection tab.</summary>
+    /// <param name="client">The client created from history, or <see langword="null"/>.</param>
     /// <returns>Whether to create a new <see cref="Client"/>.</returns>
-    bool ShowConnectionTab()
+    bool ShowConnectionTab(out Client? client)
     {
+        client = null;
+
         if (!ImGui.BeginTabItem("Connection"))
             return false;
 
@@ -389,14 +451,18 @@ public sealed partial class Preferences
         ImGui.SeparatorText("Join");
         ImGui.TextDisabled("Drop a YAML file to start playing, or...");
         Sanitize();
-
-        if (ImGui.Button("Enter slot manually") || enter)
-        {
-            ImGui.EndTabItem();
-            return true;
-        }
-
+        var ret = ImGui.Button("Enter slot manually") || enter;
         ImGui.EndTabItem();
-        return false;
+
+        foreach (var connectionInfo in CollectionsMarshal.AsSpan(History))
+            if (ImGui.Button(connectionInfo.ToDisplayString()))
+                client = new(
+                    string.IsNullOrWhiteSpace(connectionInfo.Path) ||
+                    Go(Yaml.FromFile, connectionInfo.Path, out _, out var yaml)
+                        ? null
+                        : yaml.FirstOrDefault(connectionInfo.IsMatch)
+                );
+
+        return ret;
     }
 }
