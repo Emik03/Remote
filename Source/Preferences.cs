@@ -31,11 +31,12 @@ public sealed partial class Preferences
     /// <param name="Host">The host.</param>
     /// <param name="Port">The port of the host.</param>
     /// <param name="Path">The path to the yaml file used to create this instance.</param>
+    [CLSCompliant(false), StructLayout(LayoutKind.Auto)]
     public readonly record struct Connection(
         string? Name,
         string? Password,
         string? Host,
-        [CLSCompliant(false)] ushort Port,
+        ushort Port,
         string? Path
     )
         : ISpanParsable<Connection>
@@ -235,6 +236,7 @@ public sealed partial class Preferences
 
     /// <summary>Gets the history.</summary>
 #pragma warning disable MA0016
+	[CLSCompliant(false)]
     public List<Connection> History { get; [UsedImplicitly] private set; } = [];
 
     /// <summary>Gets the list of colors.</summary>
@@ -300,6 +302,7 @@ public sealed partial class Preferences
     /// <param name="clients">The list of clients to show.</param>
     /// <param name="client">The client created from history, or <see langword="null"/>.</param>
     /// <returns>Whether to create a new instance of <see cref="Client"/>.</returns>
+    [CLSCompliant(false)]
     public bool Show(GameTime gameTime, IList<Client> clients, out Client? client)
     {
         client = null;
@@ -339,11 +342,11 @@ public sealed partial class Preferences
     {
         var resource = FontLanguage switch
         {
-            Language.English => $"{nameof(Remote)}.alt.ttf",
-            Language.Japanese => $"{nameof(Remote)}.japanese.ttf",
-            Language.Korean => $"{nameof(Remote)}.korean.ttf",
-            Language.Thai => $"{nameof(Remote)}.thai.ttf",
-            _ => $"{nameof(Remote)}.main.ttf",
+            Language.English => $"{nameof(Remote)}.Fonts.alt.ttf",
+            Language.Japanese => $"{nameof(Remote)}.Fonts.japanese.ttf",
+            Language.Korean => $"{nameof(Remote)}.Fonts.korean.ttf",
+            Language.Thai => $"{nameof(Remote)}.Fonts.thai.ttf",
+            _ => $"{nameof(Remote)}.Fonts.main.ttf",
         };
 
         if (typeof(RemoteGame).Assembly.GetManifestResourceStream(resource) is not { } stream)
