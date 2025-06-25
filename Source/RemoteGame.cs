@@ -78,7 +78,7 @@ public sealed class RemoteGame : Game
 
         if (ImGui.Begin(s_name, ImGuiWindowFlags.HorizontalScrollbar))
         {
-            if (_preferences.Show(out var fromHistory))
+            if (_preferences.Show(gameTime, _clients, out var fromHistory))
                 _ = Add(new());
 
             if (fromHistory is not null)
@@ -86,11 +86,6 @@ public sealed class RemoteGame : Game
         }
 
         ImGui.End();
-
-        for (var i = _clients.Count - 1; i >= 0 && _clients[i] is var client; i--)
-            if (client.Draw(gameTime, _preferences))
-                _clients.RemoveAt(i);
-
         _preferences.PopStyling();
         _renderer.AfterLayout();
     }

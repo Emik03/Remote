@@ -36,14 +36,15 @@ public sealed partial class Client
     {
         var open = true;
 
-        if (!ImGui.Begin(_windowName, ref open, ImGuiWindowFlags.HorizontalScrollbar) || !open)
+        if (preferences.UseTabs)
+        {
+            if (!ImGui.BeginTabItem(_windowName, ref open) || !open)
+                return Close(open);
+        }
+        else if (!ImGui.Begin(_windowName, ref open, ImGuiWindowFlags.HorizontalScrollbar) || !open)
         {
             ImGui.End();
-
-            if (!open)
-                _session?.Socket.DisconnectAsync().GetAwaiter().GetResult();
-
-            return !open;
+            return Close(open);
         }
 
         ImGui.SetWindowFontScale(preferences.UiScale);
@@ -53,7 +54,11 @@ public sealed partial class Client
         else
             ShowConnected(gameTime, preferences);
 
-        ImGui.End();
+        if (preferences.UseTabs)
+            ImGui.EndTabItem();
+        else
+            ImGui.End();
+
         return false;
     }
 
@@ -137,6 +142,7 @@ public sealed partial class Client
         ShowLog(preferences);
         ImGui.SeparatorText("Message");
         ImGui.SetNextItemWidth(preferences.Width(250));
+        ImGui.SetKeyboardFocusHere();
         var enter = ImGuiRenderer.InputText("##Message", ref _message, ushort.MaxValue, Flags);
         ImGui.SameLine();
 
@@ -332,6 +338,17 @@ public sealed partial class Client
         _canGoal = true;
         _session.SetGoalAchieved();
         _session.SetClientState(ArchipelagoClientState.ClientGoal);
+    }
+
+    /// <summary>Handles closing the tab or window.</summary>
+    /// <param name="open">Whether to keep the socket alive.</param>
+    /// <returns>Not the parameter <paramref name="open"/>.</returns>
+    bool Close(bool open)
+    {
+        if (!open)
+            _session?.Socket.DisconnectAsync().GetAwaiter().GetResult();
+
+        return !open;
     }
 
     /// <summary>Shows the location list in a non-manual context.</summary>

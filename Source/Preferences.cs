@@ -111,6 +111,9 @@ public sealed partial class Preferences
     /// <summary>Gets the languages.</summary>
     static readonly string[] s_languages = Enum.GetNames<Language>();
 
+    /// <summary>Whether to use tabs or separate windows.</summary>
+    bool _useTabs;
+
     /// <summary>Contains the current port.</summary>
     int _language, _port;
 
@@ -158,6 +161,13 @@ public sealed partial class Preferences
                 typeof(Preferences).Assembly.GetName().Name,
                 PreferencesFile
             );
+
+    /// <summary>Gets or sets the value determining whether to use tabs.</summary>
+    public bool UseTabs
+    {
+        get => _useTabs;
+        [UsedImplicitly] private set => _useTabs = value;
+    }
 
     /// <summary>Gets or sets the UI scaling.</summary>
     public float FontSize
@@ -286,19 +296,34 @@ public sealed partial class Preferences
     public void Save() => File.WriteAllText(FilePath, Kvp.Serialize(this));
 
     /// <summary>Shows the preferences window.</summary>
+    /// <param name="gameTime">The time elapsed.</param>
+    /// <param name="clients">The list of clients to show.</param>
     /// <param name="client">The client created from history, or <see langword="null"/>.</param>
     /// <returns>Whether to create a new instance of <see cref="Client"/>.</returns>
-    public bool Show(out Client? client)
+    public bool Show(GameTime gameTime, IList<Client> clients, out Client? client)
     {
         client = null;
 
         if (!ImGui.BeginTabBar("Tabs"))
+        {
+            if (!_useTabs)
+                Show(gameTime, clients);
+
             return false;
+        }
 
         ImGui.SetWindowFontScale(UiScale);
         var ret = ShowConnectionTab(out client);
         ShowSettings();
+
+        if (_useTabs)
+            Show(gameTime, clients);
+
         ImGui.EndTabBar();
+
+        if (!_useTabs)
+            Show(gameTime, clients);
+
         return ret;
     }
 
@@ -361,6 +386,16 @@ public sealed partial class Preferences
         return ret;
     }
 
+    /// <summary>Shows the clients.</summary>
+    /// <param name="gameTime">The time elapsed.</param>
+    /// <param name="clients">The clients to show.</param>
+    void Show(GameTime gameTime, IList<Client> clients)
+    {
+        for (var i = clients.Count - 1; i >= 0 && clients[i] is var c; i--)
+            if (c.Draw(gameTime, this))
+                clients.RemoveAt(i);
+    }
+
     /// <summary>Displays the settings tab.</summary>
     void ShowSettings()
     {
@@ -381,6 +416,8 @@ public sealed partial class Preferences
         Slider("UI Scale", ref _uiScale, 0.4f, 2, "%.2f");
         Slider("UI Padding", ref _uiPadding, 0, 20);
         Slider("UI Rounding", ref _uiRounding, 0, 30);
+        ImGui.SetNextItemWidth(Width(225));
+        ImGui.Checkbox("Tabs instead of separate windows", ref _useTabs);
         ImGui.SeparatorText("Fonts (Requires Restart)");
         Slider("Font Size", ref _fontSize, 8, 72, "%.0f");
         ImGui.SetNextItemWidth(Width(0));
@@ -477,7 +514,13 @@ public sealed partial class Preferences
             if (current.IsInvalid || CollectionsMarshal.AsSpan(History)[..i].Contains(current))
                 History.RemoveAt(i--);
             else if (ImGui.Button(current.ToDisplayString()))
-                client = new(current.ToYaml());
+            {
+                var yaml = current.ToYaml();
+                client = new(yaml);
+
+                if (yaml is not null)
+                    _ = client.Connect(this);
+            }
             else if (ImGui.IsItemClicked(ImGuiMouseButton.Middle) || ImGui.IsItemClicked(ImGuiMouseButton.Right))
                 History.RemoveAt(i--);
 

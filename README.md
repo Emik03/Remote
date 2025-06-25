@@ -73,6 +73,7 @@ Thank you to the following projects that make this possible:
 - [ImGui.NET](https://github.com/ImGuiNET/ImGui.NET)
 - [ManualForArchipelago](https://github.com/ManualForArchipelago/Manual)
 - [MonoGame](https://monogame.net) (go [sponsor them](https://github.com/sponsors/MonoGame)!)
+- [Noto Sans](https://fonts.google.com/noto)
 - [PupNet Deploy](https://github.com/kuiperzone/PupNet-Deploy)
 - [YamlDotNet](https://github.com/aaubry/YamlDotNet/wiki) (go [sponsor Edward Cooke](https://github.com/sponsors/EdwardCooke)!)
 
