@@ -473,7 +473,7 @@ public sealed partial class Client
                     _ => AppPalette.Neutral,
                 }];
 
-                ImGui.TextColored(color, part.Text);
+                ImGui.TextColored(color, part.Text.Replace("%", "%%"));
             }
         }
     }
