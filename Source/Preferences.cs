@@ -406,7 +406,7 @@ public sealed partial class Preferences
             return;
 
         ImGui.SeparatorText("Primary");
-        ImGui.SetNextItemWidth(Width(225));
+        ImGui.SetNextItemWidth(Width(250));
 
         _ = ImGuiRenderer.InputTextWithHint(
             "AP Directory",
@@ -419,11 +419,11 @@ public sealed partial class Preferences
         Slider("UI Scale", ref _uiScale, 0.4f, 2, "%.2f");
         Slider("UI Padding", ref _uiPadding, 0, 20);
         Slider("UI Rounding", ref _uiRounding, 0, 30);
-        ImGui.SetNextItemWidth(Width(225));
+        ImGui.SetNextItemWidth(Width(250));
         ImGui.Checkbox("Tabs instead of separate windows", ref _useTabs);
         ImGui.SeparatorText("Fonts (Requires Restart)");
         Slider("Font Size", ref _fontSize, 8, 72, "%.0f");
-        ImGui.SetNextItemWidth(Width(0));
+        ImGui.SetNextItemWidth(Width(250));
         _ = ImGui.ListBox("Font Language", ref _language, s_languages, s_languages.Length);
         ImGui.SeparatorText("Theming");
 
@@ -446,7 +446,7 @@ public sealed partial class Preferences
     /// <param name="format">The format to display.</param>
     void Slider(string title, ref float amount, float min, float max, string format = "%.1f")
     {
-        ImGui.SetNextItemWidth(Width(225));
+        ImGui.SetNextItemWidth(Width(250));
         _ = ImGui.SliderFloat(title, ref amount, min, max, format, ImGuiSliderFlags.AlwaysClamp);
     }
 
