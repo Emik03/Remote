@@ -30,31 +30,25 @@ public sealed partial class Preferences
     /// <param name="Password">The password of the game.</param>
     /// <param name="Host">The host.</param>
     /// <param name="Port">The port of the host.</param>
-    public readonly record struct ConnectionInfo(string Name, string Password, string Host, ushort Port, string Path)
-        : ISpanParsable<ConnectionInfo>
+    /// <param name="Path">The path to the yaml file used to create this instance.</param>
+    public readonly record struct Connection(
+        string? Name,
+        string? Password,
+        string? Host,
+        [CLSCompliant(false)] ushort Port,
+        string? Path
+    )
+        : ISpanParsable<Connection>
     {
-        /// <summary>Determines whether their values match.</summary>
-        /// <param name="yaml">The yaml to match against.</param>
-        /// <returns>Whether this instance matches the values in the parameter <paramref name="yaml"/>.</returns>
-        public bool IsMatch(Yaml yaml) => Name == yaml.Name && Path == yaml.Path;
-
-        /// <summary>Gets the string representation for displaying as text.</summary>
-        /// <returns>The string representation.</returns>
-        public string ToDisplayString() => $"{Name} ({Host})";
+        /// <summary>Determines whether this instance is invalid, usually from default construction.</summary>
+        public bool IsInvalid => Name is null || Host is null || Port is 0;
 
         /// <inheritdoc />
-        public override string ToString() => $"{Name}@{Password}@{Host}:{Port}@{Path}";
-
-        /// <inheritdoc />
-        public static bool TryParse(
-            [NotNullWhen(true)] string? s,
-            IFormatProvider? provider,
-            out ConnectionInfo result
-        ) =>
+        public static bool TryParse([NotNullWhen(true)] string? s, IFormatProvider? provider, out Connection result) =>
             TryParse(s.AsSpan(), provider, out result);
 
         /// <inheritdoc />
-        public static bool TryParse(ReadOnlySpan<char> s, IFormatProvider? provider, out ConnectionInfo result)
+        public static bool TryParse(ReadOnlySpan<char> s, IFormatProvider? provider, out Connection result)
         {
             var (first, (second, (path, _))) = s.SplitOn('@');
             var (slot, (password, _)) = first.SplitOn(':');
@@ -71,14 +65,33 @@ public sealed partial class Preferences
         }
 
         /// <inheritdoc />
-        public static ConnectionInfo Parse(string s, IFormatProvider? provider) => Parse(s.AsSpan(), provider);
+        public static Connection Parse(string s, IFormatProvider? provider) => Parse(s.AsSpan(), provider);
 
         /// <inheritdoc />
-        public static ConnectionInfo Parse(ReadOnlySpan<char> s, IFormatProvider? provider)
+        public static Connection Parse(ReadOnlySpan<char> s, IFormatProvider? provider)
         {
             TryParse(s, provider, out var result);
             return result;
         }
+
+        /// <summary>Determines whether their values match.</summary>
+        /// <param name="yaml">The yaml to match against.</param>
+        /// <returns>Whether this instance matches the values in the parameter <paramref name="yaml"/>.</returns>
+        public bool IsMatch(Yaml yaml) => Name == yaml.Name && Path == yaml.Path;
+
+        /// <summary>Gets the string representation for displaying as text.</summary>
+        /// <returns>The string representation.</returns>
+        public string ToDisplayString() => $"{Name} ({Host})";
+
+        /// <inheritdoc />
+        public override string ToString() => $"{Name}:{Password}@{Host}:{Port}@{Path}";
+
+        /// <summary>Converts this instance to the equivalent <see cref="Yaml"/> instance.</summary>
+        /// <returns>The <see cref="Yaml"/> instance, or <see langword="null"/> if none found on disk.</returns>
+        public Yaml? ToYaml() =>
+            string.IsNullOrWhiteSpace(Path) || Go(Yaml.FromFile, Path, out _, out var yaml)
+                ? null
+                : yaml.FirstOrDefault(IsMatch);
     }
 
     /// <summary>The flags to use across any text field.</summary>
@@ -212,7 +225,7 @@ public sealed partial class Preferences
 
     /// <summary>Gets the history.</summary>
 #pragma warning disable MA0016
-    public List<ConnectionInfo> History { get; [UsedImplicitly] private set; } = [];
+    public List<Connection> History { get; [UsedImplicitly] private set; } = [];
 
     /// <summary>Gets the list of colors.</summary>
     public List<AppColor> Colors { get; private set; } = [];
@@ -452,17 +465,26 @@ public sealed partial class Preferences
         ImGui.TextDisabled("Drop a YAML file to start playing, or...");
         Sanitize();
         var ret = ImGui.Button("Enter slot manually") || enter;
+        ImGui.SeparatorText("History");
+
+        if (History.Count is not 0)
+        {
+            ImGui.TextDisabled("Left click to join the slot.");
+            ImGui.TextDisabled("Middle or Right click to delete.");
+        }
+
+        for (var i = 0; i < History.Count && History[i] is var current; i++)
+            if (current.IsInvalid || CollectionsMarshal.AsSpan(History)[..i].Contains(current))
+                History.RemoveAt(i--);
+            else if (ImGui.Button(current.ToDisplayString()))
+                client = new(current.ToYaml());
+            else if (ImGui.IsItemClicked(ImGuiMouseButton.Middle) || ImGui.IsItemClicked(ImGuiMouseButton.Right))
+                History.RemoveAt(i--);
+
+        if (History.Count is 0)
+            ImGui.Text("Join a game for buttons to appear here!");
+
         ImGui.EndTabItem();
-
-        foreach (var connectionInfo in CollectionsMarshal.AsSpan(History))
-            if (ImGui.Button(connectionInfo.ToDisplayString()))
-                client = new(
-                    string.IsNullOrWhiteSpace(connectionInfo.Path) ||
-                    Go(Yaml.FromFile, connectionInfo.Path, out _, out var yaml)
-                        ? null
-                        : yaml.FirstOrDefault(connectionInfo.IsMatch)
-                );
-
         return ret;
     }
 }

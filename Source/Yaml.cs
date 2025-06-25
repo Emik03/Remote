@@ -103,7 +103,11 @@ public sealed class Yaml : IDictionary<string, object?>
         ICollection<Yaml> list = [];
 
         while (parser.Accept<DocumentStart>(out _))
-            list.Add(deserializer.Deserialize<Yaml>(parser));
+        {
+            var yaml = deserializer.Deserialize<Yaml>(parser);
+            yaml.Path = path;
+            list.Add(yaml);
+        }
 
         return list;
     }
