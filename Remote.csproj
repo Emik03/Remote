@@ -6,8 +6,8 @@
         <TargetFramework>net10.0</TargetFramework>
         <ApplicationManifest>app.manifest</ApplicationManifest>
         <PackageIcon>Resources/Drawable/Icon.512.png</PackageIcon>
-        <DefineConstants>$(DefineConstants);IMGUI;TEXTCOPY;XNA</DefineConstants>
         <ApplicationIcon>Resources/Drawable/Icon.256.ico</ApplicationIcon>
+        <DefineConstants>$(DefineConstants);IMGUI;TEXTCOPY;XNA</DefineConstants>
         <JsonSerializerIsReflectionEnabledByDefault>true</JsonSerializerIsReflectionEnabledByDefault>
         <Description>Standalone Archipelago client, with dedicated feature-rich support for manual apworlds.</Description>
         <PackageTags>Application MonoGame ImGui Archipelago MultiWorld MW MultiGame Multi Game Manual APWorld</PackageTags>
@@ -29,5 +29,6 @@
         <Content Include="Binaries/Remote.exe" Link="Remote.exe" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Never"/>
         <Content Include="Binaries/Remote-mac" Link="Remote-mac" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Never"/>
         <EmbeddedResource Include="Fonts/japanese.ttf" Link="japanese.ttf" CopyToOutputDirectory="Never" CopyToPublishDirectory="Never"/>
+        <EmbeddedResource Include="Resources/Drawable/Icon.256.ico" Link="Icon.ico" CopyToOutputDirectory="Never" CopyToPublishDirectory="Never"/>
     </ItemGroup>
 </Project>
