@@ -39,6 +39,10 @@ public sealed partial class Client
         if (!ImGui.Begin(_windowName, ref open, ImGuiWindowFlags.HorizontalScrollbar) || !open)
         {
             ImGui.End();
+
+            if (!open)
+                _session?.Socket.DisconnectAsync().GetAwaiter().GetResult();
+
             return !open;
         }
 
