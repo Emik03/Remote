@@ -54,9 +54,9 @@ public sealed partial class Client(Yaml? yaml = null)
             if (DisplayName is null)
                 return;
 
-            ImGui.PushStyleColor(ImGuiCol.Text, ColorOf(Flags, preferences));
             var text = $"{DisplayName}{(Count is 1 ? "" : $" ({Count})")}";
-            ImGui.Text(text);
+            ImGui.PushStyleColor(ImGuiCol.Text, ColorOf(Flags, preferences));
+            ImGui.BulletText(text);
             CopyIfClicked(text);
 
             if (Locations is not null and not [] && ImGui.IsItemHovered())
@@ -425,6 +425,17 @@ public sealed partial class Client(Yaml? yaml = null)
             _ => throw new ArgumentOutOfRangeException(nameof(location), this[location].Status, null),
         };
 
+    /// <summary>Whether the hint should be visible.</summary>
+    /// <param name="hint">The hint.</param>
+    /// <returns>Whether to make the parameter <paramref name="hint"/> visible.</returns>
+    bool ShouldBeVisible(Hint hint)
+    {
+        Debug.Assert(_session is not null);
+
+        return (!hint.Found || _showObtainedHints) &&
+            (_hintIndex is 0 ? hint.FindingPlayer : hint.ReceivingPlayer) != _session.Players.ActivePlayer.Slot;
+    }
+
     /// <summary>Gets the player name.</summary>
     /// <param name="playerSlot">The slot to get the player name.</param>
     /// <returns>The player name.</returns>
@@ -448,8 +459,8 @@ public sealed partial class Client(Yaml? yaml = null)
         var receivingPlayer = GetPlayerName(hint.ReceivingPlayer);
         var receivingGame = _session.Players.GetPlayerInfo(hint.ReceivingPlayer)?.Game;
         var item = _session.Items.GetItemName(hint.ItemId, receivingGame);
-        var message = $"{receivingPlayer}'s {item} is at {findingPlayer}'s {location}";
-        return message;
+        var entrance = string.IsNullOrWhiteSpace(hint.Entrance) ? "" : $"\n({hint.Entrance})";
+        return $"{receivingPlayer}'s {item}\nis at {findingPlayer}'s {location}{entrance}";
     }
 
     /// <summary>Groups all items into sorted items with count.</summary>

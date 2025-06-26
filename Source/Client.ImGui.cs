@@ -8,7 +8,7 @@ public sealed partial class Client
     static readonly string[] s_hintOptions = ["Show sent hints", "Show received hints"];
 
     /// <summary>Whether to show the dialog.</summary>
-    bool _showAlreadyChecked, _showConfirmationDialog, _showOutOfLogic, _showYetToReceive;
+    bool _showAlreadyChecked, _showConfirmationDialog, _showObtainedHints, _showOutOfLogic, _showYetToReceive;
 
     /// <summary>Whether the user is attempting to release.</summary>
     /// <remarks><para>
@@ -135,16 +135,16 @@ public sealed partial class Client
         if (!ImGui.BeginTabBar("Tabs"))
             return;
 
-        ShowTextClient(preferences);
-        ShowLocationClient(gameTime, preferences);
-        ShowItemClient(preferences);
-        ShowHintClient(preferences);
+        ShowChatTab(preferences);
+        ShowLocationTab(gameTime, preferences);
+        ShowItemTab(preferences);
+        ShowHintTab(preferences);
         ImGui.EndTabBar();
     }
 
     /// <summary>Shows the messaging client.</summary>
     /// <param name="preferences">The user preferences.</param>
-    void ShowTextClient(Preferences preferences)
+    void ShowChatTab(Preferences preferences)
     {
         const ImGuiInputTextFlags Flags = Preferences.TextFlags | ImGuiInputTextFlags.AllowTabInput;
         Debug.Assert(_session is not null);
@@ -152,6 +152,7 @@ public sealed partial class Client
         if (!ImGui.BeginTabItem("Chat"))
             return;
 
+        ImGui.TextDisabled("TIP: Right click text or checkboxes to copy them!");
         ShowPlayers(preferences);
         ShowLog(preferences);
         ImGui.SeparatorText("Message");
@@ -184,7 +185,7 @@ public sealed partial class Client
     /// <summary>Shows the list of locations</summary>
     /// <param name="gameTime">The time elapsed since.</param>
     /// <param name="preferences">The user preferences.</param>
-    void ShowLocationClient(GameTime gameTime, Preferences preferences)
+    void ShowLocationTab(GameTime gameTime, Preferences preferences)
     {
         Debug.Assert(_session is not null);
 
@@ -201,7 +202,7 @@ public sealed partial class Client
 
     /// <summary>Shows the list of items.</summary>
     /// <param name="preferences">The user preferences.</param>
-    void ShowItemClient(Preferences preferences)
+    void ShowItemTab(Preferences preferences)
     {
         Debug.Assert(_session is not null);
 
@@ -218,22 +219,24 @@ public sealed partial class Client
 
     /// <summary>Shows the list of hints.</summary>
     /// <param name="preferences">The user preferences.</param>
-    void ShowHintClient(Preferences preferences)
+    void ShowHintTab(Preferences preferences)
     {
         Debug.Assert(_session is not null);
 
         if (!ImGui.BeginTabItem("Hints"))
             return;
 
+        _ = ImGui.Checkbox("Show obtained hints", ref _showObtainedHints);
+        ImGui.SetNextItemWidth(preferences.Width(150));
         _ = ImGui.ListBox("Filter", ref _hintIndex, s_hintOptions, s_hintOptions.Length);
 
         foreach (var (itemFlags, message) in _session.DataStorage.GetHints()
-           .Where(x => (_hintIndex is 0 ? x.FindingPlayer : x.ReceivingPlayer) != _session.Players.ActivePlayer.Slot)
+           .Where(ShouldBeVisible)
            .Select(x => (x.ItemFlags, Message: Message(x)))
            .OrderBy(x => x.Message, FrozenSortedDictionary.Comparer))
         {
             ImGui.PushStyleColor(ImGuiCol.Text, ColorOf(itemFlags, preferences));
-            ImGui.TextWrapped(message);
+            ImGui.BulletText(message);
             CopyIfClicked(message);
             ImGui.PopStyleColor();
         }
@@ -260,7 +263,7 @@ public sealed partial class Client
                 continue;
 
             var copy = $"Team {team}: {players.Conjoin(' ')}";
-            ImGui.Text(copy.AsSpan(0, team.DigitCount() + 6));
+            ImGui.BulletText(copy.AsSpan(0, team.DigitCount() + 6));
             CopyIfClicked(copy);
 
             if (ImGui.IsItemHovered())
@@ -479,7 +482,9 @@ public sealed partial class Client
             if (this[key] is (var status, true))
             {
                 outOfLogic |= status is LocationStatus.OutOfLogic;
-                ImGui.TextColored(preferences[status], key);
+                ImGui.PushStyleColor(ImGuiCol.Text, preferences[status]);
+                ImGui.BulletText(key);
+                ImGui.PopStyleColor();
                 CopyIfClicked(key);
             }
 
