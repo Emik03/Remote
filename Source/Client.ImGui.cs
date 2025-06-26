@@ -68,10 +68,14 @@ public sealed partial class Client
     /// <summary>Copies the text if the mouse has been clicked.</summary>
     /// <param name="text"></param>
     /// <param name="button"></param>
-    static void CopyIfClicked(ReadOnlySpan<char> text, ImGuiMouseButton button = ImGuiMouseButton.Right)
+    static void CopyIfClicked(string text, ImGuiMouseButton button = ImGuiMouseButton.Right)
     {
         if (ImGui.IsItemHovered() && ImGui.IsMouseClicked(button))
+#if ANDROID
             ImGui.SetClipboardText(text);
+#else
+            ClipboardService.SetText(text);
+#endif
     }
 
     /// <summary>Convenience function for displaying a tooltip with text scaled by the user preferences.</summary>
