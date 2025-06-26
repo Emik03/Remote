@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <OutputType>Exe</OutputType>
-        <FileVersion>1.2</FileVersion>
+        <FileVersion>1.2.1</FileVersion>
         <RootNamespace>Remote</RootNamespace>
         <AndroidUseAapt2>false</AndroidUseAapt2>
         <ApplicationId>dev.emik.remote</ApplicationId>
@@ -10,10 +10,10 @@
         <TargetFramework>net10.0-android</TargetFramework>
         <AndroidEnableMultiDex>true</AndroidEnableMultiDex>
         <EmbedAssembliesIntoApk>true</EmbedAssembliesIntoApk>
+        <PackageIcon>Resources/Drawable/Icon.png</PackageIcon>
         <ApplicationManifest>app.manifest</ApplicationManifest>
         <ApplicationVersion>$(FileVersion)</ApplicationVersion>
         <AndroidUseSharedRuntime>false</AndroidUseSharedRuntime>
-        <PackageIcon>Resources/Drawable/Icon.512.png</PackageIcon>
         <SupportedOSPlatformVersion>23</SupportedOSPlatformVersion>
         <AndroidCreatePackagePerAbi>true</AndroidCreatePackagePerAbi>
         <DefineConstants>$(DefineConstants);IMGUI;XNA</DefineConstants>
@@ -27,8 +27,9 @@
         <PackageReference Include="TextCopy" Version="6.2.1"/>
         <PackageReference Include="YamlDotNet" Version="16.3.0"/>
         <PackageReference Include="ImGui.NET" Version="1.91.6.1"/>
+        <AndroidResource Remove="Resources/Drawable/Icon.512.png"/>
+        <PackageReference Include="MonoGame.Framework.Android" Version="3.8.4"/>
         <PackageReference Include="Archipelago.MultiClient.Net" Version="6.6.0"/>
-        <PackageReference Include="MonoGame.Framework.DesktopGL" Version="3.8.4"/>
         <PackageReference Include="Archipelago.MultiClient.Net.Analyzers" Version="1.5.0" PrivateAssets="all"/>
         <EmbeddedResource Include="Fonts/alt.ttf" Link="Fonts/alt.ttf" CopyToOutputDirectory="Never" CopyToPublishDirectory="Never"/>
         <EmbeddedResource Include="Fonts/main.ttf" Link="Fonts/main.ttf" CopyToOutputDirectory="Never" CopyToPublishDirectory="Never"/>
