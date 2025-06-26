@@ -43,6 +43,7 @@ public sealed class RemoteGame : Game
         _renderer.RebuildFontAtlas();
         IsMouseVisible = true;
         IsFixedTimeStep = false;
+        Window.Title = s_name;
         Window.AllowUserResizing = true;
 #if !ANDROID
         Window.FileDrop += OnFileDrop;
@@ -88,7 +89,7 @@ public sealed class RemoteGame : Game
             var viewport = ImGui.GetMainViewport();
             ImGui.SetNextWindowPos(viewport.WorkPos);
             ImGui.SetNextWindowViewport(viewport.ID);
-            ImGui.SetNextWindowSize(new(Window.ClientBounds.Width, Window.ClientBounds.Height));
+            ImGui.SetNextWindowSize(new(GraphicsDevice.Width(), GraphicsDevice.Height()));
         }
 
         if (ImGui.Begin(s_name, ImGuiWindowFlags.HorizontalScrollbar | tab))
