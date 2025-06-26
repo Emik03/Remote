@@ -32,6 +32,12 @@ public sealed partial record Evaluator(
     bool IsOptAll
 )
 {
+    /// <summary>Contains the goal index.</summary>
+    /// <param name="Goal">The index.</param>
+    // ReSharper disable once ClassNeverInstantiated.Local
+    [Serializable]
+    sealed record GoalData(int Goal);
+
     /// <summary>Initializes a new instance of the <see cref="Evaluator"/> record.</summary>
     /// <param name="helper">The list of items received.</param>
     /// <param name="hiddenCategories">The set of categories that shouldn't be visible to the user.</param>
@@ -69,7 +75,8 @@ public sealed partial record Evaluator(
         ) { }
 
     /// <summary>Attempts to process the manual <c>.apworld</c>.</summary>
-    /// <param name="helper">The list of items received.</param>
+    /// <param name="w">The wrapper to get the goal data.</param>
+    /// <param name="h">The list of items.</param>
     /// <param name="yaml">The yaml options.</param>
     /// <param name="preferences">
     /// The user preferences, containing the directory of the Archipelago installation.
@@ -78,8 +85,8 @@ public sealed partial record Evaluator(
     /// The <see cref="Evaluator"/> to evaluate <see cref="Logic"/>, or <see langword="null"/> if not a manual world,
     /// parsing failed, or the <c>.apworld</c> doesn't exist.
     /// </returns>
-    public static Evaluator? Read(IReceivedItemsHelper helper, Yaml yaml, Preferences preferences) =>
-        FindApWorld(yaml, preferences) is not { } path || Go(ReadZip, helper, yaml, path, out _, out var ok)
+    public static Evaluator? Read(IDataStorageWrapper w, IReceivedItemsHelper h, Yaml yaml, Preferences preferences) =>
+        FindApWorld(yaml, preferences) is not { } path || Go(ReadZip, w, h, yaml, path, out _, out var ok)
             ? null
             : ok;
 
@@ -119,21 +126,22 @@ public sealed partial record Evaluator(
     }
 
     /// <summary>Reads the path as a zip file. Can throw.</summary>
-    /// <param name="helper">The list of items received.</param>
+    /// <param name="wrapper">The wrapper to get the goal data.</param>
+    /// <param name="helper">The list of items.</param>
     /// <param name="yaml">The yaml options.</param>
     /// <param name="path">The path to the zip file.</param>
     /// <returns>
     /// The <see cref="Evaluator"/> to evaluate <see cref="Logic"/>, or <see langword="null"/> if not a manual world,
     /// parsing failed, or the <c>.apworld</c> doesn't exist.
     /// </returns>
-    static Evaluator? ReadZip(IReceivedItemsHelper helper, Yaml yaml, string path)
+    static Evaluator? ReadZip(IDataStorageWrapper wrapper, IReceivedItemsHelper helper, Yaml yaml, string path)
     {
         using ZipArchive zip = new(File.OpenRead(path));
         yaml.CopyFrom(Extract<JsonObject>(zip, "/data/options.json"));
 
         return ExtractCategories(zip) is ({ } hiddenCategories, var categoryToYaml) &&
             ExtractItems(zip) is (var itemToCategories, { } itemCount, { } itemValues) &&
-            ExtractLocations(zip) is ({ } locationsToLogic, var categoryToLocations)
+            ExtractLocations(wrapper, yaml, zip) is ({ } locationsToLogic, var categoryToLocations)
                 ? new Evaluator(
                     helper,
                     hiddenCategories,
@@ -305,14 +313,27 @@ public sealed partial record Evaluator(
             : (kvp.Key, FrozenSet<string>.Empty);
 
     /// <summary>Extracts all locations.</summary>
+    /// <param name="wrapper">The wrapper to get the goal data.</param>
+    /// <param name="yaml">The yaml options.</param>
     /// <param name="zip">The zip archive.</param>
     /// <returns>The locations.</returns>
     static (FrozenDictionary<string, Logic>, FrozenSortedDictionary) ExtractLocations(
+        IDataStorageWrapper wrapper,
+        Yaml yaml,
         ZipArchive zip
     )
     {
+        static bool IsVictory(JsonNode? x) =>
+            x is JsonObject obj &&
+            obj.TryGetPropertyValue("victory", out var node) &&
+            node?.GetValueKind() is JsonValueKind.True;
+
         if (Extract<JsonArray>(zip, "/data/locations.json") is not { } locations)
             return default;
+
+        if (wrapper.GetSlotData<GoalData>() is { Goal: var index } &&
+            locations.Where(IsVictory).Select(x => x?["name"]?.ToString()).Skip(index).FirstOrDefault() is { } goal)
+            yaml.Goal = goal;
 
         var regions = Extract<JsonObject>(zip, "/data/regions.json");
         Dictionary<string, Logic> locationsToLogic = new(FrozenSortedDictionary.Comparer);

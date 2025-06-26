@@ -6,6 +6,7 @@ using Parser = YamlDotNet.Core.Parser;
 using StreamStart = YamlDotNet.Core.Events.StreamStart;
 
 /// <summary>Represents the yaml file in an Archipelago that contains exactly one player.</summary>
+[Serializable]
 public sealed class Yaml : IDictionary<string, object?>
 {
     /// <summary>The field name.</summary>

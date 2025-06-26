@@ -4,6 +4,9 @@ namespace Remote;
 /// <inheritdoc cref="Client"/>
 public sealed partial class Client
 {
+    /// <summary>Contains the options for the hint setting.</summary>
+    static readonly string[] s_hintOptions = ["Show sent hints", "Show received hints"];
+
     /// <summary>Whether to show the dialog.</summary>
     bool _showAlreadyChecked, _showConfirmationDialog, _showOutOfLogic, _showYetToReceive;
 
@@ -16,7 +19,7 @@ public sealed partial class Client
     bool? _isAttemptingToRelease;
 
     /// <summary>Contains the last amount of checks.</summary>
-    int _lastItemCount = int.MinValue, _lastLocationCount = int.MaxValue;
+    int _hintIndex, _lastItemCount = int.MinValue, _lastLocationCount = int.MaxValue;
 
     /// <summary>The current state of the text field.</summary>
     string _message = "", _itemSearch = "", _locationSearch = "";
@@ -62,6 +65,15 @@ public sealed partial class Client
         return false;
     }
 
+    /// <summary>Copies the text if the mouse has been clicked.</summary>
+    /// <param name="text"></param>
+    /// <param name="button"></param>
+    static void CopyIfClicked(ReadOnlySpan<char> text, ImGuiMouseButton button = ImGuiMouseButton.Right)
+    {
+        if (ImGui.IsItemHovered() && ImGui.IsMouseClicked(button))
+            ImGui.SetClipboardText(text);
+    }
+
     /// <summary>Convenience function for displaying a tooltip with text scaled by the user preferences.</summary>
     /// <param name="preferences">The user preferences.</param>
     /// <param name="text">The text to display.</param>
@@ -91,6 +103,7 @@ public sealed partial class Client
                 {
                     ImGui.PushStyleColor(ImGuiCol.Text, preferences[AppPalette.Trap]);
                     ImGui.TextWrapped(error);
+                    CopyIfClicked(error);
                     ImGui.PopStyleColor();
                 }
 
@@ -125,6 +138,7 @@ public sealed partial class Client
         ShowTextClient(preferences);
         ShowLocationClient(gameTime, preferences);
         ShowItemClient(preferences);
+        ShowHintClient(preferences);
         ImGui.EndTabBar();
     }
 
@@ -202,6 +216,31 @@ public sealed partial class Client
         ImGui.EndTabItem();
     }
 
+    /// <summary>Shows the list of hints.</summary>
+    /// <param name="preferences">The user preferences.</param>
+    void ShowHintClient(Preferences preferences)
+    {
+        Debug.Assert(_session is not null);
+
+        if (!ImGui.BeginTabItem("Hints"))
+            return;
+
+        _ = ImGui.ListBox("Filter", ref _hintIndex, s_hintOptions, s_hintOptions.Length);
+
+        foreach (var (itemFlags, message) in _session.DataStorage.GetHints()
+           .Where(x => (_hintIndex is 0 ? x.FindingPlayer : x.ReceivingPlayer) != _session.Players.ActivePlayer.Slot)
+           .Select(x => (x.ItemFlags, Message: Message(x)))
+           .OrderBy(x => x.Message, FrozenSortedDictionary.Comparer))
+        {
+            ImGui.PushStyleColor(ImGuiCol.Text, ColorOf(itemFlags, preferences));
+            ImGui.TextWrapped(message);
+            CopyIfClicked(message);
+            ImGui.PopStyleColor();
+        }
+
+        ImGui.EndTabItem();
+    }
+
     /// <summary>Shows the list of players.</summary>
     /// <param name="preferences">The user preferences.</param>
     void ShowPlayers(Preferences preferences)
@@ -220,7 +259,9 @@ public sealed partial class Client
             if (players is [])
                 continue;
 
-            ImGui.Text($"Team {team}:");
+            var copy = $"Team {team}: {players.Conjoin(' ')}";
+            ImGui.Text(copy.AsSpan(0, team.DigitCount() + 6));
+            CopyIfClicked(copy);
 
             if (ImGui.IsItemHovered())
                 Tooltip(preferences, $"Contains {players.Count.Conjugate("player")}");
@@ -230,6 +271,7 @@ public sealed partial class Client
             for (var i = 0; i < players.Count && players[i] is var player; i++)
             {
                 ImGui.Text(player.ToString());
+                CopyIfClicked(copy);
 
                 if (ImGui.IsItemHovered())
                     Tooltip(preferences, $"Running {player.Game} on slot #{player.Slot}");
@@ -438,6 +480,7 @@ public sealed partial class Client
             {
                 outOfLogic |= status is LocationStatus.OutOfLogic;
                 ImGui.TextColored(preferences[status], key);
+                CopyIfClicked(key);
             }
 
         ImGui.EndChild();
@@ -476,6 +519,7 @@ public sealed partial class Client
         for (; startIndex < _messages.Count && _messages[startIndex].Parts is var parts; startIndex++)
         {
             var first = true;
+            var message = parts.Conjoin("");
 
             foreach (var part in parts)
             {
@@ -491,6 +535,7 @@ public sealed partial class Client
                 }];
 
                 ImGui.TextColored(color, part.Text.Replace("%", "%%"));
+                CopyIfClicked(message);
             }
         }
     }
@@ -507,11 +552,9 @@ public sealed partial class Client
     /// <param name="preferences">The user preferences.</param>
     void ShowNonManualItems(Preferences preferences)
     {
+        const string Default = Evaluator.Uncategorized;
         ShowItemSearch();
-
-        foreach (var (item, count) in GroupItems(Evaluator.Uncategorized, default))
-            if (item.IsMatch(_itemSearch))
-                item.Show(preferences, count);
+        GroupItems(Default, default).Where(x => x.IsMatch(_itemSearch)).Lazily(x => x.Show(preferences)).Enumerate();
     }
 
     /// <summary>Shows manual items.</summary>
@@ -527,14 +570,12 @@ public sealed partial class Client
             if (_evaluator.HiddenCategories.Contains(category))
                 continue;
 
-            var sum = GroupItems(category, items).Where(x => x.Item.IsMatch(_itemSearch)).Sum(x => x.Count);
+            var sum = GroupItems(category, items).Where(x => x.IsMatch(_itemSearch)).Sum(x => x.Count);
 
             if (sum is 0 || !ImGui.CollapsingHeader($"{category} ({sum})###{category}:|ItemCategory"))
                 continue;
 
-            foreach (var (item, count) in GroupItems(category, items))
-                if (item.IsMatch(_itemSearch))
-                    item.Show(preferences, count);
+            GroupItems(category, items).Where(x => x.IsMatch(_itemSearch)).Lazily(x => x.Show(preferences)).Enumerate();
         }
     }
 
@@ -547,6 +588,7 @@ public sealed partial class Client
         ref var tuple = ref this[location];
         ImGui.PushStyleColor(ImGuiCol.Text, preferences[tuple.Status]);
         ImGui.Checkbox($"{location}###{location}:|{category}:|Location", ref tuple.Checked);
+        CopyIfClicked(location);
         ImGui.PopStyleColor();
         tuple.Checked &= tuple.Status is not LocationStatus.Checked;
     }

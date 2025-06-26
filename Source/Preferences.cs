@@ -82,7 +82,7 @@ public sealed partial class Preferences
 
         /// <summary>Gets the string representation for displaying as text.</summary>
         /// <returns>The string representation.</returns>
-        public string ToDisplayString() => $"{Name} ({Host})";
+        public string ToDisplayString() => $"{Name} ({Host}:{Port})";
 
         /// <inheritdoc />
         public override string ToString() => $"{Name}:{Password}@{Host}:{Port}@{Path}";
@@ -113,7 +113,7 @@ public sealed partial class Preferences
     static readonly string[] s_languages = Enum.GetNames<Language>();
 
     /// <summary>Whether to use tabs or separate windows.</summary>
-    bool _useTabs;
+    bool _useTabs = true;
 
     /// <summary>Contains the current port.</summary>
     int _language, _port;
@@ -122,7 +122,7 @@ public sealed partial class Preferences
     float _fontSize = 36, _uiScale = 0.75f, _uiPadding = 5, _uiRounding = 10;
 
     /// <summary>Contains the current text field values.</summary>
-    string _address = DefaultAddress, _directory = DefaultDirectory, _password = "";
+    string _address = DefaultAddress, _directory = DefaultDirectory, _password = "", _yamlFilePath = "";
 
     /// <summary>Gets the color of the <see cref="Client.LocationStatus"/></summary>
     /// <param name="status">The status to get the color of.</param>
@@ -235,8 +235,8 @@ public sealed partial class Preferences
     }
 
     /// <summary>Gets the history.</summary>
+    [CLSCompliant(false)]
 #pragma warning disable MA0016
-	[CLSCompliant(false)]
     public List<Connection> History { get; [UsedImplicitly] private set; } = [];
 
     /// <summary>Gets the list of colors.</summary>
@@ -265,11 +265,12 @@ public sealed partial class Preferences
     public void PushStyling()
     {
         ImGui.PushStyleVar(ImGuiStyleVar.WindowMinSize, new Vector2(_uiScale * 600));
+        ImGui.PushStyleVar(ImGuiStyleVar.WindowBorderSize, _useTabs ? 0 : 5);
 
         for (var i = (int)AppPalette.Count; i < Colors.Count; i++)
             ImGui.PushStyleColor((ImGuiCol)(i - AppPalette.Count), Colors[i]);
 
-        ImGui.PushStyleVar(ImGuiStyleVar.WindowRounding, _uiRounding);
+        ImGui.PushStyleVar(ImGuiStyleVar.WindowRounding, _useTabs ? 0 : _uiRounding);
         ImGui.PushStyleVar(ImGuiStyleVar.ChildRounding, _uiRounding);
         ImGui.PushStyleVar(ImGuiStyleVar.PopupRounding, _uiRounding);
         ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, _uiRounding);
@@ -291,7 +292,7 @@ public sealed partial class Preferences
         if (Colors.Count - (int)AppPalette.Count is > 0 and var count)
             ImGui.PopStyleColor(count);
 
-        ImGui.PopStyleVar(12);
+        ImGui.PopStyleVar(13);
     }
 
     /// <summary>Writes this instance to disk.</summary>
@@ -300,12 +301,12 @@ public sealed partial class Preferences
     /// <summary>Shows the preferences window.</summary>
     /// <param name="gameTime">The time elapsed.</param>
     /// <param name="clients">The list of clients to show.</param>
-    /// <param name="client">The client created from history, or <see langword="null"/>.</param>
+    /// <param name="clientsToRegister">The clients created from history, or <see langword="null"/>.</param>
     /// <returns>Whether to create a new instance of <see cref="Client"/>.</returns>
     [CLSCompliant(false)]
-    public bool Show(GameTime gameTime, IList<Client> clients, out Client? client)
+    public bool Show(GameTime gameTime, IList<Client> clients, out IEnumerable<Client>? clientsToRegister)
     {
-        client = null;
+        clientsToRegister = null;
 
         if (!ImGui.BeginTabBar("Tabs"))
         {
@@ -316,7 +317,7 @@ public sealed partial class Preferences
         }
 
         ImGui.SetWindowFontScale(UiScale);
-        var ret = ShowConnectionTab(out client);
+        var ret = ShowConnectionTab(out clientsToRegister);
         ShowSettings();
 
         if (_useTabs)
@@ -460,6 +461,27 @@ public sealed partial class Preferences
             Colors = [..Colors, ..s_defaultColors.AsSpan()[Colors.Count..]];
     }
 
+    /// <summary>Shows the paste field.</summary>
+    /// <param name="clients">The clients created from history, or <see langword="null"/>.</param>
+    void ShowPasteTextField(ref IEnumerable<Client>? clients)
+    {
+        ImGui.SetNextItemWidth(Width(100));
+
+        var enter = ImGuiRenderer.InputTextWithHint(
+            "Path",
+            "Paste the YAML path here and hit enter, or...",
+            ref _yamlFilePath,
+            ushort.MaxValue,
+            TextFlags
+        );
+
+        if (!enter || string.IsNullOrWhiteSpace(_yamlFilePath) || !File.Exists(_yamlFilePath))
+            return;
+
+        clients = Client.FromFile(_yamlFilePath, this);
+        _yamlFilePath = "";
+    }
+
     /// <summary>Shows the color editor for the index.</summary>
     /// <param name="i">The index from <see cref="Colors"/> to display and mutate.</param>
     void ShowColor(int i)
@@ -477,18 +499,18 @@ public sealed partial class Preferences
     }
 
     /// <summary>Shows the connection tab.</summary>
-    /// <param name="client">The client created from history, or <see langword="null"/>.</param>
+    /// <param name="clients">The clients created from history, or <see langword="null"/>.</param>
     /// <returns>Whether to create a new <see cref="Client"/>.</returns>
-    bool ShowConnectionTab(out Client? client)
+    bool ShowConnectionTab(out IEnumerable<Client>? clients)
     {
-        client = null;
+        clients = null;
 
         if (!ImGui.BeginTabItem("Connection"))
             return false;
 
         ImGui.SeparatorText("Host");
         ImGui.SetNextItemWidth(Width(450));
-        ImGuiRenderer.InputTextWithHint("Address", DefaultAddress, ref _address, ushort.MaxValue, TextFlags);
+        _ = ImGuiRenderer.InputTextWithHint("Address", DefaultAddress, ref _address, ushort.MaxValue, TextFlags);
         ImGui.SameLine();
         ImGui.SetNextItemWidth(Width(100));
         ImGui.InputInt("Port", ref _port, 0);
@@ -503,15 +525,13 @@ public sealed partial class Preferences
 
         ImGui.SeparatorText("Join");
         ImGui.TextDisabled("Drop a YAML file to start playing, or...");
+        ShowPasteTextField(ref clients);
         Sanitize();
         var ret = ImGui.Button("Enter slot manually") || enter;
         ImGui.SeparatorText("History");
 
         if (History.Count is not 0)
-        {
-            ImGui.TextDisabled("Left click to join the slot.");
-            ImGui.TextDisabled("Middle or Right click to delete.");
-        }
+            ImGui.TextDisabled("Left click to join. Right click to delete.");
 
         for (var i = 0; i < History.Count && History[i] is var current; i++)
             if (current.IsInvalid || CollectionsMarshal.AsSpan(History)[..i].Contains(current))
@@ -519,10 +539,12 @@ public sealed partial class Preferences
             else if (ImGui.Button(current.ToDisplayString()))
             {
                 var yaml = current.ToYaml();
-                client = new(yaml);
+                Client client = new(yaml);
 
                 if (yaml is not null)
-                    _ = client.Connect(this);
+                    _ = client.Connect(this, current.Host ?? Address, current.Port, current.Password);
+
+                clients = [client];
             }
             else if (ImGui.IsItemClicked(ImGuiMouseButton.Middle) || ImGui.IsItemClicked(ImGuiMouseButton.Right))
                 History.RemoveAt(i--);

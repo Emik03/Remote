@@ -76,13 +76,27 @@ public sealed class RemoteGame : Game
         _renderer.BeforeLayout(gameTime);
         _preferences.PushStyling();
 
-        if (ImGui.Begin(s_name, ImGuiWindowFlags.HorizontalScrollbar))
+        const ImGuiWindowFlags OnTab = ImGuiWindowFlags.NoTitleBar |
+            ImGuiWindowFlags.NoResize |
+            ImGuiWindowFlags.NoMove |
+            ImGuiWindowFlags.NoBringToFrontOnFocus;
+
+        var tab = _preferences.UseTabs ? OnTab : ImGuiWindowFlags.None;
+
+        if (_preferences.UseTabs)
+        {
+            var viewport = ImGui.GetMainViewport();
+            ImGui.SetNextWindowPos(viewport.WorkPos);
+            ImGui.SetNextWindowViewport(viewport.ID);
+            ImGui.SetNextWindowSize(new(Window.ClientBounds.Width, Window.ClientBounds.Height));
+        }
+
+        if (ImGui.Begin(s_name, ImGuiWindowFlags.HorizontalScrollbar | tab))
         {
             if (_preferences.Show(gameTime, _clients, out var fromHistory))
                 _ = Add(new());
 
-            if (fromHistory is not null)
-                Add(fromHistory);
+            _ = fromHistory?.All(Add);
         }
 
         ImGui.End();

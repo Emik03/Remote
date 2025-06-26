@@ -28,47 +28,39 @@ public sealed partial class Client(Yaml? yaml = null)
     /// <summary>Wraps the importance of an item and where it was obtained.</summary>
     /// <param name="Flags">The priority of the obtained item.</param>
     /// <param name="DisplayName">The item name.</param>
-    /// <param name="LocationDisplayName">The location name.</param>
-    /// <param name="LocationGame">The location's game name.</param>
+    /// <param name="Count">The number of times this item was obtained.</param>
+    /// <param name="Locations">The locations that obtained this item.</param>
     readonly record struct ReceivedItem(
         ItemFlags? Flags,
         string? DisplayName,
-        string? LocationDisplayName,
-        string? LocationGame
+        int Count,
+        IList<(string LocationDisplayName, string LocationGame)>? Locations
     )
     {
         /// <summary>Initializes a new instance of the <see cref="ReceivedItem"/> struct.</summary>
         /// <param name="info">The <see cref="ItemInfo"/> to deconstruct.</param>
-        public ReceivedItem(ItemInfo? info)
+        public ReceivedItem(ICollection<ItemInfo?> info)
             : this(
-                info?.Flags,
-                info?.ItemDisplayName,
-                info?.LocationDisplayName,
-                info?.LocationGame
+                info.Nth(0)?.Flags,
+                info.Nth(0)?.ItemDisplayName,
+                info.Count,
+                [..info.Filter().Select(x => (x.LocationDisplayName, x.LocationGame))]
             ) { }
 
         /// <summary>Displays this instance as text with a tooltip.</summary>
         /// <param name="preferences">The user preferences.</param>
-        /// <param name="count">The amount of this item obtained.</param>
-        public void Show(Preferences preferences, int count)
+        public void Show(Preferences preferences)
         {
             if (DisplayName is null)
                 return;
 
-            var color = Flags switch
-            {
-                ItemFlags.None => preferences[AppPalette.Neutral],
-                { } flags when flags.Has(ItemFlags.Advancement) => preferences[AppPalette.Progression],
-                { } flags when flags.Has(ItemFlags.NeverExclude) => preferences[AppPalette.Useful],
-                { } flags when flags.Has(ItemFlags.Trap) => preferences[AppPalette.Trap],
-                _ => preferences[AppPalette.PendingItem],
-            };
+            ImGui.PushStyleColor(ImGuiCol.Text, ColorOf(Flags, preferences));
+            var text = $"{DisplayName}{(Count is 1 ? "" : $" ({Count})")}";
+            ImGui.Text(text);
+            CopyIfClicked(text);
 
-            ImGui.PushStyleColor(ImGuiCol.Text, color);
-            ImGui.Text($"{DisplayName}{(count is 1 ? "" : $" ({count})")}");
-
-            if (LocationDisplayName is not null && ImGui.IsItemHovered())
-                Tooltip(preferences, $"Found in {LocationDisplayName} at {LocationGame}");
+            if (Locations is not null and not [] && ImGui.IsItemHovered())
+                Tooltip(preferences, Locations.Select(ToString).Conjoin('\n'));
 
             ImGui.PopStyleColor();
         }
@@ -77,6 +69,12 @@ public sealed partial class Client(Yaml? yaml = null)
         /// <param name="search">The filter.</param>
         /// <returns>Whether this instance contains the parameter <paramref name="search"/> as a substring.</returns>
         public bool IsMatch(string search) => DisplayName?.Contains(search, StringComparison.OrdinalIgnoreCase) is true;
+
+        /// <summary>Gets the string representation of the tuple.</summary>
+        /// <param name="tuple">The tuple to get the string representation of.</param>
+        /// <returns>The string representation of the parameter <paramref name="tuple"/>.</returns>
+        static string ToString((string LocationDisplayName, string LocationGame) tuple) =>
+            $"{tuple.LocationDisplayName} at {tuple.LocationGame}";
     }
 
     /// <summary>Constant strings.</summary>
@@ -217,7 +215,23 @@ public sealed partial class Client(Yaml? yaml = null)
     /// <param name="preferences">The user preferences.</param>
     /// <returns>Whether the connection succeeded.</returns>
     [MemberNotNullWhen(true, nameof(_session)), MemberNotNullWhen(false, nameof(_errors))]
-    public bool Connect(Preferences preferences)
+    public bool Connect(Preferences preferences) =>
+        Connect(preferences, preferences.Address, preferences.Port, preferences.Password);
+
+    /// <summary>Connects to the archipelago server.</summary>
+    /// <param name="preferences">The user preferences.</param>
+    /// <param name="address">
+    /// The address to connect to instead of the one specified in the parameter <paramref name="preferences"/>.
+    /// </param>
+    /// <param name="port">
+    /// The port to use instead of the one specified in the parameter <paramref name="preferences"/>.
+    /// </param>
+    /// <param name="password">
+    /// The password to authenticate with instead of the one specified in the parameter <paramref name="preferences"/>.
+    /// </param>
+    /// <returns>Whether the connection succeeded.</returns>
+    [CLSCompliant(false), MemberNotNullWhen(true, nameof(_session)), MemberNotNullWhen(false, nameof(_errors))]
+    public bool Connect(Preferences preferences, string address, ushort port, string? password)
     {
         const ItemsHandlingFlags Flags = ItemsHandlingFlags.AllItems;
 
@@ -227,11 +241,10 @@ public sealed partial class Client(Yaml? yaml = null)
            .Replace("{number}", "1")
            .Replace("{NUMBER}", "");
 
-        _session = ArchipelagoSessionFactory.CreateSession(preferences.Address, preferences.Port);
+        _session = ArchipelagoSessionFactory.CreateSession(address, port);
         _session.MessageLog.OnMessageReceived += OnMessageReceived;
         _session.Items.ItemReceived += UpdateStatus;
         string[] tags = ["AP", nameof(Remote)];
-        var password = preferences.Password;
         var login = _session.TryConnectAndLogin(_yaml.Game, _yaml.Name, Flags, tags: tags, password: password);
 
         if (login is LoginFailure failure)
@@ -245,8 +258,12 @@ public sealed partial class Client(Yaml? yaml = null)
 
         _windowName = $"{_yaml.Name}###{_instance}";
         _session.SetClientState(ArchipelagoClientState.ClientPlaying);
-        _evaluator = Evaluator.Read(_session.Items, _yaml, preferences);
-        preferences.History.Insert(0, new(_yaml.Name, password, preferences.Address, preferences.Port, _yaml.Path));
+
+        foreach (var (key, value) in _session.DataStorage.GetSlotData())
+            ((IDictionary<string, object?>)_yaml)[key] = value;
+
+        _evaluator = Evaluator.Read(_session.DataStorage, _session.Items, _yaml, preferences);
+        preferences.History.Insert(0, new(_yaml.Name, password, address, port, _yaml.Path));
         return true;
     }
 
@@ -271,6 +288,20 @@ public sealed partial class Client(Yaml? yaml = null)
     /// <returns>The messages.</returns>
     static string[] ToMessages(Exception e, params ReadOnlySpan<string> additions) =>
         [..additions, ..e.FindPathToNull(x => x.InnerException).Select(x => x.Message)];
+
+    /// <summary>Gets the color of the flag.</summary>
+    /// <param name="flags">The flag to get the color of.</param>
+    /// <param name="preferences">The user preferences.</param>
+    /// <returns>The color for the parameter <paramref name="flags"/>.</returns>
+    static AppColor ColorOf(ItemFlags? flags, Preferences preferences) =>
+        flags switch
+        {
+            ItemFlags.None => preferences[AppPalette.Neutral],
+            { } f when f.Has(ItemFlags.Advancement) => preferences[AppPalette.Progression],
+            { } f when f.Has(ItemFlags.NeverExclude) => preferences[AppPalette.Useful],
+            { } f when f.Has(ItemFlags.Trap) => preferences[AppPalette.Trap],
+            _ => preferences[AppPalette.PendingItem],
+        };
 
     /// <summary>Invoked when a new message is received, adds the message to the log.</summary>
     /// <param name="message">The new message.</param>
@@ -394,17 +425,44 @@ public sealed partial class Client(Yaml? yaml = null)
             _ => throw new ArgumentOutOfRangeException(nameof(location), this[location].Status, null),
         };
 
+    /// <summary>Gets the player name.</summary>
+    /// <param name="playerSlot">The slot to get the player name.</param>
+    /// <returns>The player name.</returns>
+    string GetPlayerName(int playerSlot)
+    {
+        Debug.Assert(_session is not null);
+
+        return _session.Players.GetPlayerAlias(playerSlot) ??
+            _session.Players.GetPlayerName(playerSlot) ?? $"Player: {playerSlot}";
+    }
+
+    /// <summary>Gets the message for the hint.</summary>
+    /// <param name="hint">The hint to get the message of.</param>
+    /// <returns>The message representing the parameter <paramref name="hint"/>.</returns>
+    string Message(Hint hint)
+    {
+        Debug.Assert(_session is not null);
+        var findingPlayer = GetPlayerName(hint.FindingPlayer);
+        var findingGame = _session.Players.GetPlayerInfo(hint.FindingPlayer)?.Game;
+        var location = _session.Locations.GetLocationNameFromId(hint.LocationId, findingGame);
+        var receivingPlayer = GetPlayerName(hint.ReceivingPlayer);
+        var receivingGame = _session.Players.GetPlayerInfo(hint.ReceivingPlayer)?.Game;
+        var item = _session.Items.GetItemName(hint.ItemId, receivingGame);
+        var message = $"{receivingPlayer}'s {item} is at {findingPlayer}'s {location}";
+        return message;
+    }
+
     /// <summary>Groups all items into sorted items with count.</summary>
     /// <param name="category">The category that the returned items must be under.</param>
     /// <param name="lookup">The lookup table.</param>
     /// <returns>The sorted items with count.</returns>
-    IEnumerable<(ReceivedItem Item, int Count)> GroupItems(string category, FrozenSortedDictionary.Element lookup)
+    IEnumerable<ReceivedItem> GroupItems(string category, FrozenSortedDictionary.Element lookup)
     {
-        static (ReceivedItem Item, int Count) ConsCount<T>(IGrouping<T, ItemInfo> x)
+        static ReceivedItem ConsCount<T>(IGrouping<T, ItemInfo> x)
         {
             // ReSharper disable once NotDisposedResource
-            var (head, tail) = x;
-            return (new(head), tail.Count() + 1);
+            var items = x.ToIList();
+            return new([..items]);
         }
 
         bool Contains(FrozenSortedDictionary.Element lookup, ItemInfo x) =>
@@ -429,14 +487,14 @@ public sealed partial class Client(Yaml? yaml = null)
         {
             var max = _evaluator.ItemCount.GetValueOrDefault(next, 1);
 
-            for (var i = 0; i < list.Count && list[i] is var (item, count); i++)
+            for (var i = 0; i < list.Count && list[i] is var item; i++)
                 if (next.Equals(item.DisplayName, StringComparison.Ordinal))
-                    if (count == max)
+                    if (item.Count == max)
                         goto NoAdding;
                     else
                         list.RemoveAt(i);
 
-            list.Add((new(null, next, null, null), max));
+            list.Add(new(null, next, max, null));
         NoAdding: ;
         }
 
