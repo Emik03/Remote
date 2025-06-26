@@ -47,6 +47,9 @@ public sealed class Yaml : IDictionary<string, object?>
                 NameField => Name = value as string ?? Name,
                 _ when value is IDictionary<object, object> d => Add(d),
                 _ when value is string s && int.TryParse(s, out var i) && (_options[key] = i) is var _ => s,
+                _ when value is bool b && (_options[key] = b.ToByte()) is var _ => "",
+                _ when value is long l && (_options[key] = (int)l) is var _ => "",
+                _ when value is int i && (_options[key] = i) is var _ => "",
                 _ => "",
             };
     }
