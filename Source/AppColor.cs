@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: MPL-2.0
 namespace Remote;
 
+using Color = System.Drawing.Color;
 using Vector4 = System.Numerics.Vector4;
+using XnaColor = Color;
 
 /// <summary>Represents the <see cref="Vector4"/> that can be parsed as a hex color.</summary>
 /// <param name="Vector">The color as <see cref="Vector4"/>.</param>
@@ -13,48 +15,48 @@ public record struct AppColor(Vector4 Vector) : ISpanParsable<AppColor>
 
     /// <summary>Initializes a new instances of the <see cref="AppColor"/> struct.</summary>
     /// <param name="color">The color to convert.</param>
-    public AppColor(System.Drawing.Color color)
+    public AppColor(Color color)
         : this(new Vector4(color.R / Max, color.G / Max, color.B / Max, color.A / Max)) { }
 
     /// <summary>Gets the value for the default black.</summary>
-    public static AppColor Black => new(System.Drawing.Color.FromArgb(unchecked((int)0xFF191A21)));
+    public static AppColor Black => new(Color.FromArgb(unchecked((int)0xFF191A21)));
 
     /// <summary>Gets the value for the default background.</summary>
-    public static AppColor Background => new(System.Drawing.Color.FromArgb(unchecked((int)0xFF282A36)));
+    public static AppColor Background => new(Color.FromArgb(unchecked((int)0xFF282A36)));
 
     /// <summary>Gets the value for the default current line.</summary>
-    public static AppColor CurrentLine => new(System.Drawing.Color.FromArgb(unchecked((int)0xFF44475A)));
+    public static AppColor CurrentLine => new(Color.FromArgb(unchecked((int)0xFF44475A)));
 
     /// <summary>Gets the value for the default foreground.</summary>
-    public static AppColor Foreground => new(System.Drawing.Color.FromArgb(unchecked((int)0xFFF8F8F2)));
+    public static AppColor Foreground => new(Color.FromArgb(unchecked((int)0xFFF8F8F2)));
 
     /// <summary>Gets the value for the default comment.</summary>
-    public static AppColor Comment => new(System.Drawing.Color.FromArgb(unchecked((int)0xFF6272A4)));
+    public static AppColor Comment => new(Color.FromArgb(unchecked((int)0xFF6272A4)));
 
     /// <summary>Gets the value for the default cyan.</summary>
-    public static AppColor Cyan => new(System.Drawing.Color.FromArgb(unchecked((int)0xFF8BE9FD)));
+    public static AppColor Cyan => new(Color.FromArgb(unchecked((int)0xFF8BE9FD)));
 
     /// <summary>Gets the value for the default green.</summary>
-    public static AppColor Green => new(System.Drawing.Color.FromArgb(unchecked((int)0xFF50FA7B)));
+    public static AppColor Green => new(Color.FromArgb(unchecked((int)0xFF50FA7B)));
 
     /// <summary>Gets the value for the default orange.</summary>
-    public static AppColor Orange => new(System.Drawing.Color.FromArgb(unchecked((int)0xFFFFB86C)));
+    public static AppColor Orange => new(Color.FromArgb(unchecked((int)0xFFFFB86C)));
 
     /// <summary>Gets the value for the default pink.</summary>
-    public static AppColor Pink => new(System.Drawing.Color.FromArgb(unchecked((int)0xFFFF79C6)));
+    public static AppColor Pink => new(Color.FromArgb(unchecked((int)0xFFFF79C6)));
 
     /// <summary>Gets the value for the default purple.</summary>
-    public static AppColor Purple => new(System.Drawing.Color.FromArgb(unchecked((int)0xFFBD93F9)));
+    public static AppColor Purple => new(Color.FromArgb(unchecked((int)0xFFBD93F9)));
 
     /// <summary>Gets the value for the default red.</summary>
-    public static AppColor Red => new(System.Drawing.Color.FromArgb(unchecked((int)0xFFFF5555)));
+    public static AppColor Red => new(Color.FromArgb(unchecked((int)0xFFFF5555)));
 
     /// <summary>Gets the value for the default yellow.</summary>
-    public static AppColor Yellow => new(System.Drawing.Color.FromArgb(unchecked((int)0xFFF1FA8C)));
+    public static AppColor Yellow => new(Color.FromArgb(unchecked((int)0xFFF1FA8C)));
 
-    /// <summary>Gets itself as <see cref="Microsoft.Xna.Framework.Color"/>.</summary>
+    /// <summary>Gets itself as <see cref="XnaColor"/>.</summary>
     [CLSCompliant(false)]
-    public readonly Color XnaColor => new(Vector.X, Vector.Y, Vector.Z, Vector.W);
+    public readonly XnaColor XnaColor => new(Vector.X, Vector.Y, Vector.Z, Vector.W);
 
     /// <summary>Implicitly gets <see cref="Vector"/>.</summary>
     /// <param name="color">The color to get.</param>
