@@ -8,17 +8,13 @@ using Vector4 = System.Numerics.Vector4;
 [StructLayout(LayoutKind.Auto)] // ReSharper disable once StructCanBeMadeReadOnly
 public record struct AppColor(Vector4 Vector) : ISpanParsable<AppColor>
 {
+    /// <inheritdoc cref="byte.MaxValue"/>
+    const float Max = byte.MaxValue;
+
     /// <summary>Initializes a new instances of the <see cref="AppColor"/> struct.</summary>
     /// <param name="color">The color to convert.</param>
     public AppColor(System.Drawing.Color color)
-        : this(
-            new Vector4(
-                color.R / (float)byte.MaxValue,
-                color.G / (float)byte.MaxValue,
-                color.B / (float)byte.MaxValue,
-                color.A / (float)byte.MaxValue
-            )
-        ) { }
+        : this(new Vector4(color.R / Max, color.G / Max, color.B / Max, color.A / Max)) { }
 
     /// <summary>Gets the value for the default black.</summary>
     public static AppColor Black => new(System.Drawing.Color.FromArgb(unchecked((int)0xFF191A21)));
