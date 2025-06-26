@@ -36,7 +36,7 @@
         <EmbeddedResource Include="Fonts/korean.ttf" Link="Fonts/korean.ttf" CopyToOutputDirectory="Never" CopyToPublishDirectory="Never"/>
         <EmbeddedResource Include="Fonts/chinese.ttf" Link="Fonts/chinese.ttf" CopyToOutputDirectory="Never" CopyToPublishDirectory="Never"/>
         <EmbeddedResource Include="Fonts/japanese.ttf" Link="Fonts/japanese.ttf" CopyToOutputDirectory="Never" CopyToPublishDirectory="Never"/>
-        <EmbeddedResource Include="Resources/Drawable/Icon.256.ico" Link="Icon.ico" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Never"/>
-        <EmbeddedResource Include="Resources/Drawable/Icon.256.bmp" Link="Icon.bmp" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Never"/>
+        <EmbeddedResource Include="Resources/Drawable/Icon.256.ico" Link="Icon.ico" CopyToOutputDirectory="Never" CopyToPublishDirectory="Never"/>
+        <EmbeddedResource Include="Resources/Drawable/Icon.256.bmp" Link="Icon.bmp" CopyToOutputDirectory="Never" CopyToPublishDirectory="Never"/>
     </ItemGroup>
 </Project>

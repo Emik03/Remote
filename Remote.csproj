@@ -29,7 +29,7 @@
         <EmbeddedResource Include="Fonts/japanese.ttf" Link="Fonts/japanese.ttf" CopyToOutputDirectory="Never" CopyToPublishDirectory="Never"/>
         <Content Include="Binaries/Remote.exe" Link="Binaries/Remote.exe" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Never"/>
         <Content Include="Binaries/Remote-mac" Link="Binaries/Remote-mac" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Never"/>
-        <EmbeddedResource Include="Resources/Drawable/Icon.256.ico" Link="Icon.ico" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Never"/>
-        <EmbeddedResource Include="Resources/Drawable/Icon.256.bmp" Link="Icon.bmp" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Never"/>
+        <EmbeddedResource Include="Resources/Drawable/Icon.256.ico" Link="Icon.ico" CopyToOutputDirectory="Never" CopyToPublishDirectory="Never"/>
+        <EmbeddedResource Include="Resources/Drawable/Icon.256.bmp" Link="Icon.bmp" CopyToOutputDirectory="Never" CopyToPublishDirectory="Never"/>
     </ItemGroup>
 </Project>
