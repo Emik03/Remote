@@ -39,7 +39,6 @@ public sealed partial class Client
     public bool Draw(GameTime gameTime, int index, Preferences preferences)
     {
         var open = true;
-
         var color = preferences[AppPalette.OutOfLogic - index % 7];
         ImGui.PushStyleColor(ImGuiCol.TabSelected, color);
         ImGui.PushStyleColor(ImGuiCol.TabHovered, color);
