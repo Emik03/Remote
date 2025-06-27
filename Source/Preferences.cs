@@ -110,7 +110,7 @@ public sealed partial class Preferences
     const string DefaultAddress = "archipelago.gg", PreferencesFile = "preferences.cfg";
 
     /// <summary>Gets the languages.</summary>
-    static readonly string[] s_languages = Enum.GetNames<Language>();
+    static readonly string s_languages = Enum.GetNames<Language>().Append("\0").Conjoin('\0');
 
     /// <summary>Whether to use tabs or separate windows.</summary>
     bool _useTabs = true;
@@ -119,7 +119,7 @@ public sealed partial class Preferences
     int _language, _port;
 
     /// <summary>Contains the current UI settings.</summary>
-    float _fontSize = 36, _uiScale = 0.75f, _uiPadding = 5, _uiRounding = 10;
+    float _fontSize = 36, _uiScale = 0.75f, _uiPadding = 6, _uiRounding = 4, _uiSpacing = 6;
 
     /// <summary>Contains the current text field values.</summary>
     string _address = DefaultAddress, _directory = DefaultDirectory, _password = "", _yamlFilePath = "";
@@ -196,6 +196,13 @@ public sealed partial class Preferences
     {
         get => _uiRounding;
         [UsedImplicitly] private set => _uiRounding = value;
+    }
+
+    /// <summary>Gets or sets the UI spacing.</summary>
+    public float UiSpacing
+    {
+        get => _uiSpacing;
+        [UsedImplicitly] private set => _uiSpacing = value;
     }
 
     /// <summary>Gets or sets the port.</summary>
@@ -284,6 +291,12 @@ public sealed partial class Preferences
         ImGui.PushStyleVar(ImGuiStyleVar.FramePadding, padding);
         ImGui.PushStyleVar(ImGuiStyleVar.CellPadding, padding);
         ImGui.PushStyleVar(ImGuiStyleVar.SeparatorTextPadding, padding);
+
+        Vector2 spacing = new(_uiSpacing);
+
+        ImGui.PushStyleVar(ImGuiStyleVar.ItemSpacing, spacing);
+        ImGui.PushStyleVar(ImGuiStyleVar.ItemInnerSpacing, spacing);
+        ImGui.PushStyleVar(ImGuiStyleVar.IndentSpacing, _uiSpacing);
     }
 
     /// <summary>Pops all colors and styling variables.</summary>
@@ -292,7 +305,7 @@ public sealed partial class Preferences
         if (Colors.Count - (int)AppPalette.Count is > 0 and var count)
             ImGui.PopStyleColor(count);
 
-        ImGui.PopStyleVar(13);
+        ImGui.PopStyleVar(16);
     }
 
     /// <summary>Writes this instance to disk.</summary>
@@ -396,7 +409,7 @@ public sealed partial class Preferences
     void Show(GameTime gameTime, IList<Client> clients)
     {
         for (var i = clients.Count - 1; i >= 0 && clients[i] is var c; i--)
-            if (c.Draw(gameTime, this))
+            if (c.Draw(gameTime, clients.Count - i - 1, this))
                 clients.RemoveAt(i);
     }
 
@@ -420,12 +433,13 @@ public sealed partial class Preferences
         Slider("UI Scale", ref _uiScale, 0.4f, 2, "%.2f");
         Slider("UI Padding", ref _uiPadding, 0, 20);
         Slider("UI Rounding", ref _uiRounding, 0, 30);
+        Slider("UI Spacing", ref _uiSpacing, 0, 20);
         ImGui.SetNextItemWidth(Width(250));
         ImGui.Checkbox("Tabs instead of separate windows", ref _useTabs);
         ImGui.SeparatorText("Fonts (Requires Restart)");
         Slider("Font Size", ref _fontSize, 8, 72, "%.0f");
         ImGui.SetNextItemWidth(Width(250));
-        _ = ImGui.ListBox("Font Language", ref _language, s_languages, s_languages.Length);
+        _ = ImGui.Combo("Font Language", ref _language, s_languages);
         ImGui.SeparatorText("Theming");
 
         if (ImGui.CollapsingHeader("Theme"))
