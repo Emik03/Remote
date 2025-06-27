@@ -331,7 +331,8 @@ public sealed partial record Evaluator(
         if (Extract<JsonArray>(zip, "/data/locations.json") is not { } locations)
             return default;
 
-        if (wrapper.GetSlotData<GoalData>() is { Goal: var index } &&
+        if (Go(w => w.GetSlotDataAsync<GoalData>().GetAwaiter().GetResult(), wrapper, out _, out var ok) &&
+            ok is { Goal: var index } &&
             locations.Where(IsVictory).Select(x => x?["name"]?.ToString()).Skip(index).FirstOrDefault() is { } goal)
             yaml.Goal = goal;
 

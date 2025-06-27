@@ -32,24 +32,36 @@ public sealed partial class Client
 
     /// <summary>Calls <see cref="ImGui"/> a lot.</summary>
     /// <param name="gameTime">The time elapsed since.</param>
+    /// <param name="index">The index that this client resides in, used for coloring the window or tab.</param>
     /// <param name="preferences">The user preferences.</param>
     /// <returns>Whether this window is closed, and should be dequeued to allow the GC to free this instance.</returns>
     [CLSCompliant(false)]
-    public bool Draw(GameTime gameTime, Preferences preferences)
+    public bool Draw(GameTime gameTime, int index, Preferences preferences)
     {
         var open = true;
+
+        var color = preferences[AppPalette.OutOfLogic - index % 7];
+        ImGui.PushStyleColor(ImGuiCol.TabSelected, color);
+        ImGui.PushStyleColor(ImGuiCol.TabHovered, color);
+        ImGui.PushStyleColor(ImGuiCol.WindowBg, color / 1.5f);
+        ImGui.PushStyleColor(ImGuiCol.Tab, color / 1.5f);
 
         if (preferences.UseTabs)
         {
             if (!ImGui.BeginTabItem(_windowName, ref open) || !open)
+            {
+                ImGui.PopStyleColor(4);
                 return Close(open);
+            }
         }
         else if (!ImGui.Begin(_windowName, ref open, ImGuiWindowFlags.HorizontalScrollbar) || !open)
         {
+            ImGui.PopStyleColor(4);
             ImGui.End();
             return Close(open);
         }
 
+        ImGui.PopStyleColor(4);
         ImGui.SetWindowFontScale(preferences.UiScale);
 
         if (_session is null)
@@ -66,11 +78,22 @@ public sealed partial class Client
     }
 
     /// <summary>Copies the text if the mouse has been clicked.</summary>
-    /// <param name="text"></param>
-    /// <param name="button"></param>
-    static void CopyIfClicked(string text, ImGuiMouseButton button = ImGuiMouseButton.Right)
+    /// <param name="preferences">The user preferences.</param>
+    /// <param name="text">The text to copy.</param>
+    /// <param name="button">The button to check for.</param>
+    static void CopyIfClicked(Preferences preferences, string text, ImGuiMouseButton button = ImGuiMouseButton.Right)
     {
-        if (ImGui.IsItemHovered() && ImGui.IsMouseClicked(button))
+        if (!ImGui.IsItemHovered())
+            return;
+
+        if (ImGui.IsMouseDown(button))
+        {
+            ImGui.PushStyleColor(ImGuiCol.Text, preferences[AppPalette.Reachable]);
+            Tooltip(preferences, "Copied!");
+            ImGui.PopStyleColor();
+        }
+
+        if (ImGui.IsMouseClicked(button))
 #if ANDROID
             ImGui.SetClipboardText(text);
 #else
@@ -107,7 +130,7 @@ public sealed partial class Client
                 {
                     ImGui.PushStyleColor(ImGuiCol.Text, preferences[AppPalette.Trap]);
                     ImGui.TextWrapped(error);
-                    CopyIfClicked(error);
+                    CopyIfClicked(preferences, error);
                     ImGui.PopStyleColor();
                 }
 
@@ -228,22 +251,25 @@ public sealed partial class Client
         Debug.Assert(_session is not null);
 
         if (!ImGui.BeginTabItem("Hints"))
+        {
+            LastHints = null;
             return;
+        }
 
         _ = ImGui.Checkbox("Show obtained hints", ref _showObtainedHints);
         ImGui.SetNextItemWidth(preferences.Width(150));
         _ = ImGui.ListBox("Filter", ref _hintIndex, s_hintOptions, s_hintOptions.Length);
 
-        foreach (var (itemFlags, message) in _session.DataStorage.GetHints()
-           .Where(ShouldBeVisible)
-           .Select(x => (x.ItemFlags, Message: Message(x)))
-           .OrderBy(x => x.Message, FrozenSortedDictionary.Comparer))
-        {
-            ImGui.PushStyleColor(ImGuiCol.Text, ColorOf(itemFlags, preferences));
-            ImGui.BulletText(message);
-            CopyIfClicked(message);
-            ImGui.PopStyleColor();
-        }
+        if (LastHints is { } hints)
+            foreach (var (itemFlags, message) in hints.Where(ShouldBeVisible)
+               .Select(x => (x.ItemFlags, Message: Message(x)))
+               .OrderBy(x => x.Message, FrozenSortedDictionary.Comparer))
+            {
+                ImGui.PushStyleColor(ImGuiCol.Text, ColorOf(itemFlags, preferences));
+                ImGui.BulletText(message);
+                CopyIfClicked(preferences, message);
+                ImGui.PopStyleColor();
+            }
 
         ImGui.EndTabItem();
     }
@@ -268,7 +294,7 @@ public sealed partial class Client
 
             var copy = $"Team {team}: {players.Conjoin(' ')}";
             ImGui.BulletText(copy.AsSpan(0, team.DigitCount() + 6));
-            CopyIfClicked(copy);
+            CopyIfClicked(preferences, copy);
 
             if (ImGui.IsItemHovered())
                 Tooltip(preferences, $"Contains {players.Count.Conjugate("player")}");
@@ -278,7 +304,7 @@ public sealed partial class Client
             for (var i = 0; i < players.Count && players[i] is var player; i++)
             {
                 ImGui.Text(player.ToString());
-                CopyIfClicked(copy);
+                CopyIfClicked(preferences, copy);
 
                 if (ImGui.IsItemHovered())
                     Tooltip(preferences, $"Running {player.Game} on slot #{player.Slot}");
@@ -331,13 +357,15 @@ public sealed partial class Client
             ImGui.PopStyleColor();
         }
 
-        if (ImGui.Button("Cancel"))
+        if (!IsReleasing && ImGui.Button("Cancel"))
             _showConfirmationDialog = false;
 
         ImGui.SameLine();
-        _ = ImGui.Button("Confirm");
 
-        if (ImGui.IsItemActive())
+        if (!IsReleasing)
+            _ = ImGui.Button("Confirm");
+
+        if (ImGui.IsItemActive() || IsReleasing)
             ShowCountdownToRelease(gameTime, preferences, outOfLogic);
         else
             ClearChecked();
@@ -489,7 +517,7 @@ public sealed partial class Client
                 ImGui.PushStyleColor(ImGuiCol.Text, preferences[status]);
                 ImGui.BulletText(key);
                 ImGui.PopStyleColor();
-                CopyIfClicked(key);
+                CopyIfClicked(preferences, key);
             }
 
         ImGui.EndChild();
@@ -511,7 +539,12 @@ public sealed partial class Client
         if (IsReleasing)
         {
             ImGui.TextColored(preferences[AppPalette.Released], ReleaseMessage());
+            ImGui.TextDisabled("Press left click to return to the previous screen");
             Release();
+
+            if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+                ClearChecked();
+
             return;
         }
 
@@ -544,7 +577,7 @@ public sealed partial class Client
                 }];
 
                 ImGui.TextColored(color, part.Text.Replace("%", "%%"));
-                CopyIfClicked(message);
+                CopyIfClicked(preferences, message);
             }
         }
     }
@@ -597,7 +630,7 @@ public sealed partial class Client
         ref var tuple = ref this[location];
         ImGui.PushStyleColor(ImGuiCol.Text, preferences[tuple.Status]);
         ImGui.Checkbox($"{location}###{location}:|{category}:|Location", ref tuple.Checked);
-        CopyIfClicked(location);
+        CopyIfClicked(preferences, location);
         ImGui.PopStyleColor();
         tuple.Checked &= tuple.Status is not LocationStatus.Checked;
     }
