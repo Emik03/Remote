@@ -122,7 +122,12 @@ public sealed partial class Preferences
     float _fontSize = 36, _uiScale = 0.75f, _uiPadding = 6, _uiRounding = 4, _uiSpacing = 6;
 
     /// <summary>Contains the current text field values.</summary>
-    string _address = DefaultAddress, _directory = DefaultDirectory, _password = "", _yamlFilePath = "";
+    string _address = DefaultAddress,
+        _directory = DefaultDirectory,
+        _password = "",
+        _python = "",
+        _repo = "",
+        _yamlFilePath = "";
 
     /// <summary>Gets the color of the <see cref="Client.LocationStatus"/></summary>
     /// <param name="status">The status to get the color of.</param>
@@ -232,6 +237,20 @@ public sealed partial class Preferences
     {
         get => _password;
         [UsedImplicitly] private set => _password = value;
+    }
+
+    /// <summary>Gets or sets the python path.</summary>
+    public string Python
+    {
+        get => _python;
+        [UsedImplicitly] private set => _python = value;
+    }
+
+    /// <summary>Gets or sets the archipelago repository path.</summary>
+    public string Repo
+    {
+        get => _repo;
+        [UsedImplicitly] private set => _repo = value;
     }
 
     /// <summary>Gets or sets the font language.</summary>
@@ -349,6 +368,12 @@ public sealed partial class Preferences
     /// <returns>The width to use.</returns>
     public float Width(int margin) => ImGui.GetContentRegionAvail().X - UiScale * margin;
 
+    /// <summary>Gets the python path.</summary>
+    /// <returns>The python path.</returns>
+    public string GetPythonPath() =>
+        string.IsNullOrWhiteSpace(_python) ? "python" :
+        System.IO.Directory.Exists(_python) ? Path.Join(Python, "python") : _python;
+
     /// <summary>Adds the current font.</summary>
     /// <returns>The created font, or <see langword="default"/> if the resource doesn't exist.</returns>
     [CLSCompliant(false)]
@@ -416,10 +441,12 @@ public sealed partial class Preferences
     /// <summary>Displays the settings tab.</summary>
     void ShowSettings()
     {
+        const string Hint = "Only required for manual worlds that use hooks";
+
         if (!ImGui.BeginTabItem("Settings"))
             return;
 
-        ImGui.SeparatorText("Primary");
+        ImGui.SeparatorText("Paths");
         ImGui.SetNextItemWidth(Width(250));
 
         _ = ImGuiRenderer.InputTextWithHint(
@@ -429,7 +456,11 @@ public sealed partial class Preferences
             ushort.MaxValue
         );
 
-        ImGui.Separator();
+        ImGui.SetNextItemWidth(Width(250));
+        _ = ImGuiRenderer.InputTextWithHint("AP Git Repo", Hint, ref _repo, ushort.MaxValue);
+        ImGui.SetNextItemWidth(Width(250));
+        _ = ImGuiRenderer.InputTextWithHint("Python", "python", ref _python, ushort.MaxValue);
+        ImGui.SeparatorText("UI Settings");
         Slider("UI Scale", ref _uiScale, 0.4f, 2, "%.2f");
         Slider("UI Padding", ref _uiPadding, 0, 20);
         Slider("UI Rounding", ref _uiRounding, 0, 30);

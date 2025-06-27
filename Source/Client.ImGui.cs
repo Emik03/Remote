@@ -440,7 +440,7 @@ public sealed partial class Client
 
         foreach (var location in locations)
             if (locationHelper.GetLocationNameFromId(location, _yaml.Game) is { } name && ShouldBeVisible(name))
-                Checkbox(preferences, name, Evaluator.Uncategorized);
+                Checkbox(preferences, name, ApWorldReader.Uncategorized);
 
         return locationHelper.AllMissingLocations.Count is 0;
     }
@@ -593,7 +593,7 @@ public sealed partial class Client
     /// <param name="preferences">The user preferences.</param>
     void ShowNonManualItems(Preferences preferences)
     {
-        const string Default = Evaluator.Uncategorized;
+        const string Default = ApWorldReader.Uncategorized;
         ShowItemSearch();
         GroupItems(Default, default).Where(x => x.IsMatch(_itemSearch)).Lazily(x => x.Show(preferences)).Enumerate();
     }

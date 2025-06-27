@@ -4,9 +4,6 @@ namespace Remote;
 /// <inheritdoc cref="Evaluator"/>
 public sealed partial record Evaluator
 {
-    /// <summary>The default category name.</summary>
-    public const string Uncategorized = "(No Category)";
-
     /// <summary>Gets <see cref="ItemCount"/> with a <see cref="ReadOnlySpan{T}"/> lookup.</summary>
     public FrozenDictionary<string, int>.AlternateLookup<ReadOnlySpan<char>> ItemCountSpan =>
         ItemCount.GetAlternateLookup<ReadOnlySpan<char>>();
