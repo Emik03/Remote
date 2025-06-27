@@ -57,7 +57,7 @@ public sealed partial class Client(Yaml? yaml = null)
             var text = $"{DisplayName}{(Count is 1 ? "" : $" ({Count})")}";
             ImGui.PushStyleColor(ImGuiCol.Text, ColorOf(Flags, preferences));
             ImGui.BulletText(text);
-            CopyIfClicked(text);
+            CopyIfClicked(preferences, text);
 
             if (Locations is not null and not [] && ImGui.IsItemHovered())
                 Tooltip(preferences, Locations.Select(ToString).Conjoin('\n'));
@@ -155,6 +155,9 @@ public sealed partial class Client(Yaml? yaml = null)
     /// <summary>Contains this player's <c>.yaml</c> file.</summary>
     readonly Yaml _yaml = yaml ?? new();
 
+    /// <summary>The state on whether it is currently retrieving hints.</summary>
+    bool _isRetrievingHints;
+
     /// <summary>Whether this client can be or has reached its goal.</summary>
     /// <remarks><para>
     /// <see langword="false"/> means this slot does not meet its goal.
@@ -200,6 +203,28 @@ public sealed partial class Client(Yaml? yaml = null)
                 return ref value;
             }
         }
+    }
+
+    /// <summary>Contains the last retrieved hints.</summary>
+    Hint[]? LastHints
+    {
+        get
+        {
+            Debug.Assert(_session is not null);
+
+            if (field is not null || _isRetrievingHints)
+                return field;
+
+            _isRetrievingHints = true;
+
+            if (Go(() => _session.DataStorage.GetHintsAsync().GetAwaiter().GetResult(), out _, out var ok))
+                return field;
+
+            field = ok;
+            _isRetrievingHints = false;
+            return field;
+        }
+        set;
     }
 
     /// <summary>Gets the players as a sequence of <see cref="Client"/> by parsing the file provided.</summary>
@@ -259,8 +284,9 @@ public sealed partial class Client(Yaml? yaml = null)
         _windowName = $"{_yaml.Name}###{_instance}";
         _session.SetClientState(ArchipelagoClientState.ClientPlaying);
 
-        foreach (var (key, value) in _session.DataStorage.GetSlotData())
-            ((IDictionary<string, object?>)_yaml)[key] = value;
+        if (!Go(() => _session.DataStorage.GetSlotDataAsync().GetAwaiter().GetResult(), out _, out var ok))
+            foreach (var (key, value) in ok)
+                ((IDictionary<string, object?>)_yaml)[key] = value;
 
         _evaluator = Evaluator.Read(_session.DataStorage, _session.Items, _yaml, preferences);
         preferences.History.Insert(0, new(_yaml.Name, password, address, port, _yaml.Path));
@@ -322,7 +348,7 @@ public sealed partial class Client(Yaml? yaml = null)
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         long? ToId(KeyValuePair<string, CheckboxStatus> kvp)
         {
-            async Task NewFunction()
+            async Task DisplayError()
             {
                 const string Title = "Archipelago Error";
                 IEnumerable<string> buttons = ["Dismiss all", "Step to next error"];
@@ -338,7 +364,7 @@ public sealed partial class Client(Yaml? yaml = null)
             if (!s_displayErrors)
                 return null;
 #pragma warning disable MA0134
-            Task.Run(NewFunction).ConfigureAwait(false);
+            Task.Run(DisplayError).ConfigureAwait(false);
 #pragma warning restore MA0134
             return null;
         }

@@ -63,6 +63,12 @@ public record struct AppColor(Vector4 Vector) : ISpanParsable<AppColor>
     /// <returns>The <see cref="Vector4"/> from <see cref="Vector"/>.</returns>
     public static implicit operator Vector4(AppColor color) => color.Vector;
 
+    /// <summary>Divides the color.</summary>
+    /// <param name="color">The color.</param>
+    /// <param name="divisor">The number to divide with.</param>
+    /// <returns>The divided color.</returns>
+    public static AppColor operator /(AppColor color, float divisor) => new(color.Vector / divisor);
+
     /// <inheritdoc />
     public static bool TryParse([NotNullWhen(true)] string? s, IFormatProvider? provider, out AppColor result) =>
         TryParse(s.AsSpan(), provider, out result);
