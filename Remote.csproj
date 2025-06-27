@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
+        <FileVersion>1.3</FileVersion>
         <OutputType>WinExe</OutputType>
-        <FileVersion>1.2.2</FileVersion>
         <PublishTrimmed>false</PublishTrimmed>
         <TargetFramework>net10.0</TargetFramework>
         <ApplicationManifest>app.manifest</ApplicationManifest>
@@ -31,5 +31,6 @@
         <Content Include="Binaries/Remote-mac" Link="Binaries/Remote-mac" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Never"/>
         <EmbeddedResource Include="Resources/Drawable/Icon.256.ico" Link="Icon.ico" CopyToOutputDirectory="Never" CopyToPublishDirectory="Never"/>
         <EmbeddedResource Include="Resources/Drawable/Icon.256.bmp" Link="Icon.bmp" CopyToOutputDirectory="Never" CopyToPublishDirectory="Never"/>
+        <EmbeddedResource Include="Resources/Values/Extractor.py" Link="Resources/Values/Extractor.py" CopyToOutputDirectory="Never" CopyToPublishDirectory="Never"/>
     </ItemGroup>
 </Project>
