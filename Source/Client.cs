@@ -438,8 +438,7 @@ public sealed partial class Client(Yaml? yaml = null)
     /// <summary>Determines whether the pair matches the current goal.</summary>
     /// <param name="kvp">The key-value pair.</param>
     /// <returns>Whether the parameter <paramref name="kvp"/> matches the current goal.</returns>
-    bool IsGoal(KeyValuePair<string, CheckboxStatus> kvp) =>
-        kvp.Value.Status is LocationStatus.Checked && _yaml.Goal.Equals(kvp.Key, StringComparison.Ordinal);
+    bool IsGoal(KeyValuePair<string, CheckboxStatus> kvp) => _yaml.Goal.Equals(kvp.Key, StringComparison.Ordinal);
 
     /// <summary>Whether the location should be visible based on the status given.</summary>
     /// <param name="location">The location.</param>

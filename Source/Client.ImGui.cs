@@ -455,8 +455,7 @@ public sealed partial class Client
         _ = ImGui.Checkbox("Show Out of Logic Locations", ref _showOutOfLogic);
         ShowLocationSearch();
         ImGui.BeginChild("Locations", preferences.ChildSize(100));
-        bool? isGoalByExhaustion = true;
-        var isGoalByYaml = false;
+        bool? ret = true;
 
         foreach (var (category, locations) in _evaluator.CategoryToLocations)
         {
@@ -470,12 +469,10 @@ public sealed partial class Client
             {
                 var status = this[location].Status;
 
-                if (location == _yaml.Goal)
-                    isGoalByYaml = true;
-                else if (status is LocationStatus.Reachable or LocationStatus.ProbablyReachable)
-                    isGoalByExhaustion = false;
-                else if (status is not LocationStatus.Checked && isGoalByExhaustion is true)
-                    isGoalByExhaustion = null;
+                if (status is LocationStatus.Reachable or LocationStatus.ProbablyReachable)
+                    ret = false;
+                else if (status is not LocationStatus.Checked && ret is true)
+                    ret = null;
 
                 if (ShouldBeVisible(location))
                     count++;
@@ -490,7 +487,7 @@ public sealed partial class Client
                     Checkbox(preferences, location, category);
         }
 
-        return isGoalByYaml | isGoalByExhaustion;
+        return ret;
     }
 
     /// <summary>Show the locations that have been or are going to be released.</summary>
