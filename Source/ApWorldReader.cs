@@ -52,17 +52,10 @@ public sealed record ApWorldReader(
     public (FrozenDictionary<string, Logic>, FrozenSortedDictionary)
         ExtractLocations(IDataStorageWrapper wrapper, Yaml yaml)
     {
-        static bool IsVictory(JsonNode? x) =>
-            x is JsonObject obj &&
-            obj.TryGetPropertyValue("victory", out var node) &&
-            node?.GetValueKind() is JsonValueKind.True;
-
         if (Locations is null)
             return default;
 
-        if (Go(w => w.GetSlotData<GoalData>(), wrapper, out _, out var ok) &&
-            ok is { Goal: var index } &&
-            Locations.Where(IsVictory).Select(x => x?["name"]?.ToString()).Skip(index).FirstOrDefault() is { } goal)
+        if (GetGoal(wrapper) is { } goal)
             yaml.Goal = goal;
 
         Dictionary<string, Logic> locationsToLogic = new(FrozenSortedDictionary.Comparer);
@@ -167,19 +160,6 @@ public sealed record ApWorldReader(
         obj.TryGetPropertyValue("hidden", out var hidden) &&
         hidden?.GetValueKind() is JsonValueKind.True;
 
-    /// <summary>Determines whether the line contains an important warning message.</summary>
-    /// <param name="line">The warning line.</param>
-    /// <returns>Whether it is important.</returns>
-    static bool IsNotable(ReadOnlyMemory<char> line) =>
-        !line.Span.Contains(
-            "_speedups not available. Falling back to pure python LocationStore. Install a matching C++ compiler for your platform to compile _speedups.",
-            StringComparison.Ordinal
-        ) &&
-        !line.Span.Contains(
-            "warnings.warn(\"_speedups not available. Falling back to pure python LocationStore.",
-            StringComparison.Ordinal
-        );
-
     /// <summary>Whether it contains a <c>starting</c> property that is true.</summary>
     /// <param name="value">The value to check.</param>
     /// <returns>Whether this is a starting region.</returns>
@@ -187,6 +167,29 @@ public sealed record ApWorldReader(
         value is JsonObject obj &&
         obj.TryGetPropertyValue("starting", out var starting) &&
         starting?.GetValueKind() is JsonValueKind.True;
+
+    /// <summary>Gets the goal location, if possible.</summary>
+    /// <param name="wrapper">The slot data.</param>
+    /// <returns>The goal location, or <see langword="null"/> if it cannot be determined.</returns>
+    string? GetGoal(IDataStorageWrapper wrapper)
+    {
+        static bool IsVictory(JsonNode? x) =>
+            x is JsonObject obj &&
+            obj.TryGetPropertyValue("victory", out var node) &&
+            node?.GetValueKind() is JsonValueKind.True;
+
+        if (Locations is null)
+            return null;
+
+        IReadOnlyList<string?> victories = [..Locations.Where(IsVictory).Select(x => x?["name"]?.ToString())];
+
+        if (!Go(x => x.GetSlotData<GoalData>(), wrapper, out _, out var ok) &&
+            ok is { Goal: var index } &&
+            (uint)index < (uint)victories.Count)
+            return victories[index];
+
+        return victories is [var single] ? single : null;
+    }
 
     /// <summary>Gets the python script that runs <c>Data.py</c>.</summary>
     /// <returns>The python script that runs <c>Data.py</c>.</returns>
@@ -342,6 +345,41 @@ public sealed record ApWorldReader(
         return null;
     }
 
+    /// <summary>Attempts to get the world data from executing python.</summary>
+    /// <param name="path">The path to the <c>.apworld</c>.</param>
+    /// <param name="preferences">The user preferences.</param>
+    /// <returns>The world data, or <see langword="null"/> if it was unable to execute the script.</returns>
+    static JsonObject? GetWorldDataFromPython(string path, Preferences preferences)
+    {
+        if (string.IsNullOrWhiteSpace(preferences.Repo))
+            return null;
+
+        using var process = Process.Start(
+            new ProcessStartInfo(preferences.GetPythonPath())
+            {
+                CreateNoWindow = true,
+                Environment = { ["APWORLD_PATH"] = path, ["ARCHIPELAGO_REPO_PATH"] = preferences.Repo },
+                ErrorDialog = false,
+                RedirectStandardError = true,
+                RedirectStandardInput = true,
+                RedirectStandardOutput = true,
+                UseShellExecute = false,
+            }
+        );
+
+        if (process is null)
+            return null;
+
+        process.StandardInput.Write(s_script);
+        process.StandardInput.Close();
+        _ = process.WaitForExit(30000);
+
+        return JsonSerializer.Deserialize<JsonNode>(
+            process.StandardOutput.ReadToEnd(),
+            RemoteJsonSerializerContext.Default.JsonNode
+        ) as JsonObject;
+    }
+
     /// <summary>Reads the <c>.apworld</c>.</summary>
     /// <param name="path"></param>
     /// <param name="preferences">The user preferences.</param>
@@ -373,42 +411,7 @@ public sealed record ApWorldReader(
             return Extract<JsonObject>(zip, "/data/game.json");
         }
 
-        if (string.IsNullOrWhiteSpace(preferences.Repo))
-            return Fail(out categories, out options, out regions);
-
-        using var process = Process.Start(
-            new ProcessStartInfo(preferences.GetPythonPath())
-            {
-                CreateNoWindow = true,
-                Environment = { ["APWORLD_PATH"] = path, ["ARCHIPELAGO_REPO_PATH"] = preferences.Repo },
-                ErrorDialog = false,
-                RedirectStandardError = true,
-                RedirectStandardInput = true,
-                RedirectStandardOutput = true,
-                UseShellExecute = false,
-            }
-        );
-
-        if (process is null)
-            return Fail(out categories, out options, out regions);
-
-        process.StandardInput.Write(s_script);
-        process.StandardInput.Close();
-
-        if (!process.WaitForExit(30000))
-            return Fail(out categories, out options, out regions);
-
-        if (process.StandardError.ReadToEnd() is var error &&
-            error.SplitLines().Where(IsNotable).Conjoin("\n") is var errors &&
-            !string.IsNullOrWhiteSpace(errors))
-#pragma warning disable IDISP013
-            _ = Task.Run(() => MessageBox.Show("APWorld Warning", $"Manual Hooks: {error}", ["OK"]))
-               .ConfigureAwait(false);
-#pragma warning restore IDISP013
-        if (JsonSerializer.Deserialize<JsonNode>(
-            process.StandardOutput.ReadToEnd(),
-            RemoteJsonSerializerContext.Default.JsonNode
-        ) is not JsonObject obj)
+        if (GetWorldDataFromPython(path, preferences) is not { } obj)
             return Fail(out categories, out options, out regions);
 
         items = Index<JsonArray>(obj, "items.json");
@@ -434,7 +437,7 @@ public sealed record ApWorldReader(
         return JsonSerializer.Deserialize<JsonNode>(stream, RemoteJsonSerializerContext.Default.JsonNode) as T;
     }
 
-    /// <summary>Attempts to extract the value from the <see cref="JsonObject"/>.</summary>
+    /// <summary>Attempts to extract the value from the <see cref="GetWorldDataFromPython"/>.</summary>
     /// <typeparam name="T">The type to extract.</typeparam>
     /// <param name="obj">The object to extract.</param>
     /// <param name="name">The index.</param>
