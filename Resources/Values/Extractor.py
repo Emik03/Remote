@@ -1,9 +1,9 @@
-# SPDX-License-Identifier: MPL-2.0
-# Thanks to Darius for writing this for me: https://github.com/itsMapleLeaf/
+import importlib
+import json
 import os
 from pathlib import Path
-import subprocess
-from tempfile import NamedTemporaryFile, TemporaryDirectory
+import sys
+from tempfile import TemporaryDirectory
 from zipfile import ZipFile
 
 apworld_path = os.environ.get("APWORLD_PATH")
@@ -16,55 +16,33 @@ if not archipelago_repo_path:
 
 # pass something like `DEBUG_INDENT="  "` to get indented output for debugging
 debug_indent = os.environ.get("DEBUG_INDENT")
+if debug_indent and debug_indent.isdigit():
+    debug_indent = int(debug_indent)
 
 apworld_path = Path(apworld_path)
 apworld_zip = ZipFile(apworld_path, mode="r")
-
-data_loader_source = """from . import Data
-import json
-import os
-
-debug_indent = os.environ.get("DEBUG_INDENT")
-
-print(json.dumps({
-    "game.json": Data.game_table,
-    "items.json": Data.item_table,
-    "locations.json": Data.location_table,
-    "regions.json": Data.region_table,
-    "categories.json": Data.category_table,
-    "options.json": Data.option_table,
-    "meta.json": Data.meta_table,
-}, indent=debug_indent))
-"""
 
 with TemporaryDirectory() as temp_world_folder:
     apworld_zip.extractall(temp_world_folder)
     apworld_name = os.listdir(temp_world_folder)[0]
 
-    with NamedTemporaryFile(
-        mode="w",
-        dir=Path(temp_world_folder) / apworld_name,
-        suffix=".py",
-        delete_on_close=False,
-    ) as data_loader_file:
-        data_loader_file.write(data_loader_source)
-        data_loader_file.close()
+    original_path = sys.path
+    try:
+        sys.path += [temp_world_folder, archipelago_repo_path]
+        data_module = importlib.import_module(".Data", apworld_name)
+    finally:
+        sys.path = original_path
 
-        (data_loader_module_name, _) = os.path.splitext(
-            os.path.basename(data_loader_file.name)
-        )
-
-        subprocess_env = {
-            **os.environ,
-            "PYTHONPATH": archipelago_repo_path,
-        }
-
-        if debug_indent:
-            subprocess_env["DEBUG_INDENT"] = debug_indent
-
-        subprocess.run(
-            ["python", "-m", f"{apworld_name}.{data_loader_module_name}"],
-            cwd=temp_world_folder,
-            env=subprocess_env,
-            capture_output=False,
-        )
+    json.dump(
+        {
+            "game.json": data_module.game_table,
+            "items.json": data_module.item_table,
+            "locations.json": data_module.location_table,
+            "regions.json": data_module.region_table,
+            "categories.json": data_module.category_table,
+            "options.json": data_module.option_table,
+            "meta.json": data_module.meta_table,
+        },
+        fp=sys.stdout,
+        indent=debug_indent,
+    )
