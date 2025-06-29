@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MPL-2.0
 namespace Remote;
 
+using JsonSerializer = System.Text.Json.JsonSerializer;
 using Vector2 = System.Numerics.Vector2;
 
 /// <summary>Contains the preferences that are stored persistently.</summary>
@@ -32,15 +33,59 @@ public sealed partial class Preferences
     /// <param name="Port">The port of the host.</param>
     /// <param name="Game">The game.</param>
     [CLSCompliant(false), StructLayout(LayoutKind.Auto)]
-    public readonly record struct Connection(
-        string? Name,
-        string? Password,
-        string? Host,
-        ushort Port,
-        string? Game
-    )
+    public readonly record struct Connection(string? Name, string? Password, string? Host, ushort Port, string? Game)
         : ISpanParsable<Connection>
     {
+        /// <summary>Contains the list of connections.</summary>
+        /// <param name="History">The history.</param>
+        // ReSharper disable MemberHidesStaticFromOuterClass
+#pragma warning disable MA0016
+        public readonly record struct List(List<Connection> History)
+#pragma warning restore MA0016
+        {
+            /// <summary>The default host address that hosts Archipelago games.</summary>
+            const string HistoryFile = "history.json";
+
+            /// <summary>Contains the path to the preferences file to read and write from.</summary>
+            public static string FilePath { get; } = PathTo(HistoryFile, "REMOTE_HISTORY_PATH");
+
+            /// <summary>Loads the history from disk.</summary>
+            /// <returns>The preferences.</returns>
+            public static List Load()
+            {
+                if (File.Exists(FilePath) && !Go(Deserialize, out _, out var fromDisk) && fromDisk is not null)
+                    return new(fromDisk);
+
+                var directory = Path.GetDirectoryName(FilePath);
+                Debug.Assert(directory is not null);
+                System.IO.Directory.CreateDirectory(directory);
+                List fromMemory = new([]);
+                fromMemory.Save();
+                return fromMemory;
+            }
+
+            /// <summary>Writes this instance to disk.</summary>
+            public void Save() =>
+                File.WriteAllText(
+                    FilePath,
+                    JsonSerializer.Serialize(History, RemoteJsonSerializerContext.Default.ListConnection)
+                );
+
+            static List<Connection>? Deserialize() =>
+                JsonSerializer.Deserialize<List<Connection>>(
+                    File.OpenRead(FilePath),
+                    RemoteJsonSerializerContext.Default.ListConnection
+                );
+        }
+
+        /// <summary>Initializes a new instance of the <see cref="Connection"/> struct.</summary>
+        /// <param name="yaml">The yaml to deconstruct.</param>
+        /// <param name="password">The password of the game.</param>
+        /// <param name="host">The host.</param>
+        /// <param name="port">The port of the host.</param>
+        public Connection(Yaml yaml, string? password, string? host, ushort port)
+            : this(yaml.Name, password, host, port, yaml.Game) { }
+
         /// <summary>Determines whether this instance is invalid, usually from default construction.</summary>
         public bool IsInvalid => Name is null || Host is null || Port is 0 || Game is null;
 
@@ -55,14 +100,24 @@ public sealed partial class Preferences
             var (slot, (password, _)) = first.SplitOn(':');
             var (host, (portSpan, _)) = second.SplitOn(':');
 
-            if (ushort.TryParse(portSpan, NumberStyles.Any, provider, out var port))
+            if (!ushort.TryParse(portSpan, NumberStyles.Any, provider, out var port))
             {
-                result = new(slot.ToString(), password.ToString(), host.ToString(), port, game.ToString());
-                return true;
+                result = default;
+                return false;
             }
 
-            result = default;
-            return false;
+            var gameStr = game.ToString();
+            var slotStr = slot.ToString();
+            var passwordStr = password.ToString();
+            var hostStr = host.ToString();
+
+            if (File.Exists(gameStr) &&
+                Go(Yaml.FromFile, gameStr, out _, out var yaml) &&
+                yaml?.FirstOrDefault(x => x.Name == slotStr) is { } y)
+                result = new(y, passwordStr, hostStr, port);
+
+            result = new(slotStr, passwordStr, hostStr, port, gameStr);
+            return true;
         }
 
         /// <inheritdoc />
@@ -74,11 +129,6 @@ public sealed partial class Preferences
             TryParse(s, provider, out var result);
             return result;
         }
-
-        /// <summary>Determines whether their values match.</summary>
-        /// <param name="yaml">The yaml to match against.</param>
-        /// <returns>Whether this instance matches the values in the parameter <paramref name="yaml"/>.</returns>
-        public bool IsMatch(Yaml yaml) => Game == yaml.Game && Name == yaml.Name;
 
         /// <summary>Gets the string representation for displaying as text.</summary>
         /// <returns>The string representation.</returns>
@@ -113,6 +163,9 @@ public sealed partial class Preferences
 
     /// <summary>Gets the languages.</summary>
     static readonly string s_languages = Enum.GetNames<Language>().Append("\0").Conjoin('\0');
+
+    /// <summary>Contains the history.</summary>
+    readonly Connection.List _list = Connection.List.Load();
 
     /// <summary>Whether to use tabs or separate windows.</summary>
     bool _useTabs = true;
@@ -161,14 +214,7 @@ public sealed partial class Preferences
     );
 
     /// <summary>Contains the path to the preferences file to read and write from.</summary>
-    public static string FilePath { get; } =
-        Environment.GetEnvironmentVariable("REMOTE_PREFERENCES_PATH") is { } preferences
-            ? System.IO.Directory.Exists(preferences) ? Path.Join(preferences, PreferencesFile) : preferences
-            : Path.Join(
-                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                typeof(Preferences).Assembly.GetName().Name,
-                PreferencesFile
-            );
+    public static string FilePath { get; } = PathTo(PreferencesFile, "REMOTE_PREFERENCES_PATH");
 
     /// <summary>Gets or sets the value determining whether to use tabs.</summary>
     public bool UseTabs
@@ -261,12 +307,7 @@ public sealed partial class Preferences
         get => (Language)_language;
         [UsedImplicitly] private set => _language = (int)value;
     }
-
-    /// <summary>Gets the history.</summary>
-    [CLSCompliant(false)]
 #pragma warning disable MA0016
-    public List<Connection> History { get; [UsedImplicitly] private set; } = [];
-
     /// <summary>Gets the list of colors.</summary>
     public List<AppColor> Colors { get; private set; } = [];
 #pragma warning restore MA0016
@@ -285,9 +326,13 @@ public sealed partial class Preferences
         System.IO.Directory.CreateDirectory(directory);
         Preferences fromMemory = new();
         fromMemory.Sanitize();
-        File.WriteAllText(FilePath, Kvp.Serialize(fromMemory));
+        fromMemory.Save();
         return fromMemory;
     }
+
+    /// <summary>Prepends the element to the beginning of the history.</summary>
+    /// <param name="connection">The connection to prepend.</param>
+    public void Prepend(Connection connection) => _list.History.Insert(0, connection);
 
     /// <summary>Pushes all colors and styling variables.</summary>
     public void PushStyling()
@@ -330,7 +375,11 @@ public sealed partial class Preferences
     }
 
     /// <summary>Writes this instance to disk.</summary>
-    public void Save() => File.WriteAllText(FilePath, Kvp.Serialize(this));
+    public void Save()
+    {
+        File.WriteAllText(FilePath, Kvp.Serialize(this));
+        _list.Save();
+    }
 
     /// <summary>Shows the preferences window.</summary>
     /// <param name="gameTime">The time elapsed.</param>
@@ -429,6 +478,19 @@ public sealed partial class Preferences
         ArrayPool<byte>.Shared.Return(buffer);
         return ret;
     }
+
+    /// <summary>Gets the full path to the file.</summary>
+    /// <param name="file">The file path to get.</param>
+    /// <param name="environment">The environment variable that allows users to override the return.</param>
+    /// <returns>The full path to the parameter <paramref name="file"/>.</returns>
+    static string PathTo(string file, string environment) =>
+        Environment.GetEnvironmentVariable(environment) is { } preferences
+            ? System.IO.Directory.Exists(preferences) ? Path.Join(preferences, file) : preferences
+            : Path.Join(
+                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                typeof(Preferences).Assembly.GetName().Name,
+                file
+            );
 
     /// <summary>Shows the clients.</summary>
     /// <param name="gameTime">The time elapsed.</param>
@@ -577,15 +639,15 @@ public sealed partial class Preferences
         var ret = ImGui.Button("Enter slot manually") || enter;
         ImGui.SeparatorText("History");
 
-        if (History.Count is not 0)
+        if (_list.History.Count is not 0)
             ImGui.TextDisabled("Left click to join. Right click to delete.");
 
-        for (var i = 0; i < History.Count && CollectionsMarshal.AsSpan(History) is var history; i++)
+        for (var i = 0; i < _list.History.Count && CollectionsMarshal.AsSpan(_list.History) is var history; i++)
         {
             ref var current = ref history[i];
 
-            if (current.IsInvalid || CollectionsMarshal.AsSpan(History)[..i].Contains(current))
-                History.RemoveAt(i--);
+            if (current.IsInvalid || history[..i].Contains(current))
+                _list.History.RemoveAt(i--);
             else if (ImGui.Button(current.ToDisplayString()))
             {
                 Client client = new(current);
@@ -597,10 +659,10 @@ public sealed partial class Preferences
                 clients = [client];
             }
             else if (ImGui.IsItemClicked(ImGuiMouseButton.Middle) || ImGui.IsItemClicked(ImGuiMouseButton.Right))
-                History.RemoveAt(i--);
+                _list.History.RemoveAt(i--);
         }
 
-        if (History.Count is 0)
+        if (_list.History.Count is 0)
             ImGui.Text("Join a game for buttons to appear here!");
 
         ImGui.EndTabItem();

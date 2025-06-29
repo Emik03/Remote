@@ -105,16 +105,16 @@ public sealed class Yaml : IDictionary<string, object?>
         Parser parser = new(new StreamReader(File.OpenRead(path)));
         parser.Consume<StreamStart>();
         Deserializer deserializer = new();
-        ICollection<Yaml> list = [];
+        ICollection<Yaml> ret = [];
 
         while (parser.Accept<DocumentStart>(out _))
         {
             var yaml = deserializer.Deserialize<Yaml>(parser);
             yaml.Path = path;
-            list.Add(yaml);
+            ret.Add(yaml);
         }
 
-        return list;
+        return ret;
     }
 
     /// <inheritdoc />

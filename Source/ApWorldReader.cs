@@ -167,6 +167,19 @@ public sealed record ApWorldReader(
         obj.TryGetPropertyValue("hidden", out var hidden) &&
         hidden?.GetValueKind() is JsonValueKind.True;
 
+    /// <summary>Determines whether the line contains an important warning message.</summary>
+    /// <param name="line">The warning line.</param>
+    /// <returns>Whether it is important.</returns>
+    static bool IsNotable(ReadOnlyMemory<char> line) =>
+        !line.Span.Contains(
+            "_speedups not available. Falling back to pure python LocationStore. Install a matching C++ compiler for your platform to compile _speedups.",
+            StringComparison.Ordinal
+        ) &&
+        !line.Span.Contains(
+            "warnings.warn(\"_speedups not available. Falling back to pure python LocationStore.",
+            StringComparison.Ordinal
+        );
+
     /// <summary>Whether it contains a <c>starting</c> property that is true.</summary>
     /// <param name="value">The value to check.</param>
     /// <returns>Whether this is a starting region.</returns>
@@ -385,14 +398,17 @@ public sealed record ApWorldReader(
         if (!process.WaitForExit(30000))
             return Fail(out categories, out options, out regions);
 
-        if (process.StandardOutput.ReadToEnd() is var error && !string.IsNullOrWhiteSpace(error))
+        if (process.StandardError.ReadToEnd() is var error &&
+            error.SplitLines().Where(IsNotable).Conjoin("\n") is var errors &&
+            !string.IsNullOrWhiteSpace(errors))
 #pragma warning disable IDISP013
             _ = Task.Run(() => MessageBox.Show("APWorld Warning", $"Manual Hooks: {error}", ["OK"]))
                .ConfigureAwait(false);
 #pragma warning restore IDISP013
-        var obj = JsonSerializer.Deserialize<JsonObject>(process.StandardOutput.ReadToEnd());
-
-        if (obj is null)
+        if (JsonSerializer.Deserialize<JsonNode>(
+            process.StandardOutput.ReadToEnd(),
+            RemoteJsonSerializerContext.Default.JsonNode
+        ) is not JsonObject obj)
             return Fail(out categories, out options, out regions);
 
         items = Index<JsonArray>(obj, "items.json");
@@ -415,7 +431,7 @@ public sealed record ApWorldReader(
             return null;
 
         using var stream = entry.Open();
-        return JsonSerializer.Deserialize<JsonNode>(stream) as T;
+        return JsonSerializer.Deserialize<JsonNode>(stream, RemoteJsonSerializerContext.Default.JsonNode) as T;
     }
 
     /// <summary>Attempts to extract the value from the <see cref="JsonObject"/>.</summary>

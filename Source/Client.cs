@@ -189,6 +189,7 @@ public sealed partial class Client(Yaml? yaml = null)
 
     /// <summary>Initializes a new instance of the <see cref="Client"/> class.</summary>
     /// <param name="connection">The connection information.</param>
+    [CLSCompliant(false)]
     public Client(Preferences.Connection connection)
         : this(connection.ToYaml()) { }
 
@@ -295,7 +296,7 @@ public sealed partial class Client(Yaml? yaml = null)
                 ((IDictionary<string, object?>)_yaml)[key] = value;
 
         _evaluator = Evaluator.Read(_session.DataStorage, _session.Items, _yaml, preferences);
-        preferences.History.Insert(0, new(_yaml.Name, password, address, port, _yaml.Path));
+        preferences.Prepend(new(_yaml, password, address, port));
         return true;
     }
 
