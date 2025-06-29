@@ -176,7 +176,7 @@ public sealed class Yaml : IDictionary<string, object?>
         item.Key switch
         {
             DescriptionField => (Description = "") is var _,
-            GameField => (Goal = "") is var _,
+            GameField => (Game = "") is var _,
             GoalField => (Goal = "") is var _,
             NameField => (Name = "") is var _,
             _ => _options.Remove(item.Key),
@@ -191,7 +191,7 @@ public sealed class Yaml : IDictionary<string, object?>
         key switch
         {
             DescriptionField => (Description = "") is var _,
-            GameField => (Goal = "") is var _,
+            GameField => (Game = "") is var _,
             GoalField => (Goal = "") is var _,
             NameField => (Name = "") is var _,
             _ => _options.Remove(key),
@@ -202,7 +202,7 @@ public sealed class Yaml : IDictionary<string, object?>
         key switch
         {
             DescriptionField => (value = Description) is var _,
-            GameField => (value = Goal) is var _,
+            GameField => (value = Game) is var _,
             GoalField => (value = Goal) is var _,
             NameField => (value = Name) is var _,
             _ when _options.TryGetValue(key, out var v) && (value = v) is var _ => true,
