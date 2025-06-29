@@ -370,7 +370,7 @@ public sealed partial class Client(Yaml? yaml = null)
             if (!s_displayErrors)
                 return null;
 #pragma warning disable MA0134
-            Task.Run(DisplayError).ConfigureAwait(false);
+            _ = Task.Run(DisplayError).ConfigureAwait(false);
 #pragma warning restore MA0134
             return null;
         }

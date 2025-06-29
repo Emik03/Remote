@@ -30,7 +30,7 @@ public sealed partial class Preferences
     /// <param name="Password">The password of the game.</param>
     /// <param name="Host">The host.</param>
     /// <param name="Port">The port of the host.</param>
-    /// <param name="Path">The path to the yaml file used to create this instance.</param>
+    /// <param name="Game">The game.</param>
     [CLSCompliant(false), StructLayout(LayoutKind.Auto)]
     public readonly record struct Connection(
         string? Name,

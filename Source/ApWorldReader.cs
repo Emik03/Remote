@@ -159,21 +159,6 @@ public sealed record ApWorldReader(
             itemValues.ToFrozenDictionary(x => x.Key, x => x.Value.DrainToImmutable(), FrozenSortedDictionary.Comparer));
     }
 
-    /// <summary>Gets the python script that runs <c>Data.py</c>.</summary>
-    /// <returns>The python script that runs <c>Data.py</c>.</returns>
-    static string? Script()
-    {
-        using var stream = typeof(RemoteGame).Assembly.GetManifestResourceStream(
-            $"{nameof(Remote)}.Resources.Values.Extractor.py"
-        );
-
-        if (stream is null)
-            return null;
-
-        using StreamReader sr = new(stream);
-        return sr.ReadToEnd();
-    }
-
     /// <summary>Whether it contains a <c>hidden</c> property that is true.</summary>
     /// <param name="kvp">The pair to check.</param>
     /// <returns>Whether to include this in <see cref="Evaluator.HiddenCategories"/>.</returns>
@@ -189,6 +174,21 @@ public sealed record ApWorldReader(
         value is JsonObject obj &&
         obj.TryGetPropertyValue("starting", out var starting) &&
         starting?.GetValueKind() is JsonValueKind.True;
+
+    /// <summary>Gets the python script that runs <c>Data.py</c>.</summary>
+    /// <returns>The python script that runs <c>Data.py</c>.</returns>
+    static string? Script()
+    {
+        using var stream = typeof(RemoteGame).Assembly.GetManifestResourceStream(
+            $"{nameof(Remote)}.Resources.Values.Extractor.py"
+        );
+
+        if (stream is null)
+            return null;
+
+        using StreamReader sr = new(stream);
+        return sr.ReadToEnd();
+    }
 
     /// <summary>Attempts to get the <c>category</c> array field.</summary>
     /// <param name="obj">The node to extract.</param>
@@ -385,6 +385,11 @@ public sealed record ApWorldReader(
         if (!process.WaitForExit(30000))
             return Fail(out categories, out options, out regions);
 
+        if (process.StandardOutput.ReadToEnd() is var error && !string.IsNullOrWhiteSpace(error))
+#pragma warning disable IDISP013
+            _ = Task.Run(() => MessageBox.Show("APWorld Warning", $"Manual Hooks: {error}", ["OK"]))
+               .ConfigureAwait(false);
+#pragma warning restore IDISP013
         var obj = JsonSerializer.Deserialize<JsonObject>(process.StandardOutput.ReadToEnd());
 
         if (obj is null)

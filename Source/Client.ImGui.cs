@@ -421,9 +421,10 @@ public sealed partial class Client
     /// <returns>Not the parameter <paramref name="open"/>.</returns>
     bool Close(bool open)
     {
-        if (!open)
-            _ = Task.Run(() => _session?.Socket.DisconnectAsync());
-
+        if (!open && _session is not null)
+#pragma warning disable IDISP013
+            _ = Task.Run(_session.Socket.DisconnectAsync).ConfigureAwait(false);
+#pragma warning restore IDISP013
         return !open;
     }
 
