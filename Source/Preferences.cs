@@ -332,6 +332,7 @@ public sealed partial class Preferences
 
     /// <summary>Prepends the element to the beginning of the history.</summary>
     /// <param name="connection">The connection to prepend.</param>
+    [CLSCompliant(false)]
     public void Prepend(Connection connection) => _list.History.Insert(0, connection);
 
     /// <summary>Pushes all colors and styling variables.</summary>
