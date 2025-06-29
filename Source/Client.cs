@@ -217,7 +217,7 @@ public sealed partial class Client(Yaml? yaml = null)
 
             _isRetrievingHints = true;
 
-            if (Go(() => _session.DataStorage.GetHintsAsync().GetAwaiter().GetResult(), out _, out var ok))
+            if (Go(() => _session.DataStorage.GetHints(), out _, out var ok))
                 return field;
 
             field = ok;
@@ -284,7 +284,7 @@ public sealed partial class Client(Yaml? yaml = null)
         _windowName = $"{_yaml.Name}###{_instance}";
         _session.SetClientState(ArchipelagoClientState.ClientPlaying);
 
-        if (!Go(() => _session.DataStorage.GetSlotDataAsync().GetAwaiter().GetResult(), out _, out var ok))
+        if (!Go(() => _session.DataStorage.GetSlotData(), out _, out var ok))
             foreach (var (key, value) in ok)
                 ((IDictionary<string, object?>)_yaml)[key] = value;
 

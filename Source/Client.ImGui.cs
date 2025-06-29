@@ -422,7 +422,7 @@ public sealed partial class Client
     bool Close(bool open)
     {
         if (!open)
-            _session?.Socket.DisconnectAsync().GetAwaiter().GetResult();
+            _ = Task.Run(() => _session?.Socket.DisconnectAsync());
 
         return !open;
     }

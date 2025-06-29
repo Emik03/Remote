@@ -60,7 +60,7 @@ public sealed record ApWorldReader(
         if (Locations is null)
             return default;
 
-        if (Go(w => w.GetSlotDataAsync<GoalData>().GetAwaiter().GetResult(), wrapper, out _, out var ok) &&
+        if (Go(w => w.GetSlotData<GoalData>(), wrapper, out _, out var ok) &&
             ok is { Goal: var index } &&
             Locations.Where(IsVictory).Select(x => x?["name"]?.ToString()).Skip(index).FirstOrDefault() is { } goal)
             yaml.Goal = goal;
