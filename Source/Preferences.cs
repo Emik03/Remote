@@ -37,12 +37,12 @@ public sealed partial class Preferences
         string? Password,
         string? Host,
         ushort Port,
-        string? Path
+        string? Game
     )
         : ISpanParsable<Connection>
     {
         /// <summary>Determines whether this instance is invalid, usually from default construction.</summary>
-        public bool IsInvalid => Name is null || Host is null || Port is 0;
+        public bool IsInvalid => Name is null || Host is null || Port is 0 || Game is null;
 
         /// <inheritdoc />
         public static bool TryParse([NotNullWhen(true)] string? s, IFormatProvider? provider, out Connection result) =>
@@ -51,13 +51,13 @@ public sealed partial class Preferences
         /// <inheritdoc />
         public static bool TryParse(ReadOnlySpan<char> s, IFormatProvider? provider, out Connection result)
         {
-            var (first, (second, (path, _))) = s.SplitOn('@');
+            var (first, (second, (game, _))) = s.SplitOn('@');
             var (slot, (password, _)) = first.SplitOn(':');
             var (host, (portSpan, _)) = second.SplitOn(':');
 
             if (ushort.TryParse(portSpan, NumberStyles.Any, provider, out var port))
             {
-                result = new(slot.ToString(), password.ToString(), host.ToString(), port, path.ToString());
+                result = new(slot.ToString(), password.ToString(), host.ToString(), port, game.ToString());
                 return true;
             }
 
@@ -78,21 +78,23 @@ public sealed partial class Preferences
         /// <summary>Determines whether their values match.</summary>
         /// <param name="yaml">The yaml to match against.</param>
         /// <returns>Whether this instance matches the values in the parameter <paramref name="yaml"/>.</returns>
-        public bool IsMatch(Yaml yaml) => Name == yaml.Name && Path == yaml.Path;
+        public bool IsMatch(Yaml yaml) => Game == yaml.Game && Name == yaml.Name;
 
         /// <summary>Gets the string representation for displaying as text.</summary>
         /// <returns>The string representation.</returns>
         public string ToDisplayString() => $"{Name} ({Host}:{Port})";
 
         /// <inheritdoc />
-        public override string ToString() => $"{Name}:{Password}@{Host}:{Port}@{Path}";
+        public override string ToString() => $"{Name}:{Password}@{Host}:{Port}@{Game}";
 
         /// <summary>Converts this instance to the equivalent <see cref="Yaml"/> instance.</summary>
         /// <returns>The <see cref="Yaml"/> instance, or <see langword="null"/> if none found on disk.</returns>
-        public Yaml? ToYaml() =>
-            string.IsNullOrWhiteSpace(Path) || Go(Yaml.FromFile, Path, out _, out var yaml)
-                ? null
-                : yaml.FirstOrDefault(IsMatch);
+        public Yaml ToYaml() =>
+            new()
+            {
+                Game = Game ?? "",
+                Name = Name ?? "",
+            };
     }
 
     /// <summary>The flags to use across any text field.</summary>
@@ -578,21 +580,25 @@ public sealed partial class Preferences
         if (History.Count is not 0)
             ImGui.TextDisabled("Left click to join. Right click to delete.");
 
-        for (var i = 0; i < History.Count && History[i] is var current; i++)
+        for (var i = 0; i < History.Count && CollectionsMarshal.AsSpan(History) is var history; i++)
+        {
+            ref var current = ref history[i];
+
             if (current.IsInvalid || CollectionsMarshal.AsSpan(History)[..i].Contains(current))
                 History.RemoveAt(i--);
             else if (ImGui.Button(current.ToDisplayString()))
             {
-                var yaml = current.ToYaml();
-                Client client = new(yaml);
+                Client client = new(current);
 
-                if (yaml is not null)
-                    _ = client.Connect(this, current.Host ?? Address, current.Port, current.Password);
+                if (!client.Connect(this, current.Host ?? Address, current.Port, current.Password) &&
+                    client.Connect(this, Address, Port, Password))
+                    current = current with { Host = Address, Port = Port, Password = Password };
 
                 clients = [client];
             }
             else if (ImGui.IsItemClicked(ImGuiMouseButton.Middle) || ImGui.IsItemClicked(ImGuiMouseButton.Right))
                 History.RemoveAt(i--);
+        }
 
         if (History.Count is 0)
             ImGui.Text("Join a game for buttons to appear here!");

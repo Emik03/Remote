@@ -187,6 +187,11 @@ public sealed partial class Client(Yaml? yaml = null)
         : this() =>
         _errors = errors;
 
+    /// <summary>Initializes a new instance of the <see cref="Client"/> class.</summary>
+    /// <param name="connection">The connection information.</param>
+    public Client(Preferences.Connection connection)
+        : this(connection.ToYaml()) { }
+
     /// <summary>Gets or adds this location and retrieves the checkbox status of that location.</summary>
     /// <param name="key">The key to add or get.</param>
     public ref CheckboxStatus this[string key]
@@ -281,6 +286,7 @@ public sealed partial class Client(Yaml? yaml = null)
             return false;
         }
 
+        _errors = null;
         _windowName = $"{_yaml.Name}###{_instance}";
         _session.SetClientState(ArchipelagoClientState.ClientPlaying);
 
