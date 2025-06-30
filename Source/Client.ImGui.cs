@@ -194,6 +194,7 @@ public sealed partial class Client
             return;
 
         ShowChatTab(preferences);
+        ShowPlayerTab(preferences);
         ShowLocationTab(gameTime, preferences);
         ShowItemTab(preferences);
         ShowHintTab(preferences);
@@ -223,7 +224,6 @@ public sealed partial class Client
         }
 
         ImGui.TextDisabled("TIP: Right click text or checkboxes to copy them!");
-        ShowPlayers(preferences);
         ShowLog(preferences);
         ImGui.SeparatorText("Message");
         ImGui.SetNextItemWidth(preferences.Width(250));
@@ -258,6 +258,34 @@ public sealed partial class Client
         if (ImGui.IsItemHovered())
             Tooltip(preferences, HelpMessage2);
 
+        ImGui.EndChild();
+        ImGui.EndTabItem();
+    }
+
+    /// <summary>Shows the player client.</summary>
+    /// <param name="preferences">The user preferences.</param>
+    void ShowPlayerTab(Preferences preferences)
+    {
+        const ImGuiTableFlags Flags = ImGuiTableFlags.Resizable | ImGuiTableFlags.SizingStretchSame;
+        Debug.Assert(_session is not null);
+
+        if (!ImGui.BeginTabItem("Players"))
+            return;
+
+        if (!ImGui.BeginChild("Players"))
+        {
+            ImGui.EndChild();
+            return;
+        }
+
+        if (!ImGui.BeginTable("Players", 4, Flags))
+        {
+            ImGui.EndTable();
+            return;
+        }
+
+        ShowPlayers(preferences);
+        ImGui.EndTable();
         ImGui.EndChild();
         ImGui.EndTabItem();
     }
@@ -355,43 +383,52 @@ public sealed partial class Client
     /// <param name="preferences">The user preferences.</param>
     void ShowPlayers(Preferences preferences)
     {
+        const string FlavorText = "Despite everything, it's still you.";
         Debug.Assert(_session is not null);
-        ImGui.SeparatorText("Players");
+        ImGui.TableSetupColumn("Name", ImGuiTableColumnFlags.None, preferences.UiScale * 10);
+        ImGui.TableSetupColumn("Game", ImGuiTableColumnFlags.None, preferences.UiScale * 10);
+        ImGui.TableSetupColumn("Slot", ImGuiTableColumnFlags.None, 2);
+        ImGui.TableSetupColumn("Team", ImGuiTableColumnFlags.None, 2);
+        ImGui.TableHeadersRow();
 
-        if (!ImGui.BeginChild("Players", new(0, preferences.UiScale * 50)))
+        foreach (var player in _session.Players.AllPlayers)
         {
-            ImGui.EndChild();
-            return;
+            ImGui.TableNextRow();
+            ImGui.TableNextColumn();
+            var playerName = player.ToString();
+            var isSelf = player.Slot == _session.Players.ActivePlayer.Slot;
+            var selfColor = preferences[isSelf ? AppPalette.Useful : AppPalette.Neutral];
+            ImGui.TextColored(selfColor, playerName);
+            CopyIfClicked(preferences, playerName);
+
+            if (isSelf && ImGui.IsItemHovered())
+                Tooltip(preferences, FlavorText);
+
+            var (gameName, isManual) = player.Game is ['M', 'a', 'n', 'u', 'a', 'l', '_', .. var rest]
+                ? (rest.SplitOn('_')[..^1].ToString(), true)
+                : (player.Game, false);
+
+            ImGui.TableNextColumn();
+            ImGui.TextColored(preferences[isManual ? AppPalette.Progression : AppPalette.Neutral], gameName);
+            CopyIfClicked(preferences, gameName);
+
+            if (isManual && ImGui.IsItemHovered())
+                Tooltip(preferences, "Manual Game");
+
+            var slotName = player.Slot.ToString();
+            ImGui.TableNextColumn();
+            ImGui.TextColored(selfColor, slotName);
+            CopyIfClicked(preferences, slotName);
+
+            if (isSelf && ImGui.IsItemHovered())
+                Tooltip(preferences, FlavorText);
+
+            ImGui.TableNextColumn();
+            var teamName = player.Team.ToString();
+            var isTeammate = player.Team == _session.Players.ActivePlayer.Team;
+            ImGui.TextColored(preferences[isTeammate ? AppPalette.Neutral : AppPalette.Checked], teamName);
+            CopyIfClicked(preferences, teamName);
         }
-
-        foreach (var (team, players) in _session.Players.Players)
-        {
-            if (players is [])
-                continue;
-
-            var copy = $"Team {team}: {players.Conjoin(' ')}";
-            ImGui.BulletText(copy.AsSpan(0, team.DigitCount() + 6));
-            CopyIfClicked(preferences, copy);
-
-            if (ImGui.IsItemHovered())
-                Tooltip(preferences, $"Contains {players.Count.Conjugate("player")}");
-
-            ImGui.SameLine();
-
-            for (var i = 0; i < players.Count && players[i] is var player; i++)
-            {
-                ImGui.Text(player.ToString());
-                CopyIfClicked(preferences, copy);
-
-                if (ImGui.IsItemHovered())
-                    Tooltip(preferences, $"Running {player.Game} on slot #{player.Slot}");
-
-                if (i + 1 < players.Count)
-                    ImGui.SameLine();
-            }
-        }
-
-        ImGui.EndChild();
     }
 
     /// <summary>Shows the message log.</summary>
