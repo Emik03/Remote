@@ -354,7 +354,7 @@ public sealed partial class Preferences
     {
         var v = color.Vector;
         ImGui.ColorEdit4(name, ref v, ImGuiColorEditFlags.DisplayHex);
-        ImGui.ColorEdit4($"##{name}", ref v, ImGuiColorEditFlags.DisplayRGB | ImGuiColorEditFlags.NoSmallPreview);
+        ImGui.ColorEdit4($"##{name}", ref v, ImGuiColorEditFlags.DisplayHSV | ImGuiColorEditFlags.NoSmallPreview);
         return new(v);
     }
 
