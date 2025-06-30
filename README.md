@@ -63,8 +63,16 @@ When compiling the project yourself, make sure to specify `-c Debug` as compilin
 ## Thanks
 
 Thank you to the following projects that make this possible:
+
+---
+
 - [Icon](https://github.com/Emik03/Remote/blob/main/Resources/Drawable/Icon.svg) by [Ghostlyfield](https://bsky.app/profile/ghostlyfield.bsky.social)
 - [Extractor.py](https://github.com/Emik03/Remote/blob/main/Resources/Values/Extractor.py) by [Darius](https://github.com/itsMapleLeaf)
+- [Main Color Scheme](https://draculatheme.com/contribute)
+- [Secondary Color Scheme](https://sronpersonalpages.nl/~pault/)
+
+---
+
 - [Archipelago](https://archipelago.gg/)
 - [Archipelago.MultiClient.Net](https://github.com/ArchipelagoMW/Archipelago.MultiClient.Net)
 - [Archipelago.MultiClient.Net.Analyzers](https://github.com/BadMagic100/Archipelago.MultiClient.Net.Analyzers)
@@ -77,6 +85,8 @@ Thank you to the following projects that make this possible:
 - [Noto Sans](https://fonts.google.com/noto)
 - [PupNet Deploy](https://github.com/kuiperzone/PupNet-Deploy)
 - [YamlDotNet](https://github.com/aaubry/YamlDotNet/wiki) (go [sponsor Edward Cooke](https://github.com/sponsors/EdwardCooke)!)
+
+---
 
 ## Contribute
 
