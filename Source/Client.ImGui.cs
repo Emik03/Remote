@@ -40,10 +40,11 @@ public sealed partial class Client
     {
         var open = true;
         var color = preferences[AppPalette.OutOfLogic - index % 7];
-        ImGui.PushStyleColor(ImGuiCol.WindowBg, color / 1.5f);
-        ImGui.PushStyleColor(ImGuiCol.TabSelected, color);
-        ImGui.PushStyleColor(ImGuiCol.Tab, color / 1.5f);
-        ImGui.PushStyleColor(ImGuiCol.TabHovered, color);
+        const float Active = 1.5f, Inactive = 2.5f;
+        ImGui.PushStyleColor(ImGuiCol.TabSelected, color / Active);
+        ImGui.PushStyleColor(ImGuiCol.TabHovered, color / Active);
+        ImGui.PushStyleColor(ImGuiCol.WindowBg, color / Inactive);
+        ImGui.PushStyleColor(ImGuiCol.Tab, color / Inactive);
 
         if (preferences.UseTabs)
         {
