@@ -664,11 +664,7 @@ public sealed partial class Preferences
             else if (ImGui.Button(current.ToString()))
             {
                 Client client = new(current);
-
-                if (!client.Connect(this, current.Host ?? Address, current.Port, current.Password) &&
-                    client.Connect(this, Address, Port, Password))
-                    current = current with { Host = Address, Port = Port, Password = Password };
-
+                client.Connect(this, current.Host ?? Address, current.Port, current.Password);
                 clients = [client];
             }
             else if (ImGui.IsItemClicked(ImGuiMouseButton.Middle) || ImGui.IsItemClicked(ImGuiMouseButton.Right))

@@ -167,10 +167,10 @@ public sealed partial class Client(Yaml? yaml = null)
     bool? _canGoal = false;
 
     /// <summary>Contains the last index in <see cref="_messages"/> right before a release occurs.</summary>
-    int _releaseIndex;
+    int _hintCost, _releaseIndex;
 
     /// <summary>Contains the window name.</summary>
-    string _windowName = $"Client###{s_instances}";
+    string _connectionMessage = "", _windowName = $"Client###{s_instances}";
 
     /// <summary>Contains all errors to display.</summary>
     string[]? _errors;
@@ -183,6 +183,9 @@ public sealed partial class Client(Yaml? yaml = null)
 
     /// <summary>Gets the last successful connection.</summary>
     Preferences.Connection _info;
+
+    /// <summary>The attempt to login.</summary>
+    Task _connectingTask = Task.CompletedTask;
 
     /// <summary>Initializes a new instance of the <see cref="Client"/> class.</summary>
     /// <param name="errors">The errors to show immediately.</param>
@@ -248,8 +251,7 @@ public sealed partial class Client(Yaml? yaml = null)
     /// <summary>Connects to the archipelago server.</summary>
     /// <param name="preferences">The user preferences.</param>
     /// <returns>Whether the connection succeeded.</returns>
-    [MemberNotNullWhen(true, nameof(_session)), MemberNotNullWhen(false, nameof(_errors))]
-    public bool Connect(Preferences preferences) =>
+    public void Connect(Preferences preferences) =>
         Connect(preferences, preferences.Address, preferences.Port, preferences.Password);
 
     /// <summary>Connects to the archipelago server.</summary>
@@ -264,45 +266,65 @@ public sealed partial class Client(Yaml? yaml = null)
     /// The password to authenticate with instead of the one specified in the parameter <paramref name="preferences"/>.
     /// </param>
     /// <returns>Whether the connection succeeded.</returns>
-    [CLSCompliant(false), MemberNotNullWhen(true, nameof(_session)), MemberNotNullWhen(false, nameof(_errors))]
-    public bool Connect(Preferences preferences, string address, ushort port, string? password)
+    [CLSCompliant(false)]
+    public void Connect(Preferences preferences, string address, ushort port, string? password)
     {
-        const ItemsHandlingFlags Flags = ItemsHandlingFlags.AllItems;
-
-        _yaml.Name = _yaml.Name
-           .Replace("{player}", "1")
-           .Replace("{PLAYER}", "")
-           .Replace("{number}", "1")
-           .Replace("{NUMBER}", "");
-
-        _session = ArchipelagoSessionFactory.CreateSession(address, port);
-        _session.MessageLog.OnMessageReceived += OnMessageReceived;
-        _session.Items.ItemReceived += UpdateStatus;
-        string[] tags = ["AP", nameof(Remote)];
-        var login = _session.TryConnectAndLogin(_yaml.Game, _yaml.Name, Flags, tags: tags, password: password);
-
-        if (login is LoginFailure failure)
+        async Task Attempt()
         {
-            _session.MessageLog.OnMessageReceived -= OnMessageReceived;
-            _session.Items.ItemReceived -= UpdateStatus;
-            _errors = failure.Errors;
-            _session = null;
-            return false;
+            const ItemsHandlingFlags Flags = ItemsHandlingFlags.AllItems;
+
+            await Task.Yield();
+            var session = ArchipelagoSessionFactory.CreateSession(address, port);
+            session.MessageLog.OnMessageReceived += OnMessageReceived;
+            session.Items.ItemReceived += UpdateStatus;
+            string[] tags = ["AP", nameof(Remote)];
+            _connectionMessage = "Attempting new connection.\nConnecting... (1/5)";
+            var connect = await session.ConnectAsync();
+            _hintCost = connect.HintCostPercentage;
+            _yaml.EscapeName();
+            _connectionMessage = "Connected!\nLogging in... (2/5)";
+            var login = await session.LoginAsync(_yaml.Game, _yaml.Name, Flags, tags: tags, password: password);
+
+            if (login is LoginFailure failure)
+            {
+                session.MessageLog.OnMessageReceived -= OnMessageReceived;
+                session.Items.ItemReceived -= UpdateStatus;
+                _errors = failure.Errors;
+                return;
+            }
+
+            _errors = null;
+            _windowName = $"{_yaml.Name}###{_instance}";
+            _connectionMessage = "Logged in!\nReading slot data... (3/5)";
+            session.SetClientState(ArchipelagoClientState.ClientPlaying);
+
+            if (!Go(() => session.DataStorage.GetSlotData(), out _, out var ok))
+                foreach (var (key, value) in ok)
+                    ((IDictionary<string, object?>)_yaml)[key] = value;
+
+            _connectionMessage = "Slot data has been read!\nReading APWorld... (4/5)";
+            _evaluator = Evaluator.Read(session.DataStorage, session.Items, _yaml, preferences);
+            _connectionMessage = "APWorld has been read!\nSaving history in memory... (5/5)";
+            _info = new(_yaml, password, address, port);
+            preferences.Sync(ref _info);
+            preferences.Prepend(_info);
+            _session = session;
         }
 
-        _errors = null;
-        _windowName = $"{_yaml.Name}###{_instance}";
-        _session.SetClientState(ArchipelagoClientState.ClientPlaying);
+        async Task? Wrapped()
+        {
+            try
+            {
+                await Attempt();
+            }
+            catch (Exception e)
+            {
+                _errors = ToMessages(e);
+            }
+        }
 
-        if (!Go(() => _session.DataStorage.GetSlotData(), out _, out var ok))
-            foreach (var (key, value) in ok)
-                ((IDictionary<string, object?>)_yaml)[key] = value;
-
-        _evaluator = Evaluator.Read(_session.DataStorage, _session.Items, _yaml, preferences);
-        _info = new(_yaml, password, address, port);
-        preferences.Sync(ref _info);
-        preferences.Prepend(_info);
-        return true;
+        _connectionMessage = "";
+        _connectingTask = Task.Run(Wrapped);
     }
 
     /// <inheritdoc />

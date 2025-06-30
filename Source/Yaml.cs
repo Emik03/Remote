@@ -167,6 +167,10 @@ public sealed class Yaml : IDictionary<string, object?>
                 : null;
     }
 
+    /// <summary>Escapes the name.</summary>
+    public void EscapeName() =>
+        Name = Name.Replace("{player}", "1").Replace("{PLAYER}", "").Replace("{number}", "1").Replace("{NUMBER}", "");
+
     /// <inheritdoc />
     bool ICollection<KeyValuePair<string, object?>>.Contains(KeyValuePair<string, object?> item) =>
         ((IDictionary<string, object?>)this)[item.Key] is { } l ? l.Equals(item.Value) : item.Value is not null;

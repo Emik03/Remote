@@ -117,10 +117,38 @@ public sealed partial class Client
         ImGui.EndTooltip();
     }
 
+    /// <summary>Gets the setter for the next item open.</summary>
+    /// <returns>The function that invokes <see cref="ImGui.SetNextItemOpen(bool)"/>.</returns>
+    static Action GetNextItemOpenSetter()
+    {
+        bool? ret = null;
+
+        if (ImGui.Button("Expand all"))
+            ret = true;
+
+        ImGui.SameLine();
+
+        if (ImGui.Button("Collapse all"))
+            ret = false;
+
+        return ret switch
+        {
+            null => Noop,
+            true => static () => ImGui.SetNextItemOpen(true),
+            false => static () => ImGui.SetNextItemOpen(false),
+        };
+    }
+
     /// <summary>Shows the components for entering slot information.</summary>
     /// <param name="preferences">The user preferences.</param>
     void ShowBuilder(Preferences preferences)
     {
+        if (!_connectingTask.IsCompleted)
+        {
+            ImGui.TextDisabled(_connectionMessage);
+            return;
+        }
+
         ImGui.SeparatorText("Slot");
         ImGui.SetNextItemWidth(preferences.Width(100));
         _ = ImGuiRenderer.InputText("Game", ref _yaml.Game, ushort.MaxValue, Preferences.TextFlags);
@@ -139,8 +167,8 @@ public sealed partial class Client
 
         ImGui.SeparatorText("Create");
 
-        if ((ImGui.Button("Connect") || enter) && Go(Connect, preferences, out var e, out _))
-            _errors = ToMessages(e);
+        if (ImGui.Button("Connect") || enter)
+            Connect(preferences);
     }
 
     /// <summary>Shows the components for having connected to the server.</summary>
@@ -189,6 +217,7 @@ public sealed partial class Client
         }
 
         ImGui.TextDisabled("TIP: Right click text or checkboxes to copy them!");
+        ImGui.TextDisabled($"Hint cost percentage: {_hintCost}%%");
         ShowPlayers(preferences);
         ShowLog(preferences);
         ImGui.SeparatorText("Message");
@@ -511,6 +540,7 @@ public sealed partial class Client
     {
         Debug.Assert(_evaluator is not null);
         _ = ImGui.Checkbox("Show Out of Logic Locations", ref _showOutOfLogic);
+        var setter = GetNextItemOpenSetter();
         ShowLocationSearch();
         ImGui.BeginChild("Locations", preferences.ChildSize(100));
         bool? ret = true;
@@ -536,7 +566,12 @@ public sealed partial class Client
                     count++;
             }
 
-            if (count is 0 || !ImGui.CollapsingHeader($"{category} ({count})###{category}:|LocationCategory"))
+            if (count is 0)
+                continue;
+
+            setter();
+
+            if (!ImGui.CollapsingHeader($"{category} ({count})###{category}:|LocationCategory"))
                 continue;
 
             // ReSharper disable once ForeachCanBePartlyConvertedToQueryUsingAnotherGetEnumerator
@@ -667,6 +702,7 @@ public sealed partial class Client
     {
         Debug.Assert(_evaluator is not null);
         _ = ImGui.Checkbox("Show pending items", ref _showYetToReceive);
+        var setter = GetNextItemOpenSetter();
         ShowItemSearch();
 
         foreach (var (category, items) in _evaluator.CategoryToItems)
@@ -676,7 +712,12 @@ public sealed partial class Client
 
             var sum = GroupItems(category, items).Where(x => x.IsMatch(_itemSearch)).Sum(x => x.Count);
 
-            if (sum is 0 || !ImGui.CollapsingHeader($"{category} ({sum})###{category}:|ItemCategory"))
+            if (sum is 0)
+                continue;
+
+            setter();
+
+            if (!ImGui.CollapsingHeader($"{category} ({sum})###{category}:|ItemCategory"))
                 continue;
 
             GroupItems(category, items).Where(x => x.IsMatch(_itemSearch)).Lazily(x => x.Show(preferences)).Enumerate();
