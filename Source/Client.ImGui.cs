@@ -7,6 +7,9 @@ public sealed partial class Client
     /// <summary>Contains the options for the hint setting.</summary>
     static readonly string[] s_hintOptions = ["Show sent hints", "Show received hints"];
 
+    /// <summary>Contains the list of sent messages, with the drafting message at the end.</summary>
+    readonly List<string> _sentMessages = [""];
+
     /// <summary>Whether to show the dialog.</summary>
     bool _showAlreadyChecked, _showConfirmationDialog, _showObtainedHints, _showOutOfLogic, _showYetToReceive;
 
@@ -19,10 +22,10 @@ public sealed partial class Client
     bool? _isAttemptingToRelease;
 
     /// <summary>Contains the last amount of checks.</summary>
-    int _hintIndex, _lastItemCount = int.MinValue, _lastLocationCount = int.MaxValue;
+    int _hintIndex, _lastItemCount = int.MinValue, _lastLocationCount = int.MaxValue, _sentMessagesIndex;
 
     /// <summary>The current state of the text field.</summary>
-    string _message = "", _itemSearch = "", _locationSearch = "";
+    string _itemSearch = "", _locationSearch = "";
 
     /// <summary>The amount of time before release.</summary>
     TimeSpan _confirmationTimer;
@@ -185,13 +188,22 @@ public sealed partial class Client
         ImGui.SeparatorText("Message");
         ImGui.SetNextItemWidth(preferences.Width(250));
         ImGui.SetKeyboardFocusHere();
-        var enter = ImGuiRenderer.InputText("##Message", ref _message, ushort.MaxValue, Flags);
+
+        if (ImGui.IsKeyPressed(ImGuiKey.DownArrow))
+            MoveSentMessageIndex(1);
+
+        if (ImGui.IsKeyPressed(ImGuiKey.UpArrow))
+            MoveSentMessageIndex(-1);
+
+        ref var latestMessage = ref CollectionsMarshal.AsSpan(_sentMessages)[^1];
+        var enter = ImGui.InputText("##Message", ref latestMessage, ushort.MaxValue, Flags);
         ImGui.SameLine();
 
         if (ImGui.Button("Send") || enter)
         {
-            _session.Say(_message);
-            _message = "";
+            _session.Say(latestMessage);
+            _sentMessages.Add("");
+            _sentMessagesIndex = _sentMessages.Count - 1;
         }
 
         ImGui.SameLine();
@@ -335,6 +347,23 @@ public sealed partial class Client
             ImGui.SetScrollHereY(1);
 
         ImGui.EndChild();
+    }
+
+    /// <summary>Moves the index by an amount.</summary>
+    /// <param name="offset">The offset.</param>
+    void MoveSentMessageIndex(int offset)
+    {
+        var io = ImGui.GetIO();
+
+        for (var i = 0; i < _sentMessages[_sentMessagesIndex].Length; i++)
+        {
+            io.AddKeyEvent(ImGuiKey.Backspace, true);
+            io.AddKeyEvent(ImGuiKey.Backspace, false);
+        }
+
+        _sentMessagesIndex = (_sentMessagesIndex + offset).Clamp(0, _sentMessages.Count - 1);
+        var message = _sentMessagesIndex == _sentMessages.Count - 1 ? "" : _sentMessages[_sentMessagesIndex];
+        io.AddInputCharactersUTF8(message);
     }
 
     /// <summary>Shows the confirmation dialog for releasing locations.</summary>
