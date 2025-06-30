@@ -40,10 +40,10 @@ public sealed partial class Client
     {
         var open = true;
         var color = preferences[AppPalette.OutOfLogic - index % 7];
-        ImGui.PushStyleColor(ImGuiCol.TabSelected, color);
-        ImGui.PushStyleColor(ImGuiCol.TabHovered, color);
         ImGui.PushStyleColor(ImGuiCol.WindowBg, color / 1.5f);
+        ImGui.PushStyleColor(ImGuiCol.TabSelected, color);
         ImGui.PushStyleColor(ImGuiCol.Tab, color / 1.5f);
+        ImGui.PushStyleColor(ImGuiCol.TabHovered, color);
 
         if (preferences.UseTabs)
         {
@@ -540,7 +540,7 @@ public sealed partial class Client
         {
             ImGui.TextColored(preferences[AppPalette.Released], ReleaseMessage());
             ImGui.TextDisabled("Press left click to return to the previous screen");
-            Release();
+            Release(preferences);
 
             if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
                 ClearChecked();

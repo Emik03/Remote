@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MPL-2.0
 namespace Remote;
 
+using JsonIgnoreAttribute = System.Text.Json.Serialization.JsonIgnoreAttribute;
 using JsonSerializer = System.Text.Json.JsonSerializer;
 using Vector2 = System.Numerics.Vector2;
 
@@ -32,9 +33,16 @@ public sealed partial class Preferences
     /// <param name="Host">The host.</param>
     /// <param name="Port">The port of the host.</param>
     /// <param name="Game">The game.</param>
+    /// <param name="Locations">The checked locations.</param>
     [CLSCompliant(false), StructLayout(LayoutKind.Auto)]
-    public readonly record struct Connection(string? Name, string? Password, string? Host, ushort Port, string? Game)
-        : ISpanParsable<Connection>
+    public readonly record struct Connection(
+        string? Name,
+        string? Password,
+        string? Host,
+        ushort Port,
+        string? Game,
+        ImmutableHashSet<string>? Locations
+    )
     {
         /// <summary>Contains the list of connections.</summary>
         /// <param name="History">The history.</param>
@@ -79,63 +87,47 @@ public sealed partial class Preferences
         }
 
         /// <summary>Initializes a new instance of the <see cref="Connection"/> struct.</summary>
+        /// <param name="connection">The connection to copy.</param>
+        /// <param name="locations">The locations to inherit.</param>
+        public Connection(Connection connection, IEnumerable<string>? locations)
+            : this(
+                connection.Name,
+                connection.Password,
+                connection.Host,
+                connection.Port,
+                connection.Game,
+                connection.GetLocationsOrEmpty().Union(locations ?? [])
+            ) { }
+
+        /// <summary>Initializes a new instance of the <see cref="Connection"/> struct.</summary>
         /// <param name="yaml">The yaml to deconstruct.</param>
         /// <param name="password">The password of the game.</param>
         /// <param name="host">The host.</param>
         /// <param name="port">The port of the host.</param>
         public Connection(Yaml yaml, string? password, string? host, ushort port)
-            : this(yaml.Name, password, host, port, yaml.Game) { }
+            : this(yaml.Name, password, host, port, yaml.Game, []) { }
 
         /// <summary>Determines whether this instance is invalid, usually from default construction.</summary>
+        [JsonIgnore]
         public bool IsInvalid => Name is null || Host is null || Port is 0 || Game is null;
 
         /// <inheritdoc />
-        public static bool TryParse([NotNullWhen(true)] string? s, IFormatProvider? provider, out Connection result) =>
-            TryParse(s.AsSpan(), provider, out result);
+        public bool Equals(Connection other) =>
+            Port == other.Port &&
+            StringComparer.Ordinal.Equals(Name, other.Name) &&
+            StringComparer.Ordinal.Equals(Game, other.Game) &&
+            StringComparer.Ordinal.Equals(Host, other.Host) &&
+            StringComparer.Ordinal.Equals(Password ?? "", other.Password ?? "");
 
         /// <inheritdoc />
-        public static bool TryParse(ReadOnlySpan<char> s, IFormatProvider? provider, out Connection result)
-        {
-            var (first, (second, (game, _))) = s.SplitOn('@');
-            var (slot, (password, _)) = first.SplitOn(':');
-            var (host, (portSpan, _)) = second.SplitOn(':');
-
-            if (!ushort.TryParse(portSpan, NumberStyles.Any, provider, out var port))
-            {
-                result = default;
-                return false;
-            }
-
-            var gameStr = game.ToString();
-            var slotStr = slot.ToString();
-            var passwordStr = password.ToString();
-            var hostStr = host.ToString();
-
-            if (File.Exists(gameStr) &&
-                Go(Yaml.FromFile, gameStr, out _, out var yaml) &&
-                yaml?.FirstOrDefault(x => x.Name == slotStr) is { } y)
-                result = new(y, passwordStr, hostStr, port);
-
-            result = new(slotStr, passwordStr, hostStr, port, gameStr);
-            return true;
-        }
+        public override int GetHashCode() => HashCode.Combine(Port, Name, Game, Host, Password ?? "");
 
         /// <inheritdoc />
-        public static Connection Parse(string s, IFormatProvider? provider) => Parse(s.AsSpan(), provider);
+        public override string ToString() => $"{Name} ({Host}:{Port})";
 
-        /// <inheritdoc />
-        public static Connection Parse(ReadOnlySpan<char> s, IFormatProvider? provider)
-        {
-            TryParse(s, provider, out var result);
-            return result;
-        }
-
-        /// <summary>Gets the string representation for displaying as text.</summary>
-        /// <returns>The string representation.</returns>
-        public string ToDisplayString() => $"{Name} ({Host}:{Port})";
-
-        /// <inheritdoc />
-        public override string ToString() => $"{Name}:{Password}@{Host}:{Port}@{Game}";
+        /// <summary>Gets the locations.</summary>
+        /// <returns>The locations.</returns>
+        public ImmutableHashSet<string> GetLocationsOrEmpty() => Locations ?? ImmutableHashSet<string>.Empty;
 
         /// <summary>Converts this instance to the equivalent <see cref="Yaml"/> instance.</summary>
         /// <returns>The <see cref="Yaml"/> instance, or <see langword="null"/> if none found on disk.</returns>
@@ -307,8 +299,9 @@ public sealed partial class Preferences
         get => (Language)_language;
         [UsedImplicitly] private set => _language = (int)value;
     }
-#pragma warning disable MA0016
+
     /// <summary>Gets the list of colors.</summary>
+#pragma warning disable MA0016
     public List<AppColor> Colors { get; private set; } = [];
 #pragma warning restore MA0016
     /// <summary>Loads the preferences from disk.</summary>
@@ -380,6 +373,25 @@ public sealed partial class Preferences
     {
         File.WriteAllText(FilePath, Kvp.Serialize(this));
         _list.Save();
+    }
+
+    /// <summary>Synchronizes the connection with the one found within the internal collection.</summary>
+    /// <param name="connection">The connection to synchronize.</param>
+    [CLSCompliant(false)]
+    public void Sync(ref Connection connection)
+    {
+        var history = CollectionsMarshal.AsSpan(_list.History);
+
+        for (var i = 0; i < history.Length; i++)
+        {
+            ref var current = ref history[i];
+
+            if (!connection.Equals(current))
+                continue;
+
+            connection = new(connection, current.GetLocationsOrEmpty());
+            current = connection;
+        }
     }
 
     /// <summary>Shows the preferences window.</summary>
@@ -649,7 +661,7 @@ public sealed partial class Preferences
 
             if (current.IsInvalid || history[..i].Contains(current))
                 _list.History.RemoveAt(i--);
-            else if (ImGui.Button(current.ToDisplayString()))
+            else if (ImGui.Button(current.ToString()))
             {
                 Client client = new(current);
 

@@ -34,7 +34,7 @@ public sealed partial class Client(Yaml? yaml = null)
         ItemFlags? Flags,
         string? DisplayName,
         int Count,
-        IList<(string LocationDisplayName, string LocationGame)>? Locations
+        IReadOnlyList<(string LocationDisplayName, string LocationGame)>? Locations
     )
     {
         /// <summary>Initializes a new instance of the <see cref="ReceivedItem"/> struct.</summary>
@@ -181,6 +181,9 @@ public sealed partial class Client(Yaml? yaml = null)
     /// <summary>The logic evaluator.</summary>
     Evaluator? _evaluator;
 
+    /// <summary>Gets the last successful connection.</summary>
+    Preferences.Connection _info;
+
     /// <summary>Initializes a new instance of the <see cref="Client"/> class.</summary>
     /// <param name="errors">The errors to show immediately.</param>
     public Client(string[]? errors)
@@ -296,7 +299,9 @@ public sealed partial class Client(Yaml? yaml = null)
                 ((IDictionary<string, object?>)_yaml)[key] = value;
 
         _evaluator = Evaluator.Read(_session.DataStorage, _session.Items, _yaml, preferences);
-        preferences.Prepend(new(_yaml, password, address, port));
+        _info = new(_yaml, password, address, port);
+        preferences.Sync(ref _info);
+        preferences.Prepend(_info);
         return true;
     }
 
@@ -350,9 +355,16 @@ public sealed partial class Client(Yaml? yaml = null)
     }
 
     /// <summary>Releases the locations whose checkboxes are ticked.</summary>
-    void Release()
+    void Release(Preferences preferences)
     {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        bool NeedsToBeTrackedLocally(string location)
+        {
+            Debug.Assert(_session is not null);
+
+            return _session.Locations.GetLocationIdFromName(_yaml.Game, location) is not -1 and var id &&
+                !_session.Locations.AllLocations.Contains(id);
+        }
+
         long? ToId(KeyValuePair<string, CheckboxStatus> kvp)
         {
             async Task DisplayError()
@@ -387,7 +399,11 @@ public sealed partial class Client(Yaml? yaml = null)
         if (_canGoal is false && _locations.Any(IsGoal))
             _canGoal = null;
 
-        foreach (var key in _sortedKeys)
+        IList<string> keys = [.._locations.Where(x => x.Value.Checked).Select(x => x.Key)];
+        _info = new(_info, keys.Where(NeedsToBeTrackedLocally));
+        preferences.Sync(ref _info);
+
+        foreach (var key in keys)
         {
             ref var location = ref this[key];
 
@@ -410,7 +426,8 @@ public sealed partial class Client(Yaml? yaml = null)
             {
                 _ when itemHelper.GetLocationIdFromName(_yaml.Game, location) is var id &&
                     itemHelper.AllLocations.Contains(id) &&
-                    !itemHelper.AllMissingLocations.Contains(id) =>
+                    !itemHelper.AllMissingLocations.Contains(id) ||
+                    _info.GetLocationsOrEmpty().Contains(location) =>
                     LocationStatus.Checked,
                 _ when _evaluator is null => LocationStatus.ProbablyReachable,
                 _ when _evaluator?.InLogic(location) is false => LocationStatus.OutOfLogic,
