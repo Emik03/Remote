@@ -39,10 +39,10 @@ public sealed partial class Client
     /// <param name="preferences">The user preferences.</param>
     /// <returns>Whether this window is closed, and should be dequeued to allow the GC to free this instance.</returns>
     [CLSCompliant(false)]
-    public bool Draw(GameTime gameTime, int index, Preferences preferences)
+    public bool Draw(GameTime gameTime, Preferences preferences)
     {
         var open = true;
-        var color = preferences[AppPalette.OutOfLogic - index % 7];
+        var color = preferences[AppPalette.OutOfLogic - _instance % 7];
         const float Active = 1.5f, Inactive = 2.5f;
         ImGui.PushStyleColor(ImGuiCol.TabSelected, color / Active);
         ImGui.PushStyleColor(ImGuiCol.TabHovered, color / Active);

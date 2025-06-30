@@ -518,7 +518,7 @@ public sealed partial class Preferences
     void Show(GameTime gameTime, IList<Client> clients)
     {
         for (var i = clients.Count - 1; i >= 0 && clients[i] is var c; i--)
-            if (c.Draw(gameTime, clients.Count - i - 1, this))
+            if (c.Draw(gameTime, this))
                 clients.RemoveAt(i);
     }
 
