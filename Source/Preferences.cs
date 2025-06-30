@@ -642,6 +642,10 @@ public sealed partial class Preferences
         _ = ImGuiRenderer.InputTextWithHint("AP Git Repo", Hint, ref _repo, ushort.MaxValue);
         ImGui.SetNextItemWidth(Width(250));
         _ = ImGuiRenderer.InputTextWithHint("Python", "python", ref _python, ushort.MaxValue);
+        ImGui.SeparatorText("Navigation");
+        _ = ImGui.Checkbox("Tabs instead of separate windows", ref _useTabs);
+        _ = ImGui.Checkbox("Move to chat tab when releasing", ref _moveToChatTab);
+        _ = ImGui.Checkbox("Hold to confirm location release", ref _holdToConfirm);
         ImGui.SeparatorText("UI Settings");
         Slider("UI Scale", ref _uiScale, 0.4f, 2, "%.2f");
         Slider("UI Padding", ref _uiPadding, 0, 20);
@@ -651,10 +655,6 @@ public sealed partial class Preferences
         Slider("Window Dim", ref _windowDim, 1, 10, "%.2f");
         Slider("Active Dim", ref _activeTabDim, 1, 10, "%.2f");
         Slider("Inactive Dim", ref _inactiveTabDim, 1, 10, "%.2f");
-        ImGui.SeparatorText("Navigation");
-        _ = ImGui.Checkbox("Tabs instead of separate windows", ref _useTabs);
-        _ = ImGui.Checkbox("Move to chat tab when releasing", ref _moveToChatTab);
-        _ = ImGui.Checkbox("Hold to confirm location release", ref _holdToConfirm);
         ImGui.SeparatorText("Fonts (Requires Restart)");
         Slider("Font Size", ref _fontSize, 8, 72, "%.0f");
         ImGui.SetNextItemWidth(Width(250));
