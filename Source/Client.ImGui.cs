@@ -238,7 +238,6 @@ public sealed partial class Client
             return;
         }
 
-        ImGui.SetWindowFontScale(preferences.UiScale);
         ImGui.TextDisabled("TIP: Right click text or checkboxes to copy them!");
         ShowLog(preferences);
         ImGui.SeparatorText("Message");
@@ -294,8 +293,6 @@ public sealed partial class Client
             return;
         }
 
-        ImGui.SetWindowFontScale(preferences.UiScale);
-
         if (!ImGui.BeginTable("Players", 4, Flags))
         {
             ImGui.EndTable();
@@ -324,8 +321,6 @@ public sealed partial class Client
             return;
         }
 
-        ImGui.SetWindowFontScale(preferences.UiScale);
-
         if (_showConfirmationDialog)
             ShowConfirmationDialog(gameTime, preferences);
         else
@@ -349,8 +344,6 @@ public sealed partial class Client
             ImGui.EndChild();
             return;
         }
-
-        ImGui.SetWindowFontScale(preferences.UiScale);
 
         if (_evaluator is null)
             ShowNonManualItems(preferences);
@@ -379,7 +372,6 @@ public sealed partial class Client
             return;
         }
 
-        ImGui.SetWindowFontScale(preferences.UiScale);
         var ro = _session.RoomState;
         ImGui.TextDisabled($"Hint cost percentage: {ro.HintCostPercentage}%% ({ro.HintCost} points)");
         ImGui.TextDisabled($"You can do {(ro.HintPoints / ro.HintCost).Conjugate("hint")} ({ro.HintPoints} points)");
@@ -457,7 +449,6 @@ public sealed partial class Client
             return;
         }
 
-        ImGui.SetWindowFontScale(preferences.UiScale);
         ShowMessages(preferences, 0);
 
         if (ImGui.GetScrollY() >= ImGui.GetScrollMaxY())
@@ -638,7 +629,6 @@ public sealed partial class Client
         Debug.Assert(_session is not null);
         ShowLocationSearch();
         ImGui.BeginChild("Locations", preferences.ChildSize(100));
-        ImGui.SetWindowFontScale(preferences.UiScale);
         var locationHelper = _session.Locations;
         var locations = _showAlreadyChecked ? locationHelper.AllLocations : locationHelper.AllMissingLocations;
 
@@ -659,7 +649,6 @@ public sealed partial class Client
         var setter = GetNextItemOpenSetter();
         ShowLocationSearch();
         ImGui.BeginChild("Locations", preferences.ChildSize(100));
-        ImGui.SetWindowFontScale(preferences.UiScale);
         bool? ret = true;
 
         foreach (var (category, locations) in _evaluator.CategoryToLocations)
@@ -710,8 +699,6 @@ public sealed partial class Client
             ImGui.EndChild();
             return false;
         }
-
-        ImGui.SetWindowFontScale(preferences.UiScale);
 
         if (IsReleasing && _isAttemptingToRelease is null)
         {
