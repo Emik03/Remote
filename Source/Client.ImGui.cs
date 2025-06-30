@@ -206,8 +206,14 @@ public sealed partial class Client
     {
         const ImGuiInputTextFlags Flags = Preferences.TextFlags | ImGuiInputTextFlags.AllowTabInput;
         Debug.Assert(_session is not null);
+        var isForced = preferences.MoveToChatTab && IsReleasing;
+        var flags = isForced ? ImGuiTabItemFlags.SetSelected : ImGuiTabItemFlags.None;
+        var ret = !ImGuiRenderer.BeginTabItem("Chat", ref Unsafe.NullRef<bool>(), flags);
 
-        if (!ImGui.BeginTabItem("Chat"))
+        if (isForced)
+            ClearChecked();
+
+        if (ret)
             return;
 
         if (!ImGui.BeginChild("Chat"))

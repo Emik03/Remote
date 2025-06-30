@@ -160,7 +160,7 @@ public sealed partial class Preferences
     readonly Connection.List _list = Connection.List.Load();
 
     /// <summary>Whether to use tabs or separate windows.</summary>
-    bool _useTabs = true;
+    bool _useTabs = true, _moveToChatTab = true;
 
     /// <summary>Contains the current port.</summary>
     int _language, _port;
@@ -213,6 +213,13 @@ public sealed partial class Preferences
     {
         get => _useTabs;
         [UsedImplicitly] private set => _useTabs = value;
+    }
+
+    /// <summary>Gets or sets the value determining whether to use tabs.</summary>
+    public bool MoveToChatTab
+    {
+        get => _moveToChatTab;
+        [UsedImplicitly] private set => _moveToChatTab = value;
     }
 
     /// <summary>Gets or sets the UI scaling.</summary>
@@ -543,7 +550,8 @@ public sealed partial class Preferences
         Slider("UI Rounding", ref _uiRounding, 0, 30);
         Slider("UI Spacing", ref _uiSpacing, 0, 20);
         ImGui.SetNextItemWidth(Width(250));
-        ImGui.Checkbox("Tabs instead of separate windows", ref _useTabs);
+        _ = ImGui.Checkbox("Tabs instead of separate windows", ref _useTabs);
+        _ = ImGui.Checkbox("Move to chat tab when releasing", ref _moveToChatTab);
         ImGui.SeparatorText("Fonts (Requires Restart)");
         Slider("Font Size", ref _fontSize, 8, 72, "%.0f");
         ImGui.SetNextItemWidth(Width(250));
