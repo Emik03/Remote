@@ -57,7 +57,7 @@ public sealed partial class Client(Yaml? yaml = null)
             var text = $"{DisplayName}{(Count is 1 ? "" : $" ({Count})")}";
             ImGui.PushStyleColor(ImGuiCol.Text, ColorOf(Flags, preferences));
             ImGui.BulletText(text);
-            CopyIfClicked(preferences, text);
+            CopyIfClicked(preferences, DisplayName);
 
             if (Locations is not null and not [] && ImGui.IsItemHovered())
                 Tooltip(preferences, Locations.Select(ToString).Conjoin('\n'));
