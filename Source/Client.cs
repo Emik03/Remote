@@ -167,7 +167,7 @@ public sealed partial class Client(Yaml? yaml = null)
     bool? _canGoal = false;
 
     /// <summary>Contains the last index in <see cref="_messages"/> right before a release occurs.</summary>
-    int _hintCost, _releaseIndex;
+    int _releaseIndex;
 
     /// <summary>Contains the window name.</summary>
     string _connectionMessage = "", _windowName = $"Client###{s_instances}";
@@ -279,8 +279,7 @@ public sealed partial class Client(Yaml? yaml = null)
             session.Items.ItemReceived += UpdateStatus;
             string[] tags = ["AP", nameof(Remote)];
             _connectionMessage = "Attempting new connection.\nConnecting... (1/5)";
-            var connect = await session.ConnectAsync();
-            _hintCost = connect.HintCostPercentage;
+            _ = await session.ConnectAsync();
             _yaml.EscapeName();
             _connectionMessage = "Connected!\nLogging in... (2/5)";
             var login = await session.LoginAsync(_yaml.Game, _yaml.Name, Flags, tags: tags, password: password);

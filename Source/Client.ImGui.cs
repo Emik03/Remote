@@ -217,7 +217,6 @@ public sealed partial class Client
         }
 
         ImGui.TextDisabled("TIP: Right click text or checkboxes to copy them!");
-        ImGui.TextDisabled($"Hint cost percentage: {_hintCost}%%");
         ShowPlayers(preferences);
         ShowLog(preferences);
         ImGui.SeparatorText("Message");
@@ -324,6 +323,9 @@ public sealed partial class Client
             return;
         }
 
+        var ro = _session.RoomState;
+        ImGui.TextDisabled($"Hint cost percentage: {ro.HintCostPercentage}%% ({ro.HintCost} points)");
+        ImGui.TextDisabled($"You can do {(ro.HintPoints / ro.HintCost).Conjugate("hint")} ({ro.HintPoints} points)");
         _ = ImGui.Checkbox("Show obtained hints", ref _showObtainedHints);
         ImGui.SetNextItemWidth(preferences.Width(150));
         _ = ImGui.ListBox("Filter", ref _hintIndex, s_hintOptions, s_hintOptions.Length);
