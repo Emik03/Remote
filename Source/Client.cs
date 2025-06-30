@@ -195,7 +195,7 @@ public sealed partial class Client(Yaml? yaml = null)
 
     /// <summary>Initializes a new instance of the <see cref="Client"/> class.</summary>
     /// <param name="connection">The connection information.</param>
-    [CLSCompliant(false)]
+    [CLSCompliant(false), NoImplicitOperator]
     public Client(Preferences.Connection connection)
         : this(connection.ToYaml()) =>
         _info = connection;
