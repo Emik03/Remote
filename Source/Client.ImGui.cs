@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MPL-2.0
 namespace Remote;
 
-using Vector4 = System.Numerics.Vector4;
-
 /// <inheritdoc cref="Client"/>
 public sealed partial class Client
 {
@@ -377,7 +375,7 @@ public sealed partial class Client
         ImGui.TextDisabled($"You can do {(ro.HintPoints / ro.HintCost).Conjugate("hint")} ({ro.HintPoints} points)");
         _ = ImGui.Checkbox("Show obtained hints", ref _showObtainedHints);
         ImGui.SetNextItemWidth(preferences.Width(150));
-        _ = ImGui.ListBox("Filter", ref _hintIndex, s_hintOptions, s_hintOptions.Length);
+        _ = ImGui.Combo("Filter", ref _hintIndex, s_hintOptions, s_hintOptions.Length);
 
         if (LastHints is { } hints)
             foreach (var (itemFlags, message) in hints.Where(ShouldBeVisible)
@@ -449,6 +447,7 @@ public sealed partial class Client
             return;
         }
 
+        ImGui.SetWindowFontScale(preferences.UiScale);
         ShowMessages(preferences, 0);
 
         if (ImGui.GetScrollY() >= ImGui.GetScrollMaxY())
@@ -628,7 +627,14 @@ public sealed partial class Client
     {
         Debug.Assert(_session is not null);
         ShowLocationSearch();
-        ImGui.BeginChild("Locations", preferences.ChildSize(100));
+
+        if (!ImGui.BeginChild("Locations", preferences.ChildSize(100)))
+        {
+            ImGui.EndChild();
+            return false;
+        }
+
+        ImGui.SetWindowFontScale(preferences.UiScale);
         var locationHelper = _session.Locations;
         var locations = _showAlreadyChecked ? locationHelper.AllLocations : locationHelper.AllMissingLocations;
 
@@ -648,7 +654,14 @@ public sealed partial class Client
         _ = ImGui.Checkbox("Show Out of Logic Locations", ref _showOutOfLogic);
         var setter = GetNextItemOpenSetter();
         ShowLocationSearch();
-        ImGui.BeginChild("Locations", preferences.ChildSize(100));
+
+        if (!ImGui.BeginChild("Locations", preferences.ChildSize(100)))
+        {
+            ImGui.EndChild();
+            return false;
+        }
+
+        ImGui.SetWindowFontScale(preferences.UiScale);
         bool? ret = true;
 
         foreach (var (category, locations) in _evaluator.CategoryToLocations)
@@ -699,6 +712,8 @@ public sealed partial class Client
             ImGui.EndChild();
             return false;
         }
+
+        ImGui.SetWindowFontScale(preferences.UiScale);
 
         if (IsReleasing && _isAttemptingToRelease is null)
         {
