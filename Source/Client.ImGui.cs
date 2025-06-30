@@ -182,6 +182,12 @@ public sealed partial class Client
         if (!ImGui.BeginTabItem("Chat"))
             return;
 
+        if (!ImGui.BeginChild("Chat"))
+        {
+            ImGui.EndChild();
+            return;
+        }
+
         ImGui.TextDisabled("TIP: Right click text or checkboxes to copy them!");
         ShowPlayers(preferences);
         ShowLog(preferences);
@@ -218,6 +224,7 @@ public sealed partial class Client
         if (ImGui.IsItemHovered())
             Tooltip(preferences, HelpMessage2);
 
+        ImGui.EndChild();
         ImGui.EndTabItem();
     }
 
@@ -231,11 +238,18 @@ public sealed partial class Client
         if (!ImGui.BeginTabItem("Locations"))
             return;
 
+        if (!ImGui.BeginChild("Locations"))
+        {
+            ImGui.EndChild();
+            return;
+        }
+
         if (_showConfirmationDialog)
             ShowConfirmationDialog(gameTime, preferences);
         else
             ShowLocations(preferences);
 
+        ImGui.EndChild();
         ImGui.EndTabItem();
     }
 
@@ -248,11 +262,18 @@ public sealed partial class Client
         if (!ImGui.BeginTabItem("Items"))
             return;
 
+        if (!ImGui.BeginChild("Items"))
+        {
+            ImGui.EndChild();
+            return;
+        }
+
         if (_evaluator is null)
             ShowNonManualItems(preferences);
         else
             ShowManualItems(preferences);
 
+        ImGui.EndChild();
         ImGui.EndTabItem();
     }
 
@@ -265,6 +286,12 @@ public sealed partial class Client
         if (!ImGui.BeginTabItem("Hints"))
         {
             LastHints = null;
+            return;
+        }
+
+        if (!ImGui.BeginChild("Hints"))
+        {
+            ImGui.EndChild();
             return;
         }
 
@@ -283,6 +310,7 @@ public sealed partial class Client
                 ImGui.PopStyleColor();
             }
 
+        ImGui.EndChild();
         ImGui.EndTabItem();
     }
 
