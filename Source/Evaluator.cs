@@ -66,6 +66,25 @@ public sealed partial record Evaluator(
             false
         ) { }
 
+    /// <summary>Attempts to find the <c>.apworld</c>.</summary>
+    /// <param name="yaml">The yaml options.</param>
+    /// <param name="preferences">The user preferences.</param>
+    /// <returns>The path to the <c>.apworld</c>, or <see langword="null"/> if none found.</returns>
+    public static string? FindApWorld(Yaml yaml, Preferences preferences)
+    {
+        var world = $"{yaml.Game}.apworld";
+
+        string? Enumerate(string directory) =>
+            Directory.Exists(directory)
+                ? Directory.EnumerateFiles(directory)
+                   .FirstOrDefault(x => world.Equals(Path.GetFileName(x.AsSpan()), StringComparison.OrdinalIgnoreCase))
+                : null;
+
+        return Enumerate(Path.Join(preferences.Directory, "worlds")) ??
+            Enumerate(Path.Join(preferences.Directory, "custom_worlds")) ??
+            Enumerate(preferences.Directory);
+    }
+
     /// <summary>Attempts to process the manual <c>.apworld</c>.</summary>
     /// <param name="w">The wrapper to get the goal data.</param>
     /// <param name="h">The list of items.</param>
@@ -81,25 +100,6 @@ public sealed partial record Evaluator(
         FindApWorld(y, preferences) is not { } path || Go(ReadZip, (w, h), y, preferences, path, out _, out var ok)
             ? null
             : ok;
-
-    /// <summary>Attempts to find the <c>.apworld</c>.</summary>
-    /// <param name="yaml">The yaml options.</param>
-    /// <param name="preferences">The user preferences.</param>
-    /// <returns>The path to the <c>.apworld</c>, or <see langword="null"/> if none found.</returns>
-    static string? FindApWorld(Yaml yaml, Preferences preferences)
-    {
-        var world = $"{yaml.Game}.apworld";
-
-        string? Enumerate(string directory) =>
-            Directory.Exists(directory)
-                ? Directory.EnumerateFiles(directory)
-                   .FirstOrDefault(x => world.Equals(Path.GetFileName(x.AsSpan()), StringComparison.OrdinalIgnoreCase))
-                : null;
-
-        return Enumerate(Path.Join(preferences.Directory, "worlds")) ??
-            Enumerate(Path.Join(preferences.Directory, "custom_worlds")) ??
-            Enumerate(preferences.Directory);
-    }
 
     /// <summary>Reads the path as a zip file. Can throw.</summary>
     /// <param name="interfaces">The interfaces.</param>

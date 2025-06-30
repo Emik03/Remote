@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MPL-2.0
 namespace Remote;
 
+using Vector4 = System.Numerics.Vector4;
+
 /// <inheritdoc cref="Client"/>
 public sealed partial class Client
 {
@@ -36,34 +38,43 @@ public sealed partial class Client
     /// <summary>Calls <see cref="ImGui"/> a lot.</summary>
     /// <param name="gameTime">The time elapsed since.</param>
     /// <param name="preferences">The user preferences.</param>
+    /// <param name="selected">Whether this tab is selected.</param>
     /// <returns>Whether this window is closed, and should be dequeued to allow the GC to free this instance.</returns>
     [CLSCompliant(false)]
-    public bool Draw(GameTime gameTime, Preferences preferences)
+    public bool Draw(GameTime gameTime, Preferences preferences, out bool selected)
     {
+        const int Styles = 3;
         var open = true;
-        var color = preferences[AppPalette.OutOfLogic - _instance % 7];
-        const float Active = 1.5f, Inactive = 2.5f;
-        ImGui.PushStyleColor(ImGuiCol.TabSelected, color / Active);
-        ImGui.PushStyleColor(ImGuiCol.TabHovered, color / Active);
-        ImGui.PushStyleColor(ImGuiCol.WindowBg, color / Inactive);
-        ImGui.PushStyleColor(ImGuiCol.Tab, color / Inactive);
+        var pushedColor = AppColor.TryParse(_info.Color, out var color);
+
+        if (pushedColor)
+        {
+            ImGui.PushStyleColor(ImGuiCol.TabSelected, color / preferences.ActiveTabDim);
+            ImGui.PushStyleColor(ImGuiCol.TabHovered, color / preferences.ActiveTabDim);
+            ImGui.PushStyleColor(ImGuiCol.Tab, color / preferences.InactiveTabDim);
+        }
 
         if (preferences.UseTabs)
         {
             if (!ImGui.BeginTabItem(_windowName, ref open) || !open)
             {
-                ImGui.PopStyleColor(4);
-                return Close(open);
+                if (pushedColor)
+                    ImGui.PopStyleColor(Styles);
+
+                selected = false;
+                return Close(preferences, open);
             }
         }
         else if (!ImGui.Begin(_windowName, ref open, ImGuiWindowFlags.HorizontalScrollbar) || !open)
         {
-            ImGui.PopStyleColor(4);
+            if (pushedColor)
+                ImGui.PopStyleColor(Styles);
+
             ImGui.End();
-            return Close(open);
+            selected = false;
+            return Close(preferences, open);
         }
 
-        ImGui.PopStyleColor(4);
         ImGui.SetWindowFontScale(preferences.UiScale);
 
         if (_session is null)
@@ -76,6 +87,10 @@ public sealed partial class Client
         else
             ImGui.End();
 
+        if (pushedColor)
+            ImGui.PopStyleColor(Styles);
+
+        selected = true;
         return false;
     }
 
@@ -197,6 +212,7 @@ public sealed partial class Client
         ShowLocationTab(gameTime, preferences);
         ShowItemTab(preferences);
         ShowHintTab(preferences);
+        ShowSettings(preferences);
         ImGui.EndTabBar();
     }
 
@@ -222,6 +238,7 @@ public sealed partial class Client
             return;
         }
 
+        ImGui.SetWindowFontScale(preferences.UiScale);
         ImGui.TextDisabled("TIP: Right click text or checkboxes to copy them!");
         ShowLog(preferences);
         ImGui.SeparatorText("Message");
@@ -277,6 +294,8 @@ public sealed partial class Client
             return;
         }
 
+        ImGui.SetWindowFontScale(preferences.UiScale);
+
         if (!ImGui.BeginTable("Players", 4, Flags))
         {
             ImGui.EndTable();
@@ -305,6 +324,8 @@ public sealed partial class Client
             return;
         }
 
+        ImGui.SetWindowFontScale(preferences.UiScale);
+
         if (_showConfirmationDialog)
             ShowConfirmationDialog(gameTime, preferences);
         else
@@ -328,6 +349,8 @@ public sealed partial class Client
             ImGui.EndChild();
             return;
         }
+
+        ImGui.SetWindowFontScale(preferences.UiScale);
 
         if (_evaluator is null)
             ShowNonManualItems(preferences);
@@ -356,6 +379,7 @@ public sealed partial class Client
             return;
         }
 
+        ImGui.SetWindowFontScale(preferences.UiScale);
         var ro = _session.RoomState;
         ImGui.TextDisabled($"Hint cost percentage: {ro.HintCostPercentage}%% ({ro.HintCost} points)");
         ImGui.TextDisabled($"You can do {(ro.HintPoints / ro.HintCost).Conjugate("hint")} ({ro.HintPoints} points)");
@@ -376,6 +400,70 @@ public sealed partial class Client
 
         ImGui.EndChild();
         ImGui.EndTabItem();
+    }
+
+    /// <summary>Displays the color edit widget.</summary>
+    void ShowSettings(Preferences preferences)
+    {
+        Debug.Assert(_session is not null);
+
+        if (!ImGui.BeginTabItem("Settings"))
+            return;
+
+        if (!ImGui.BeginChild("Settings"))
+        {
+            ImGui.EndChild();
+            return;
+        }
+
+        ImGui.SeparatorText("Diagnostics");
+
+        if (ImGui.Button("Open APWorld Directory") && Evaluator.FindApWorld(_yaml, preferences) is { } apWorld)
+        {
+            ProcessStartInfo startInfo = new()
+                { FileName = Path.GetDirectoryName(apWorld), CreateNoWindow = true, UseShellExecute = true };
+
+            using var _ = Process.Start(startInfo);
+        }
+
+        ImGui.SameLine();
+
+        if (ImGui.Button("Reconnect"))
+        {
+            Close(preferences, false);
+            Connect(preferences);
+        }
+
+        ImGui.SeparatorText("Theming");
+        var color = AppColor.Parse(_info.Color);
+        var newColor = Preferences.ShowColorEdit("Color", color);
+
+        if (newColor != color)
+            _info = _info with { Color = newColor.ToString() };
+
+        ImGui.EndChild();
+        ImGui.EndTabItem();
+    }
+
+    /// <summary>Shows the message log.</summary>
+    /// <param name="preferences">The user preferences</param>
+    void ShowLog(Preferences preferences)
+    {
+        ImGui.SeparatorText("Log");
+
+        if (!ImGui.BeginChild("Log", preferences.ChildSize()))
+        {
+            ImGui.EndChild();
+            return;
+        }
+
+        ImGui.SetWindowFontScale(preferences.UiScale);
+        ShowMessages(preferences, 0);
+
+        if (ImGui.GetScrollY() >= ImGui.GetScrollMaxY())
+            ImGui.SetScrollHereY(1);
+
+        ImGui.EndChild();
     }
 
     /// <summary>Shows the list of players.</summary>
@@ -428,43 +516,6 @@ public sealed partial class Client
             ImGui.TextColored(preferences[isTeammate ? AppPalette.Neutral : AppPalette.Checked], teamName);
             CopyIfClicked(preferences, teamName);
         }
-    }
-
-    /// <summary>Shows the message log.</summary>
-    /// <param name="preferences">The user preferences</param>
-    void ShowLog(Preferences preferences)
-    {
-        ImGui.SeparatorText("Log");
-
-        if (!ImGui.BeginChild("Log", preferences.ChildSize()))
-        {
-            ImGui.EndChild();
-            return;
-        }
-
-        ShowMessages(preferences, 0);
-
-        if (ImGui.GetScrollY() >= ImGui.GetScrollMaxY())
-            ImGui.SetScrollHereY(1);
-
-        ImGui.EndChild();
-    }
-
-    /// <summary>Moves the index by an amount.</summary>
-    /// <param name="offset">The offset.</param>
-    void MoveSentMessageIndex(int offset)
-    {
-        var io = ImGui.GetIO();
-
-        for (var i = 0; i < _sentMessages[_sentMessagesIndex].Length; i++)
-        {
-            io.AddKeyEvent(ImGuiKey.Backspace, true);
-            io.AddKeyEvent(ImGuiKey.Backspace, false);
-        }
-
-        _sentMessagesIndex = (_sentMessagesIndex + offset).Clamp(0, _sentMessages.Count - 1);
-        var message = _sentMessagesIndex == _sentMessages.Count - 1 ? "" : _sentMessages[_sentMessagesIndex];
-        io.AddInputCharactersUTF8(message);
     }
 
     /// <summary>Shows the confirmation dialog for releasing locations.</summary>
@@ -547,15 +598,35 @@ public sealed partial class Client
         _session.SetClientState(ArchipelagoClientState.ClientGoal);
     }
 
+    /// <summary>Moves the index by an amount.</summary>
+    /// <param name="offset">The offset.</param>
+    void MoveSentMessageIndex(int offset)
+    {
+        var io = ImGui.GetIO();
+
+        for (var i = 0; i < _sentMessages[_sentMessagesIndex].Length; i++)
+        {
+            io.AddKeyEvent(ImGuiKey.Backspace, true);
+            io.AddKeyEvent(ImGuiKey.Backspace, false);
+        }
+
+        _sentMessagesIndex = (_sentMessagesIndex + offset).Clamp(0, _sentMessages.Count - 1);
+        var message = _sentMessagesIndex == _sentMessages.Count - 1 ? "" : _sentMessages[_sentMessagesIndex];
+        io.AddInputCharactersUTF8(message);
+    }
+
     /// <summary>Handles closing the tab or window.</summary>
+    /// <param name="preferences">The user preferences.</param>
     /// <param name="open">Whether to keep the socket alive.</param>
     /// <returns>Not the parameter <paramref name="open"/>.</returns>
-    bool Close(bool open)
+    bool Close(Preferences preferences, bool open)
     {
-        if (!open && _session is not null)
+        if (open || _session is null)
+            return !open;
 #pragma warning disable IDISP013
-            _ = Task.Run(_session.Socket.DisconnectAsync).ConfigureAwait(false);
+        _ = Task.Run(_session.Socket.DisconnectAsync).ConfigureAwait(false);
 #pragma warning restore IDISP013
+        preferences.Sync(ref _info);
         return !open;
     }
 
@@ -567,6 +638,7 @@ public sealed partial class Client
         Debug.Assert(_session is not null);
         ShowLocationSearch();
         ImGui.BeginChild("Locations", preferences.ChildSize(100));
+        ImGui.SetWindowFontScale(preferences.UiScale);
         var locationHelper = _session.Locations;
         var locations = _showAlreadyChecked ? locationHelper.AllLocations : locationHelper.AllMissingLocations;
 
@@ -587,6 +659,7 @@ public sealed partial class Client
         var setter = GetNextItemOpenSetter();
         ShowLocationSearch();
         ImGui.BeginChild("Locations", preferences.ChildSize(100));
+        ImGui.SetWindowFontScale(preferences.UiScale);
         bool? ret = true;
 
         foreach (var (category, locations) in _evaluator.CategoryToLocations)
@@ -637,6 +710,8 @@ public sealed partial class Client
             ImGui.EndChild();
             return false;
         }
+
+        ImGui.SetWindowFontScale(preferences.UiScale);
 
         if (IsReleasing && _isAttemptingToRelease is null)
         {

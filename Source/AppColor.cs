@@ -58,6 +58,12 @@ public record struct AppColor(Vector4 Vector) : ISpanParsable<AppColor>
     [CLSCompliant(false)]
     public readonly XnaColor XnaColor => new(Vector.X, Vector.Y, Vector.Z, Vector.W);
 
+    /// <summary>Implicitly creates <seealso cref="AppColor"/> from <see cref="uint"/>.</summary>
+    /// <param name="color">The color to get.</param>
+    /// <returns>The <see cref="AppColor"/> from <see cref="uint"/>.</returns>
+    [CLSCompliant(false)]
+    public static implicit operator AppColor(uint color) => new(FromU32(color));
+
     /// <summary>Implicitly gets <see cref="Vector"/>.</summary>
     /// <param name="color">The color to get.</param>
     /// <returns>The <see cref="Vector4"/> from <see cref="Vector"/>.</returns>
@@ -68,6 +74,10 @@ public record struct AppColor(Vector4 Vector) : ISpanParsable<AppColor>
     /// <param name="divisor">The number to divide with.</param>
     /// <returns>The divided color.</returns>
     public static AppColor operator /(AppColor color, float divisor) => new(color.Vector / divisor);
+
+    /// <inheritdoc cref="TryParse(string, IFormatProvider, out AppColor)"/>
+    public static bool TryParse([NotNullWhen(true)] string? s, out AppColor result) =>
+        TryParse(s.AsSpan(), CultureInfo.InvariantCulture, out result);
 
     /// <inheritdoc />
     public static bool TryParse([NotNullWhen(true)] string? s, IFormatProvider? provider, out AppColor result) =>
@@ -81,8 +91,11 @@ public record struct AppColor(Vector4 Vector) : ISpanParsable<AppColor>
         return ret;
     }
 
+    /// <inheritdoc cref="Parse(string, IFormatProvider)"/>
+    public static AppColor Parse(string? s) => Parse(s.AsSpan(), CultureInfo.InvariantCulture);
+
     /// <inheritdoc />
-    public static AppColor Parse(string s, IFormatProvider? provider) => Parse(s.AsSpan(), provider);
+    public static AppColor Parse(string? s, IFormatProvider? provider) => Parse(s.AsSpan(), provider);
 
     /// <inheritdoc />
     public static AppColor Parse(ReadOnlySpan<char> s, IFormatProvider? provider) =>
@@ -90,7 +103,7 @@ public record struct AppColor(Vector4 Vector) : ISpanParsable<AppColor>
 
     /// <inheritdoc />
     public readonly override string ToString() =>
-        $"0x{(byte)(Vector.X * byte.MaxValue)
+        $"#{(byte)(Vector.X * byte.MaxValue)
             :X2}{(byte)(Vector.Y * byte.MaxValue)
             :X2}{(byte)(Vector.Z * byte.MaxValue)
             :X2}{(byte)(Vector.W * byte.MaxValue)
@@ -99,7 +112,13 @@ public record struct AppColor(Vector4 Vector) : ISpanParsable<AppColor>
     /// <summary>Removes the <c>0x</c> header from hex strings.</summary>
     /// <param name="span">The span to trim.</param>
     /// <returns>The trimmed span.</returns>
-    static ReadOnlySpan<char> RemoveHeader(ReadOnlySpan<char> span) => span is ['0', 'x', .. var rest] ? rest : span;
+    static ReadOnlySpan<char> RemoveHeader(ReadOnlySpan<char> span) =>
+        span switch
+        {
+            ['0', 'x', .. var rest] => rest,
+            ['#', .. var rest] => rest,
+            _ => span,
+        };
 
     /// <summary>Converts the unsigned packed integer into <see cref="Vector4"/>.</summary>
     /// <param name="u">The unsigned packed integer to convert.</param>

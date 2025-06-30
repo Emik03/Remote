@@ -197,7 +197,8 @@ public sealed partial class Client(Yaml? yaml = null)
     /// <param name="connection">The connection information.</param>
     [CLSCompliant(false)]
     public Client(Preferences.Connection connection)
-        : this(connection.ToYaml()) { }
+        : this(connection.ToYaml()) =>
+        _info = connection;
 
     /// <summary>Gets or adds this location and retrieves the checkbox status of that location.</summary>
     /// <param name="key">The key to add or get.</param>
@@ -216,6 +217,9 @@ public sealed partial class Client(Yaml? yaml = null)
             }
         }
     }
+
+    /// <summary>Gets the color.</summary>
+    public AppColor? Color => AppColor.TryParse(_info.Color, out var color) ? color : null;
 
     /// <summary>Contains the last retrieved hints.</summary>
     Hint[]? LastHints
@@ -299,9 +303,9 @@ public sealed partial class Client(Yaml? yaml = null)
             _connectionMessage = "Slot data has been read!\nReading APWorld... (4/5)";
             _evaluator = Evaluator.Read(session.DataStorage, session.Items, _yaml, preferences);
             _connectionMessage = "APWorld has been read!\nSaving history in memory... (5/5)";
-            _info = new(_yaml, password, address, port);
-            preferences.Sync(ref _info);
+            _info = new(_yaml, password, address, port, _info.Color);
             preferences.Prepend(_info);
+            preferences.Sync(ref _info);
             _session = session;
         }
 
@@ -311,9 +315,9 @@ public sealed partial class Client(Yaml? yaml = null)
             {
                 await Attempt();
             }
-            catch (Exception e)
+            catch (Exception ex)
             {
-                _errors = ToMessages(e);
+                _errors = ["Failed to connect. Is the server down, is the host and port correct?", ..ToMessages(ex)];
             }
         }
 
@@ -341,7 +345,12 @@ public sealed partial class Client(Yaml? yaml = null)
     /// <param name="additions">The additional strings to add before-hand.</param>
     /// <returns>The messages.</returns>
     static string[] ToMessages(Exception e, params ReadOnlySpan<string> additions) =>
-        [..additions, ..e.FindPathToNull(x => x.InnerException).Select(x => x.Message)];
+    [
+        ..additions,
+        ..e.FindPathToNull(x => x.InnerException)
+           .SelectMany(x => (IEnumerable<Exception>)[x, ..(x as AggregateException)?.InnerExceptions ?? []])
+           .Select(x => x.Message),
+    ];
 
     /// <summary>Gets the color of the flag.</summary>
     /// <param name="flags">The flag to get the color of.</param>

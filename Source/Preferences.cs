@@ -4,6 +4,7 @@ namespace Remote;
 using JsonIgnoreAttribute = System.Text.Json.Serialization.JsonIgnoreAttribute;
 using JsonSerializer = System.Text.Json.JsonSerializer;
 using Vector2 = System.Numerics.Vector2;
+using Vector4 = System.Numerics.Vector4;
 
 /// <summary>Contains the preferences that are stored persistently.</summary>
 public sealed partial class Preferences
@@ -34,6 +35,7 @@ public sealed partial class Preferences
     /// <param name="Port">The port of the host.</param>
     /// <param name="Game">The game.</param>
     /// <param name="Locations">The checked locations.</param>
+    /// <param name="Color">The color for the tab or window.</param>
     [CLSCompliant(false), StructLayout(LayoutKind.Auto)]
     public readonly record struct Connection(
         string? Name,
@@ -41,7 +43,8 @@ public sealed partial class Preferences
         string? Host,
         ushort Port,
         string? Game,
-        ImmutableHashSet<string>? Locations
+        ImmutableHashSet<string>? Locations,
+        string? Color
     )
     {
         /// <summary>Contains the list of connections.</summary>
@@ -89,14 +92,16 @@ public sealed partial class Preferences
         /// <summary>Initializes a new instance of the <see cref="Connection"/> struct.</summary>
         /// <param name="connection">The connection to copy.</param>
         /// <param name="locations">The locations to inherit.</param>
-        public Connection(Connection connection, IEnumerable<string>? locations)
+        /// <param name="color">The color for the tab or window.</param>
+        public Connection(Connection connection, IEnumerable<string>? locations, string? color = null)
             : this(
                 connection.Name,
                 connection.Password,
                 connection.Host,
                 connection.Port,
                 connection.Game,
-                connection.GetLocationsOrEmpty().Union(locations ?? [])
+                connection.GetLocationsOrEmpty().Union(locations ?? []),
+                color
             ) { }
 
         /// <summary>Initializes a new instance of the <see cref="Connection"/> struct.</summary>
@@ -104,8 +109,9 @@ public sealed partial class Preferences
         /// <param name="password">The password of the game.</param>
         /// <param name="host">The host.</param>
         /// <param name="port">The port of the host.</param>
-        public Connection(Yaml yaml, string? password, string? host, ushort port)
-            : this(yaml.Name, password, host, port, yaml.Game, []) { }
+        /// <param name="color">The color for the tab or window.</param>
+        public Connection(Yaml yaml, string? password, string? host, ushort port, string? color = null)
+            : this(yaml.Name, password, host, port, yaml.Game, [], color) { }
 
         /// <summary>Determines whether this instance is invalid, usually from default construction.</summary>
         [JsonIgnore]
@@ -156,6 +162,11 @@ public sealed partial class Preferences
     /// <summary>Gets the languages.</summary>
     static readonly string s_languages = Enum.GetNames<Language>().Append("\0").Conjoin('\0');
 
+    /// <summary>Gets the <see cref="ImGuiCol"/> set that represents background colors.</summary>
+    static readonly FrozenSet<ImGuiCol> s_backgrounds = Enum.GetValues<ImGuiCol>()
+       .Where(x => x.ToString().EndsWith("BG", StringComparison.OrdinalIgnoreCase))
+       .ToFrozenSet();
+
     /// <summary>Contains the history.</summary>
     readonly Connection.List _list = Connection.List.Load();
 
@@ -166,7 +177,14 @@ public sealed partial class Preferences
     int _language, _port;
 
     /// <summary>Contains the current UI settings.</summary>
-    float _fontSize = 36, _uiScale = 0.75f, _uiPadding = 6, _uiRounding = 4, _uiSpacing = 6;
+    float _activeTabDim = 1.25f,
+        _windowDim = 3.75f,
+        _fontSize = 36,
+        _inactiveTabDim = 2.5f,
+        _uiScale = 0.75f,
+        _uiPadding = 6,
+        _uiRounding = 4,
+        _uiSpacing = 6;
 
     /// <summary>Contains the current text field values.</summary>
     string _address = DefaultAddress,
@@ -220,6 +238,27 @@ public sealed partial class Preferences
     {
         get => _moveToChatTab;
         [UsedImplicitly] private set => _moveToChatTab = value;
+    }
+
+    /// <summary>Gets or sets the active tab dim.</summary>
+    public float ActiveTabDim
+    {
+        get => _activeTabDim;
+        [UsedImplicitly] private set => _activeTabDim = value;
+    }
+
+    /// <summary>Gets or sets the window dim.</summary>
+    public float WindowDim
+    {
+        get => _windowDim;
+        [UsedImplicitly] private set => _windowDim = value;
+    }
+
+    /// <summary>Gets or sets the inactive tab dim.</summary>
+    public float InactiveTabDim
+    {
+        get => _inactiveTabDim;
+        [UsedImplicitly] private set => _inactiveTabDim = value;
     }
 
     /// <summary>Gets or sets the UI scaling.</summary>
@@ -307,6 +346,18 @@ public sealed partial class Preferences
         [UsedImplicitly] private set => _language = (int)value;
     }
 
+    /// <summary>Shows the color edit widget.</summary>
+    /// <param name="name">The displayed text.</param>
+    /// <param name="color">The color that will change.</param>
+    /// <returns>The new color.</returns>
+    public static AppColor ShowColorEdit(string name, AppColor color)
+    {
+        var v = color.Vector;
+        ImGui.ColorEdit4(name, ref v, ImGuiColorEditFlags.DisplayHex);
+        ImGui.ColorEdit4($"##{name}", ref v, ImGuiColorEditFlags.DisplayRGB | ImGuiColorEditFlags.NoSmallPreview);
+        return new(v);
+    }
+
     /// <summary>Gets the list of colors.</summary>
 #pragma warning disable MA0016
     public List<AppColor> Colors { get; private set; } = [];
@@ -336,13 +387,17 @@ public sealed partial class Preferences
     public void Prepend(Connection connection) => _list.History.Insert(0, connection);
 
     /// <summary>Pushes all colors and styling variables.</summary>
-    public void PushStyling()
+    /// <param name="active">The current tab.</param>
+    public void PushStyling(Client? active)
     {
         ImGui.PushStyleVar(ImGuiStyleVar.WindowMinSize, new Vector2(_uiScale * 600));
         ImGui.PushStyleVar(ImGuiStyleVar.WindowBorderSize, _useTabs ? 0 : 5);
 
-        for (var i = (int)AppPalette.Count; i < Colors.Count; i++)
-            ImGui.PushStyleColor((ImGuiCol)(i - AppPalette.Count), Colors[i]);
+        for (var i = (int)AppPalette.Count; i < Colors.Count && (ImGuiCol)(i - AppPalette.Count) is var color; i++)
+            ImGui.PushStyleColor(
+                color,
+                s_backgrounds.Contains(color) && active?.Color is { } c ? c / _windowDim : Colors[i]
+            );
 
         ImGui.PushStyleVar(ImGuiStyleVar.WindowRounding, _useTabs ? 0 : _uiRounding);
         ImGui.PushStyleVar(ImGuiStyleVar.ChildRounding, _uiRounding);
@@ -387,16 +442,41 @@ public sealed partial class Preferences
     [CLSCompliant(false)]
     public void Sync(ref Connection connection)
     {
+        string FindNextAvailableColor()
+        {
+            foreach (var color in s_sron)
+            {
+                var history = CollectionsMarshal.AsSpan(_list.History);
+
+                for (var i = 0; i < history.Length; i++)
+                {
+                    ref var current = ref history[i];
+
+                    if (!string.IsNullOrWhiteSpace(current.Color) && AppColor.Parse(current.Color) == color)
+                        goto Next;
+                }
+
+                return color.ToString();
+
+            Next: ;
+            }
+
+            return s_sron.PickRandom().ToString();
+        }
+
         var history = CollectionsMarshal.AsSpan(_list.History);
 
         for (var i = 0; i < history.Length; i++)
         {
             ref var current = ref history[i];
 
+            if (string.IsNullOrWhiteSpace(connection.Color) && string.IsNullOrWhiteSpace(current.Color))
+                current = current with { Color = FindNextAvailableColor() };
+
             if (!connection.Equals(current))
                 continue;
 
-            connection = new(connection, current.GetLocationsOrEmpty());
+            connection = new(connection, current.GetLocationsOrEmpty(), connection.Color ?? current.Color);
             current = connection;
         }
     }
@@ -404,18 +484,17 @@ public sealed partial class Preferences
     /// <summary>Shows the preferences window.</summary>
     /// <param name="gameTime">The time elapsed.</param>
     /// <param name="clients">The list of clients to show.</param>
+    /// <param name="tab">The selected tab.</param>
     /// <param name="clientsToRegister">The clients created from history, or <see langword="null"/>.</param>
     /// <returns>Whether to create a new instance of <see cref="Client"/>.</returns>
     [CLSCompliant(false)]
-    public bool Show(GameTime gameTime, IList<Client> clients, out IEnumerable<Client>? clientsToRegister)
+    public bool Show(GameTime gameTime, IList<Client> clients, out int? tab, out IEnumerable<Client>? clientsToRegister)
     {
         clientsToRegister = null;
 
         if (!ImGui.BeginTabBar("Tabs"))
         {
-            if (!_useTabs)
-                Show(gameTime, clients);
-
+            tab = _useTabs ? null : Show(gameTime, clients);
             return false;
         }
 
@@ -424,12 +503,15 @@ public sealed partial class Preferences
         ShowSettings();
 
         if (_useTabs)
-            Show(gameTime, clients);
-
-        ImGui.EndTabBar();
-
-        if (!_useTabs)
-            Show(gameTime, clients);
+        {
+            tab = Show(gameTime, clients);
+            ImGui.EndTabBar();
+        }
+        else
+        {
+            ImGui.EndTabBar();
+            tab = Show(gameTime, clients);
+        }
 
         return ret;
     }
@@ -515,11 +597,20 @@ public sealed partial class Preferences
     /// <summary>Shows the clients.</summary>
     /// <param name="gameTime">The time elapsed.</param>
     /// <param name="clients">The clients to show.</param>
-    void Show(GameTime gameTime, IList<Client> clients)
+    int? Show(GameTime gameTime, IList<Client> clients)
     {
+        int? ret = null;
+
         for (var i = clients.Count - 1; i >= 0 && clients[i] is var c; i--)
-            if (c.Draw(gameTime, this))
+        {
+            if (c.Draw(gameTime, this, out var v))
                 clients.RemoveAt(i);
+
+            if (v)
+                ret = i;
+        }
+
+        return ret;
     }
 
     /// <summary>Displays the settings tab.</summary>
@@ -549,6 +640,10 @@ public sealed partial class Preferences
         Slider("UI Padding", ref _uiPadding, 0, 20);
         Slider("UI Rounding", ref _uiRounding, 0, 30);
         Slider("UI Spacing", ref _uiSpacing, 0, 20);
+        ImGui.SeparatorText("Color Dimming (Only when connected)");
+        Slider("Window Dim", ref _windowDim, 1, 10, "%.2f");
+        Slider("Active Dim", ref _activeTabDim, 1, 10, "%.2f");
+        Slider("Inactive Dim", ref _inactiveTabDim, 1, 10, "%.2f");
         ImGui.SetNextItemWidth(Width(250));
         _ = ImGui.Checkbox("Tabs instead of separate windows", ref _useTabs);
         _ = ImGui.Checkbox("Move to chat tab when releasing", ref _moveToChatTab);
@@ -622,10 +717,7 @@ public sealed partial class Preferences
             ? ((AppPalette)i).ToString()
             : ((ImGuiCol)(i - (int)AppPalette.Count)).ToString();
 
-        var v = Colors[i].Vector;
-        _ = ImGui.ColorEdit4(name, ref v, ImGuiColorEditFlags.DisplayHex);
-        _ = ImGui.ColorEdit4($"##{name}", ref v, ImGuiColorEditFlags.DisplayRGB | ImGuiColorEditFlags.NoSmallPreview);
-        Colors[i] = new(v);
+        Colors[i] = ShowColorEdit(name, Colors[i]);
     }
 
     /// <summary>Shows the connection tab.</summary>

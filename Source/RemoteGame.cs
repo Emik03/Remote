@@ -23,6 +23,9 @@ public sealed class RemoteGame : Game
     /// <summary>The current user preferences.</summary>
     readonly Preferences _preferences = Preferences.Load();
 
+    /// <summary>Contains the active tab.</summary>
+    int? _tab;
+
     /// <summary>Keeps <see cref="_iniPath"/> pinned.</summary>
     GCHandle _iniPathPin;
 
@@ -75,7 +78,7 @@ public sealed class RemoteGame : Game
 
         GraphicsDevice.Clear(_preferences[AppPalette.Background].XnaColor);
         _renderer.BeforeLayout(gameTime);
-        _preferences.PushStyling();
+        _preferences.PushStyling(_tab is { } t ? _clients[t] : null);
 
         const ImGuiWindowFlags OnTab = ImGuiWindowFlags.NoTitleBar |
             ImGuiWindowFlags.NoResize |
@@ -94,7 +97,7 @@ public sealed class RemoteGame : Game
 
         if (ImGui.Begin(s_name, ImGuiWindowFlags.HorizontalScrollbar | tab))
         {
-            if (_preferences.Show(gameTime, _clients, out var fromHistory))
+            if (_preferences.Show(gameTime, _clients, out _tab, out var fromHistory))
                 _ = Add(new());
 
             _ = fromHistory?.All(Add);
