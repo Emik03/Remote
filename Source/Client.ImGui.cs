@@ -35,7 +35,6 @@ public sealed partial class Client
 
     /// <summary>Calls <see cref="ImGui"/> a lot.</summary>
     /// <param name="gameTime">The time elapsed since.</param>
-    /// <param name="index">The index that this client resides in, used for coloring the window or tab.</param>
     /// <param name="preferences">The user preferences.</param>
     /// <returns>Whether this window is closed, and should be dequeued to allow the GC to free this instance.</returns>
     [CLSCompliant(false)]
