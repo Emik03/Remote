@@ -171,7 +171,7 @@ public sealed partial class Preferences
     readonly Connection.List _list = Connection.List.Load();
 
     /// <summary>Whether to use tabs or separate windows.</summary>
-    bool _useTabs = true, _moveToChatTab = true;
+    bool _holdToConfirm = true, _useTabs = true, _moveToChatTab = true;
 
     /// <summary>Contains the current port.</summary>
     int _language, _port;
@@ -225,6 +225,13 @@ public sealed partial class Preferences
 
     /// <summary>Contains the path to the preferences file to read and write from.</summary>
     public static string FilePath { get; } = PathTo(PreferencesFile, "REMOTE_PREFERENCES_PATH");
+
+    /// <summary>Gets or sets the value determining whether to have holding to confirm location releases.</summary>
+    public bool HoldToConfirm
+    {
+        get => _holdToConfirm;
+        [UsedImplicitly] private set => _holdToConfirm = value;
+    }
 
     /// <summary>Gets or sets the value determining whether to use tabs.</summary>
     public bool UseTabs
@@ -644,9 +651,10 @@ public sealed partial class Preferences
         Slider("Window Dim", ref _windowDim, 1, 10, "%.2f");
         Slider("Active Dim", ref _activeTabDim, 1, 10, "%.2f");
         Slider("Inactive Dim", ref _inactiveTabDim, 1, 10, "%.2f");
-        ImGui.SetNextItemWidth(Width(250));
+        ImGui.SeparatorText("Navigation");
         _ = ImGui.Checkbox("Tabs instead of separate windows", ref _useTabs);
         _ = ImGui.Checkbox("Move to chat tab when releasing", ref _moveToChatTab);
+        _ = ImGui.Checkbox("Hold to confirm location release", ref _holdToConfirm);
         ImGui.SeparatorText("Fonts (Requires Restart)");
         Slider("Font Size", ref _fontSize, 8, 72, "%.0f");
         ImGui.SetNextItemWidth(Width(250));

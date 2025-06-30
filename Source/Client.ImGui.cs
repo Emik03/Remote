@@ -748,7 +748,7 @@ public sealed partial class Client
         }
 
         var color = preferences[outOfLogic ? AppPalette.ReleasingOutOfLogic : AppPalette.Releasing];
-        _confirmationTimer -= gameTime.ElapsedGameTime;
+        _confirmationTimer = preferences.HoldToConfirm ? _confirmationTimer - gameTime.ElapsedGameTime : new(-1);
         ImGui.TextColored(color, ReleasingMessage());
     }
 
