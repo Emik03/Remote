@@ -569,15 +569,19 @@ public sealed partial class Client
                 if (!first || (first = false))
                     ImGui.SameLine();
 
-                var color = preferences[part.PaletteColor switch
+                var palette = part.PaletteColor switch
                 {
                     PaletteColor.SlateBlue => AppPalette.Useful,
                     PaletteColor.Salmon => AppPalette.Trap,
                     PaletteColor.Plum => AppPalette.Progression,
                     _ => AppPalette.Neutral,
-                }];
+                };
 
-                ImGui.TextColored(color, part.Text.Replace("%", "%%"));
+                ImGui.TextColored(preferences[palette], part.Text.Replace("%", "%%"));
+
+                if (palette is not AppPalette.Neutral && ImGui.IsItemHovered())
+                    Tooltip(preferences, $"Item Class: {palette}");
+
                 CopyIfClicked(preferences, message);
             }
         }
