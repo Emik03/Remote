@@ -155,9 +155,6 @@ public sealed partial class Client(Yaml? yaml = null)
     /// <summary>Contains this player's <c>.yaml</c> file.</summary>
     readonly Yaml _yaml = yaml ?? new();
 
-    /// <summary>The state on whether it is currently retrieving hints.</summary>
-    bool _isRetrievingHints;
-
     /// <summary>Whether this client can be or has reached its goal.</summary>
     /// <remarks><para>
     /// <see langword="false"/> means this slot does not meet its goal.
@@ -186,6 +183,9 @@ public sealed partial class Client(Yaml? yaml = null)
 
     /// <summary>The attempt to login.</summary>
     Task _connectingTask = Task.CompletedTask;
+
+    /// <summary>The attempt to get hints.</summary>
+    Task<Hint[]?> _hintTask = Task.FromResult<Hint[]?>(null);
 
     /// <summary>Initializes a new instance of the <see cref="Client"/> class.</summary>
     /// <param name="errors">The errors to show immediately.</param>
@@ -224,19 +224,14 @@ public sealed partial class Client(Yaml? yaml = null)
         {
             Debug.Assert(_session is not null);
 
-            if (field is not null || _isRetrievingHints)
-                return field;
+            if (_hintTask is { IsCompletedSuccessfully: true, Result: { } hints })
+                return hints;
 
-            _isRetrievingHints = true;
+            if (_hintTask.IsCompleted)
+                _hintTask = Task.Run(() => _session.DataStorage.GetHintsAsync());
 
-            if (Go(() => _session.DataStorage.GetHints(), out _, out var ok))
-                return field;
-
-            field = ok;
-            _isRetrievingHints = false;
-            return field;
+            return null;
         }
-        set;
     }
 
     /// <summary>Gets the players as a sequence of <see cref="Client"/> by parsing the file provided.</summary>

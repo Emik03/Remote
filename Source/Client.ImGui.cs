@@ -313,7 +313,7 @@ public sealed partial class Client
 
         if (!ImGui.BeginTabItem("Hints"))
         {
-            LastHints = null;
+            _hintTask = Task.FromResult<Hint[]?>(null);
             return;
         }
 
