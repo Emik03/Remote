@@ -87,14 +87,14 @@ public sealed partial record Evaluator
     /// <returns>Whether the specific percentage of an item is obtained.</returns>
     bool OnItemPercent((ReadOnlyMemory<char> Item, ReadOnlyMemory<char> Percent) tuple) =>
         IsOptAll && IsItemDisabled(tuple.Item.Span) ||
-        tuple.Percent.Span.Into<double>() <=
+        tuple.Percent.Span.Into<int>() / 100d <=
         Helper.AllItemsReceived.Count(x => Eq(x.ItemName, tuple.Item)) / (double)ItemCountSpan[tuple.Item.Span];
 
     /// <summary>Determines whether the specific percentage of a category is obtained.</summary>
     /// <param name="tuple">The tuple to deconstruct.</param>
     /// <returns>Whether the specific percentage of a category is obtained.</returns>
     bool OnCategoryPercent((ReadOnlyMemory<char> Category, ReadOnlyMemory<char> Percent) tuple) =>
-        tuple.Percent.Span.Into<double>() <=
+        tuple.Percent.Span.Into<int>() / 100d <=
         Helper.AllItemsReceived.Count(IsItemInCategory(tuple.Category)) /
         (double)CategoryCountSpan[tuple.Category.Span].Min(OptCategoryCount(tuple.Category));
 
