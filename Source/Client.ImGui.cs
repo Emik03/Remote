@@ -119,14 +119,88 @@ public sealed partial class Client
     /// <summary>Convenience function for displaying a tooltip with text scaled by the user preferences.</summary>
     /// <param name="preferences">The user preferences.</param>
     /// <param name="text">The text to display.</param>
-    static void Tooltip(Preferences preferences, string text)
+    /// <param name="colored">Whether to make the text colorful.</param>
+    static void Tooltip(Preferences preferences, string text, bool colored = false)
     {
+        ImGui.PushStyleColor(ImGuiCol.PopupBg, preferences[AppPalette.Count + (int)ImGuiCol.PopupBg]);
+
         if (!ImGui.BeginTooltip())
+        {
+            ImGui.PopStyleColor();
             return;
+        }
 
         ImGui.SetWindowFontScale(preferences.UiScale);
-        ImGui.Text(text);
+        Wrapped(text, ImGui.GetMainViewport().Size.X, colored);
         ImGui.EndTooltip();
+        ImGui.PopStyleColor();
+    }
+
+    /// <summary>Creates the wrapped string.</summary>
+    /// <param name="text">The text to wrap.</param>
+    /// <param name="maxWidth">The maximum width.</param>
+    /// <param name="colored">Whether to make the text colorful.</param>
+    /// <returns>The wrapped version of the parameter <paramref name="text"/>.</returns>
+    static void Wrapped(string text, float maxWidth, bool colored)
+    {
+        static void PushRange(ReadOnlySpan<char> span, bool colored, ref int braces)
+        {
+            static void Push(char c, bool makeColorful, in int braces)
+            {
+                if (makeColorful)
+                    ImGui.PushStyleColor(ImGuiCol.Text, Preferences.Sron[braces % Preferences.Sron.Length]);
+
+                ImGui.TextUnformatted([c]);
+                ImGui.SameLine(0, 0);
+
+                if (makeColorful)
+                    ImGui.PopStyleColor();
+            }
+
+            foreach (var c in span)
+                switch (c)
+                {
+                    case '(':
+                        braces++;
+                        Push(c, colored, braces);
+                        break;
+                    case ')':
+                        Push(c, colored, braces);
+                        braces--;
+                        break;
+                    default:
+                        Push(c, colored, braces);
+                        break;
+                }
+        }
+
+        var sum = 0f;
+        var span = text.AsSpan();
+        int braces = 0, last = 0, replace = 0;
+        SearchValues<char> br = Whitespaces.BreakingSearch.GetSpan()[0], ws = Whitespaces.UnicodeSearch.GetSpan()[0];
+
+        for (var i = 0; i < span.Length && span[i] is var c && (sum += ImGui.CalcTextSize([c]).X) is var _; i++)
+            switch (c)
+            {
+                case var _ when br.Contains(c):
+                    sum = 0;
+                    PushRange(span[last..i], colored, ref braces);
+                    replace = last = i + 1;
+                    ImGui.NewLine();
+                    break;
+                case var _ when ws.Contains(c):
+                    replace = i;
+                    break;
+                case var _ when sum <= maxWidth: break;
+                default:
+                    PushRange(span[last..replace], colored, ref braces);
+                    sum = ImGui.CalcTextSize(span[replace..i]).X;
+                    last = replace + 1;
+                    ImGui.NewLine();
+                    break;
+            }
+
+        PushRange(span[last..], colored, ref braces);
     }
 
     /// <summary>Gets the setter for the next item open.</summary>
@@ -373,9 +447,10 @@ public sealed partial class Client
             return;
         }
 
-        var ro = _session.RoomState;
-        ImGui.TextDisabled($"Hint cost percentage: {ro.HintCostPercentage}%% ({ro.HintCost} points)");
-        ImGui.TextDisabled($"You can do {(ro.HintPoints / ro.HintCost).Conjugate("hint")} ({ro.HintPoints} points)");
+        var rm = _session.RoomState;
+        ImGui.TextDisabled($"Hint cost percentage: {rm.HintCostPercentage}%% ({rm.HintCost.Conjugate("point")})");
+        var can = $"You can do {(rm.HintPoints / rm.HintCost).Conjugate("hint")} ({rm.HintPoints.Conjugate("point")})";
+        ImGui.TextDisabled(can);
         _ = ImGui.Checkbox("Show obtained hints", ref _showObtainedHints);
         ImGui.SetNextItemWidth(preferences.Width(150));
         _ = ImGui.Combo("Filter", ref _hintIndex, s_hintOptions, s_hintOptions.Length);
@@ -728,7 +803,7 @@ public sealed partial class Client
         var outOfLogic = false;
 
         foreach (var key in _sortedKeys)
-            if (this[key] is (var status, true))
+            if (this[key] is (_, var status, true))
             {
                 outOfLogic |= status is LocationStatus.OutOfLogic;
                 ImGui.PushStyleColor(ImGuiCol.Text, preferences[status]);
@@ -783,7 +858,7 @@ public sealed partial class Client
             foreach (var part in parts)
             {
                 if (!first || (first = false))
-                    ImGui.SameLine();
+                    ImGui.SameLine(0, 0);
 
                 var palette = part.PaletteColor switch
                 {
@@ -793,7 +868,9 @@ public sealed partial class Client
                     _ => AppPalette.Neutral,
                 };
 
-                ImGui.TextColored(preferences[palette], part.Text.Replace("%", "%%"));
+                ImGui.PushStyleColor(ImGuiCol.Text, preferences[palette]);
+                ImGui.TextUnformatted(part.Text);
+                ImGui.PopStyleColor();
 
                 if (palette is not AppPalette.Neutral && ImGui.IsItemHovered())
                     Tooltip(preferences, $"Item Class: {palette}");
@@ -854,12 +931,16 @@ public sealed partial class Client
     /// <param name="category">The category that the location falls under, used to ensure IDs remain distinct.</param>
     void Checkbox(Preferences preferences, string location, string category)
     {
-        ref var tuple = ref this[location];
-        ImGui.PushStyleColor(ImGuiCol.Text, preferences[tuple.Status]);
-        ImGui.Checkbox($"{location}###{location}:|{category}:|Location", ref tuple.Checked);
+        ref var value = ref this[location];
+        ImGui.PushStyleColor(ImGuiCol.Text, preferences[value.Status]);
+        ImGui.Checkbox($"{location}###{location}:|{category}:|Location", ref value.Checked);
         CopyIfClicked(preferences, location);
+
+        if (value.Logic is { } logic && ImGui.IsItemHovered())
+            Tooltip(preferences, logic.DeparseDisplay(), true);
+
         ImGui.PopStyleColor();
-        tuple.Checked &= tuple.Status is not LocationStatus.Checked;
+        value.Checked &= value.Status is not LocationStatus.Checked;
     }
 
     /// <summary>Clears all checkboxes.</summary>

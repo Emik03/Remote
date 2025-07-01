@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MPL-2.0
 namespace Remote;
 
-using CheckboxStatus = (Client.LocationStatus Status, bool Checked);
+using CheckboxStatus = (Logic? Logic, Client.LocationStatus Status, bool Checked);
 
 /// <summary>
 /// Responsible for rendering the <see cref="ImGui"/> window to display its state of <see cref="ArchipelagoSession"/>.
@@ -268,14 +268,12 @@ public sealed partial class Client(Yaml? yaml = null)
     [CLSCompliant(false)]
     public void Connect(Preferences preferences, string address, ushort port, string? password)
     {
-        async Task Attempt()
+        async Task AttemptAsync()
         {
             const ItemsHandlingFlags Flags = ItemsHandlingFlags.AllItems;
 
             await Task.Yield();
             var session = ArchipelagoSessionFactory.CreateSession(address, port);
-            session.MessageLog.OnMessageReceived += OnMessageReceived;
-            session.Items.ItemReceived += UpdateStatus;
             string[] tags = ["AP", nameof(Remote)];
             _connectionMessage = "Attempting new connection.\nConnecting... (1/5)";
             _ = await session.ConnectAsync();
@@ -285,8 +283,6 @@ public sealed partial class Client(Yaml? yaml = null)
 
             if (login is LoginFailure failure)
             {
-                session.MessageLog.OnMessageReceived -= OnMessageReceived;
-                session.Items.ItemReceived -= UpdateStatus;
                 _errors = failure.Errors;
                 return;
             }
@@ -296,9 +292,8 @@ public sealed partial class Client(Yaml? yaml = null)
             _connectionMessage = "Logged in!\nReading slot data... (3/5)";
             session.SetClientState(ArchipelagoClientState.ClientPlaying);
 
-            if (!Go(() => session.DataStorage.GetSlotData(), out _, out var ok))
-                foreach (var (key, value) in ok)
-                    ((IDictionary<string, object?>)_yaml)[key] = value;
+            foreach (var (key, value) in await session.DataStorage.GetSlotDataAsync())
+                ((IDictionary<string, object?>)_yaml)[key] = value;
 
             _connectionMessage = "Slot data has been read!\nReading APWorld... (4/5)";
             _evaluator = Evaluator.Read(session.DataStorage, session.Items, _yaml, preferences);
@@ -307,13 +302,15 @@ public sealed partial class Client(Yaml? yaml = null)
             preferences.Prepend(_info);
             preferences.Sync(ref _info);
             _session = session;
+            _session.Items.ItemReceived += UpdateStatus;
+            _session.MessageLog.OnMessageReceived += OnMessageReceived;
         }
 
-        async Task? Wrapped()
+        async Task? TryConnectAsync()
         {
             try
             {
-                await Attempt();
+                await AttemptAsync();
             }
             catch (Exception ex)
             {
@@ -322,7 +319,7 @@ public sealed partial class Client(Yaml? yaml = null)
         }
 
         _connectionMessage = "";
-        _connectingTask = Task.Run(Wrapped);
+        _connectingTask = Task.Run(TryConnectAsync);
     }
 
     /// <inheritdoc />
@@ -335,10 +332,10 @@ public sealed partial class Client(Yaml? yaml = null)
     public override string ToString() => _windowName;
 
     /// <summary>Whether this pair can be released.</summary>
-    /// <param name="kvp">The pair to deconstruct.</param>
-    /// <returns>Whether the parameter <paramref name="kvp"/> can be released.</returns>
-    static bool IsReleasable(KeyValuePair<string, CheckboxStatus> kvp) =>
-        kvp.Value is (LocationStatus.Reachable or LocationStatus.ProbablyReachable or LocationStatus.OutOfLogic, true);
+    /// <param name="x">The pair to deconstruct.</param>
+    /// <returns>Whether the parameter <paramref name="x"/> can be released.</returns>
+    static bool IsReleasable(KeyValuePair<string, CheckboxStatus> x) =>
+        x.Value is (_, LocationStatus.Reachable or LocationStatus.ProbablyReachable or LocationStatus.OutOfLogic, true);
 
     /// <summary>Converts the exception to the <see cref="string"/> array.</summary>
     /// <param name="e">The exception to convert.</param>
@@ -392,7 +389,7 @@ public sealed partial class Client(Yaml? yaml = null)
 
         long? ToId(KeyValuePair<string, CheckboxStatus> kvp)
         {
-            async Task DisplayError()
+            async Task DisplayErrorAsync()
             {
                 const string Title = "Archipelago Error";
                 IEnumerable<string> buttons = ["Dismiss all", "Step to next error"];
@@ -408,7 +405,7 @@ public sealed partial class Client(Yaml? yaml = null)
             if (!s_displayErrors)
                 return null;
 #pragma warning disable MA0134
-            _ = Task.Run(DisplayError).ConfigureAwait(false);
+            _ = Task.Run(DisplayErrorAsync).ConfigureAwait(false);
 #pragma warning restore MA0134
             return null;
         }
@@ -446,21 +443,25 @@ public sealed partial class Client(Yaml? yaml = null)
     /// <param name="_">The discard for the hook.</param>
     void UpdateStatus(ReceivedItemsHelper? _ = null)
     {
-        void Update(string location, ILocationCheckHelper itemHelper) =>
-            this[location].Status = 0 switch
+        void Update(string location, ILocationCheckHelper itemHelper)
+        {
+            ref var value = ref this[location];
+
+            (value.Logic, value.Status) = 0 switch
             {
                 _ when itemHelper.GetLocationIdFromName(_yaml.Game, location) is var id &&
                     itemHelper.AllLocations.Contains(id) &&
                     !itemHelper.AllMissingLocations.Contains(id) ||
                     _info.GetLocationsOrEmpty().Contains(location) =>
-                    LocationStatus.Checked,
-                _ when _evaluator is null => LocationStatus.ProbablyReachable,
-                _ when _evaluator?.InLogic(location) is false => LocationStatus.OutOfLogic,
-                _ => LocationStatus.Reachable,
+                    (null, LocationStatus.Checked),
+                _ when _evaluator is null => (null, LocationStatus.ProbablyReachable),
+                _ when _evaluator.InLogic(location) is { } logic => (logic, LocationStatus.OutOfLogic),
+                _ => (null, LocationStatus.Reachable),
             };
+        }
 
-        Debug.Assert(_locationSearch is not null);
         Debug.Assert(_session is not null);
+        Debug.Assert(_locationSearch is not null);
         var locationHelper = _session.Locations;
 
         if (_evaluator is null)

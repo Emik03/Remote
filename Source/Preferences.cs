@@ -4,7 +4,6 @@ namespace Remote;
 using JsonIgnoreAttribute = System.Text.Json.Serialization.JsonIgnoreAttribute;
 using JsonSerializer = System.Text.Json.JsonSerializer;
 using Vector2 = System.Numerics.Vector2;
-using Vector4 = System.Numerics.Vector4;
 
 /// <summary>Contains the preferences that are stored persistently.</summary>
 public sealed partial class Preferences
@@ -451,7 +450,7 @@ public sealed partial class Preferences
     {
         string FindNextAvailableColor()
         {
-            foreach (var color in s_sron)
+            foreach (var color in Sron)
             {
                 var history = CollectionsMarshal.AsSpan(_list.History);
 
@@ -468,7 +467,7 @@ public sealed partial class Preferences
             Next: ;
             }
 
-            return s_sron.PickRandom().ToString();
+            return Sron.PickRandom().ToString();
         }
 
         var history = CollectionsMarshal.AsSpan(_list.History);
@@ -507,7 +506,7 @@ public sealed partial class Preferences
 
         ImGui.SetWindowFontScale(UiScale);
         var ret = ShowConnectionTab(out clientsToRegister);
-        ShowSettings();
+        ShowPreferences();
 
         if (_useTabs)
         {
@@ -620,12 +619,12 @@ public sealed partial class Preferences
         return ret;
     }
 
-    /// <summary>Displays the settings tab.</summary>
-    void ShowSettings()
+    /// <summary>Displays the preferences tab.</summary>
+    void ShowPreferences()
     {
         const string Hint = "Only required for manual worlds that use hooks";
 
-        if (!ImGui.BeginTabItem("Settings"))
+        if (!ImGui.BeginTabItem("Preferences"))
             return;
 
         ImGui.SeparatorText("Paths");

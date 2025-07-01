@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MPL-2.0
 namespace Remote;
 
-/// <summary>The record for processing <see cref="Logic"/> and whether something is in logic.</summary>
+/// <summary>The record for processing <see cref="OnAnd"/> and whether something is in logic.</summary>
 /// <param name="Helper">The list of items received.</param>
 /// <param name="HiddenCategories">The set of categories that shouldn't be visible to the user.</param>
-/// <param name="LocationsToLogic">The conversion from locations to its <see cref="Logic"/> instances.</param>
+/// <param name="LocationsToLogic">The conversion from locations to its <see cref="OnAnd"/> instances.</param>
 /// <param name="CategoryToLocations">The conversion from categories to its set of locations.</param>
 /// <param name="CategoryToYaml">The conversion for categories to the yaml options that it falls under.</param>
 /// <param name="CategoryToItems">The conversion from categories to its set of items.</param>
@@ -33,7 +33,7 @@ public sealed partial record Evaluator(
     /// <summary>Initializes a new instance of the <see cref="Evaluator"/> record.</summary>
     /// <param name="helper">The list of items received.</param>
     /// <param name="hiddenCategories">The set of categories that shouldn't be visible to the user.</param>
-    /// <param name="locationsToLogic">The conversion from locations to its <see cref="Logic"/> instances.</param>
+    /// <param name="locationsToLogic">The conversion from locations to its <see cref="OnAnd"/> instances.</param>
     /// <param name="categoryToLocations">The conversion from categories to its set of locations.</param>
     /// <param name="categoryToYaml">The conversion for categories to the yaml options that it falls under.</param>
     /// <param name="itemToCategories">The conversion from items to the set of categories it falls under.</param>
@@ -93,7 +93,7 @@ public sealed partial record Evaluator(
     /// The user preferences, containing the directory of the Archipelago installation.
     /// </param>
     /// <returns>
-    /// The <see cref="Evaluator"/> to evaluate <see cref="Logic"/>, or <see langword="null"/> if not a manual world,
+    /// The <see cref="Evaluator"/> to evaluate <see cref="OnAnd"/>, or <see langword="null"/> if not a manual world,
     /// parsing failed, or the <c>.apworld</c> doesn't exist.
     /// </returns>
     public static Evaluator? Read(IDataStorageWrapper w, IReceivedItemsHelper h, Yaml y, Preferences preferences) =>
@@ -107,7 +107,7 @@ public sealed partial record Evaluator(
     /// <param name="preferences">The user preferences.</param>
     /// <param name="path">The path to the zip file.</param>
     /// <returns>
-    /// The <see cref="Evaluator"/> to evaluate <see cref="Logic"/>, or <see langword="null"/> if not a manual world,
+    /// The <see cref="Evaluator"/> to evaluate <see cref="OnAnd"/>, or <see langword="null"/> if not a manual world,
     /// parsing failed, or the <c>.apworld</c> doesn't exist.
     /// </returns>
     static Evaluator? ReadZip(

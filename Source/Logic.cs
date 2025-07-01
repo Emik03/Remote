@@ -81,6 +81,10 @@ public sealed partial class Logic(
     /// <summary>Whether to show errors in <see cref="MessageBox.Show"/>.</summary>
     static bool s_displayErrors = true;
 
+    /// <summary>Gets the value determines whether this instance is a yaml function.</summary>
+    public bool IsYamlFunction =>
+        Function.Name.Span is "YamlCompare" or "YamlDisabled" or "YamlEnabled" || Grouping?.IsYamlFunction is true;
+
     /// <summary>Makes a requirement that either of the instances should be fulfilled.</summary>
     /// <param name="left">The left-hand side.</param>
     /// <param name="right">The right-hand side.</param>
@@ -136,6 +140,22 @@ public sealed partial class Logic(
             x => $"({x?.Deparse()})",
             x => $"{x.Left.Deparse()} AND {x.Right.Deparse()}",
             x => $"{x.Left.Deparse()} OR {x.Right.Deparse()}",
+            x => $"|{x}|",
+            x => $"|@{x}|",
+            x => $"|{x.Item}:{x.Count}|",
+            x => $"|@{x.Category}:{x.Count}|",
+            x => $"|{x.Item}:{x.Percent}%|",
+            x => $"|@{x.Category}:{x.Percent}%|",
+            x => $"{{{x.Name}({x.Args})}}"
+        );
+
+    /// <summary>Converts this instance back into the <see cref="string"/> representation.</summary>
+    /// <returns>The <see cref="string"/> representation that can be used to reconstruct this instance.</returns>
+    public string DeparseDisplay() =>
+        Map(
+            x => $"({x?.DeparseDisplay()})",
+            x => $"({x.Left.DeparseDisplay()} AND {x.Right.DeparseDisplay()})",
+            x => $"({x.Left.DeparseDisplay()} OR {x.Right.DeparseDisplay()})",
             x => $"|{x}|",
             x => $"|@{x}|",
             x => $"|{x.Item}:{x.Count}|",
@@ -282,7 +302,7 @@ public sealed partial class Logic(
     static Logic? Error<T>(T tokens, int i, bool hasConsumedMismatchedToken = true, [CallerLineNumber] int line = 0)
         where T : IReadOnlyList<Token>
     {
-        async Task? DisplayError()
+        async Task? DisplayErrorAsync()
         {
             const int Lookaround = 3;
             const string Title = "Logic Parse Error";
@@ -306,7 +326,7 @@ public sealed partial class Logic(
         if (s_displayErrors)
             return null;
 #pragma warning disable MA0134
-        _ = Task.Run(DisplayError).ConfigureAwait(false);
+        _ = Task.Run(DisplayErrorAsync).ConfigureAwait(false);
 #pragma warning restore MA0134
         return null;
     }

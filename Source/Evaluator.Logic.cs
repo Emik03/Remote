@@ -19,24 +19,27 @@ public sealed partial record Evaluator
     /// <summary>Determines whether the logic is fulfilled.</summary>
     /// <param name="logic">The logic to check.</param>
     /// <returns>Whether the parameter <paramref name="logic"/> is fulfilled.</returns>
-    public bool In([NotNullWhen(false)] Logic? logic) =>
-        logic?.Map(
-            In,
-            OnAnd,
-            OnOr,
-            OnItem,
-            OnCategory,
-            OnItemCount,
-            OnCategoryCount,
-            OnItemPercent,
-            OnCategoryPercent,
-            OnFunction
-        ) is true or null;
+    public Logic? In([NotNullWhen(false)] Logic? logic) =>
+        logic switch
+        {
+            null => null,
+            { IsGrouping: true, Grouping: var l } => In(l),
+            { IsAnd: true, And: var l } => OnAnd(l),
+            { IsOr: true, Or: var l } => OnOr(l),
+            { IsItem: true, Item: var l } => OnItem(l) ? null : logic,
+            { IsCategory: true, Category: var l } => OnCategory(l) ? null : logic,
+            { IsItemCount: true, ItemCount: var l } => OnItemCount(l) ? null : logic,
+            { IsCategoryCount: true, CategoryCount: var l } => OnCategoryCount(l) ? null : logic,
+            { IsItemPercent: true, ItemPercent: var l } => OnItemPercent(l) ? null : logic,
+            { IsCategoryPercent: true, CategoryPercent: var l } => OnCategoryPercent(l) ? null : logic,
+            { IsFunction: true, Function: var l } => OnFunction(logic, l),
+            _ => throw new NotSupportedException(logic.ToString()),
+        };
 
     /// <summary>Determines whether the name of the location is in-logic.</summary>
     /// <param name="location">The location to check.</param>
     /// <returns>Whether the parameter <paramref name="location"/> is the name of a location that is in-logic.</returns>
-    public bool InLogic(string location) => !LocationsToLogic.TryGetValue(location, out var logic) || In(logic);
+    public Logic? InLogic(string location) => LocationsToLogic.TryGetValue(location, out var logic) ? In(logic) : null;
 
     /// <summary>Determines whether both spans of characters are equal in contents.</summary>
     /// <param name="next">The left-hand side.</param>
@@ -47,12 +50,17 @@ public sealed partial record Evaluator
     /// <summary>Determines whether the <c>AND</c> condition is fulfilled.</summary>
     /// <param name="tuple">The tuple to deconstruct.</param>
     /// <returns>Whether the <c>AND</c> condition is fulfilled.</returns>
-    bool OnAnd((Logic Left, Logic Right) tuple) => In(tuple.Left) && In(tuple.Right);
+    Logic? OnAnd((Logic Left, Logic Right) tuple) =>
+        In(tuple.Left) is var left && left is not null && left.IsYamlFunction ? left :
+        In(tuple.Right) is var right && right is not null && right.IsYamlFunction ? right : left & right;
 
     /// <summary>Determines whether the <c>OR</c> condition is fulfilled.</summary>
     /// <param name="tuple">The tuple to deconstruct.</param>
     /// <returns>Whether the <c>OR</c> condition is fulfilled.</returns>
-    bool OnOr((Logic Left, Logic Right) tuple) => In(tuple.Left) || In(tuple.Right);
+    Logic? OnOr((Logic Left, Logic Right) tuple) =>
+        In(tuple.Left) is var left && In(tuple.Right) is var right && left is not null && left.IsYamlFunction ?
+            right :
+            right is not null && right.IsYamlFunction ? left : left | right;
 
     /// <summary>Determines whether any of an item is obtained.</summary>
     /// <param name="item">The item to check.</param>
@@ -99,18 +107,19 @@ public sealed partial record Evaluator
         (double)CategoryCountSpan[tuple.Category.Span].Min(OptCategoryCount(tuple.Category));
 
     /// <summary>Determines whether the function returns <see langword="true"/>.</summary>
+    /// <param name="logic">The logic.</param>
     /// <param name="tuple">The tuple to deconstruct.</param>
     /// <returns>Whether the function returns <see langword="true"/>.</returns>
-    bool OnFunction((ReadOnlyMemory<char> Name, ReadOnlyMemory<char> Args) tuple) =>
+    Logic? OnFunction(Logic? logic, (ReadOnlyMemory<char> Name, ReadOnlyMemory<char> Args) tuple) =>
         tuple.Name.Span.Trim() switch
         {
-            nameof(YamlEnabled) => YamlEnabled(tuple.Args),
-            nameof(YamlDisabled) => YamlDisabled(tuple.Args),
-            nameof(YamlCompare) => YamlCompare(tuple.Args),
-            nameof(OptOne) => OptOne(tuple.Args),
+            nameof(ItemValue) => ItemValue(tuple.Args) ? null : logic,
             nameof(OptAll) => OptAll(tuple.Args),
-            nameof(ItemValue) => ItemValue(tuple.Args),
-            _ => true,
+            nameof(OptOne) => OptOne(tuple.Args),
+            nameof(YamlCompare) => YamlCompare(tuple.Args) ? null : logic,
+            nameof(YamlEnabled) => YamlEnabled(tuple.Args) ? null : logic,
+            nameof(YamlDisabled) => YamlDisabled(tuple.Args) ? null : logic,
+            _ => null,
         };
 
     /// <summary>Determines whether the yaml option is enabled.</summary>
@@ -148,13 +157,13 @@ public sealed partial record Evaluator
     /// <summary>Determines whether the item is disabled by yaml options, or the requirement itself is met.</summary>
     /// <param name="item">The item to check.</param>
     /// <returns>Whether the item is disabled by yaml options, or the requirement itself is met.</returns>
-    bool OptOne(ReadOnlyMemory<char> item) =>
-        IsItemDisabled(item.SplitOn(':').First.Span) || In(Logic.TokenizeAndParse(item));
+    Logic? OptOne(ReadOnlyMemory<char> item) =>
+        IsItemDisabled(item.SplitOn(':').First.Span) ? null : In(Logic.TokenizeAndParse(item));
 
     /// <summary>Evaluates <see cref="In"/> but with <see cref="IsOptAll"/> enabled.</summary>
     /// <param name="memory">The string of characters to parse.</param>
     /// <returns>The returned value from <see cref="In"/>.</returns>
-    bool OptAll(ReadOnlyMemory<char> memory) =>
+    Logic? OptAll(ReadOnlyMemory<char> memory) =>
         (IsOptAll ? this : this with { IsOptAll = true }).In(Logic.TokenizeAndParse(memory));
 
     /// <summary>Determines whether the amount of a phantom item is sufficiently obtained.</summary>
