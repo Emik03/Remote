@@ -225,7 +225,10 @@ public sealed partial class Client
         var ret = !ImGuiRenderer.BeginTabItem("Chat", ref Unsafe.NullRef<bool>(), flags);
 
         if (isForced)
+        {
+            Release(preferences);
             ClearChecked();
+        }
 
         if (ret)
             return;
