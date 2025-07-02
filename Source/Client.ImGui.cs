@@ -885,7 +885,7 @@ public sealed partial class Client
     /// <param name="preferences">The user preferences.</param>
     void ShowItemSearch(Preferences preferences)
     {
-        ImGui.SetNextItemWidth(preferences.Width(400));
+        ImGui.SetNextItemWidth(preferences.Width(450));
         _ = ImGuiRenderer.InputTextWithHint("##ItemSearch", "Search...", ref _itemSearch, ushort.MaxValue);
     }
 
@@ -893,7 +893,7 @@ public sealed partial class Client
     /// <param name="preferences">The user preferences.</param>
     void ShowLocationSearch(Preferences preferences)
     {
-        ImGui.SetNextItemWidth(preferences.Width(400));
+        ImGui.SetNextItemWidth(preferences.Width(450));
         _ = ImGuiRenderer.InputTextWithHint("##LocationSearch", "Search...", ref _locationSearch, ushort.MaxValue);
     }
 
