@@ -33,12 +33,6 @@
         <PackageReference Include="Archipelago.MultiClient.Net" Version="6.6.0"/>
         <PackageReference Include="MonoGame.Framework.Android" Version="3.8.5-develop.1"/>
         <PackageReference Include="Archipelago.MultiClient.Net.Analyzers" Version="1.5.0" PrivateAssets="all"/>
-        <EmbeddedResource Include="Fonts/alt.ttf" Link="Fonts/alt.ttf" CopyToOutputDirectory="Never" CopyToPublishDirectory="Never"/>
-        <EmbeddedResource Include="Fonts/main.ttf" Link="Fonts/main.ttf" CopyToOutputDirectory="Never" CopyToPublishDirectory="Never"/>
-        <EmbeddedResource Include="Fonts/thai.ttf" Link="Fonts/thai.ttf" CopyToOutputDirectory="Never" CopyToPublishDirectory="Never"/>
-        <EmbeddedResource Include="Fonts/korean.ttf" Link="Fonts/korean.ttf" CopyToOutputDirectory="Never" CopyToPublishDirectory="Never"/>
-        <EmbeddedResource Include="Fonts/chinese.ttf" Link="Fonts/chinese.ttf" CopyToOutputDirectory="Never" CopyToPublishDirectory="Never"/>
-        <EmbeddedResource Include="Fonts/japanese.ttf" Link="Fonts/japanese.ttf" CopyToOutputDirectory="Never" CopyToPublishDirectory="Never"/>
         <EmbeddedResource Include="Resources/Drawable/Icon.256.ico" Link="Icon.ico" CopyToOutputDirectory="Never" CopyToPublishDirectory="Never"/>
         <EmbeddedResource Include="Resources/Drawable/Icon.256.bmp" Link="Icon.bmp" CopyToOutputDirectory="Never" CopyToPublishDirectory="Never"/>
     </ItemGroup>
