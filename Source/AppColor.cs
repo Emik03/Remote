@@ -54,6 +54,14 @@ public record struct AppColor(Vector4 Vector) : ISpanParsable<AppColor>
     /// <summary>Gets the value for the default yellow.</summary>
     public static AppColor Yellow => new(Color.FromArgb(unchecked((int)0xFFF1FA8C)));
 
+    /// <summary>Gets the unsigned integer representation of this instance.</summary>
+    [CLSCompliant(false)]
+    public readonly uint UInt32 =>
+        (uint)((byte)(Vector.X * Max) << 24 |
+            (byte)(Vector.Y * Max) << 16 |
+            (byte)(Vector.Z * Max) << 8 |
+            (byte)(Vector.W * Max) << 0);
+
     /// <summary>Gets itself as <see cref="XnaColor"/>.</summary>
     [CLSCompliant(false)]
     public readonly XnaColor XnaColor => new(Vector.X, Vector.Y, Vector.Z, Vector.W);
@@ -124,5 +132,5 @@ public record struct AppColor(Vector4 Vector) : ISpanParsable<AppColor>
     /// <param name="u">The unsigned packed integer to convert.</param>
     /// <returns>The <see cref="Vector4"/> from the parameter <paramref name="u"/>.</returns>
     static Vector4 FromU32(uint u) =>
-        new((byte)(u >> 24) / 255.0f, (byte)(u >> 16) / 255.0f, (byte)(u >> 8) / 255.0f, (byte)u / 255.0f);
+        new((byte)(u >> 24) / Max, (byte)(u >> 16) / Max, (byte)(u >> 8) / Max, (byte)u / Max);
 }
