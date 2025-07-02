@@ -1,5 +1,4 @@
 // SPDX-License-Identifier: MPL-2.0
-#define LOGIC_TRIM_CONSOLE_WRITE
 namespace Remote;
 
 /// <summary>
@@ -8,6 +7,7 @@ namespace Remote;
 /// </summary>
 static class LogicTrimmer
 {
+#if LOGIC_TRIM_CONSOLE_WRITE
     /// <summary>The maximum number of variables for assertions.</summary>
     /// <remarks><para>
     /// Increasing this number performs a more exhaustive search of logic with
@@ -17,7 +17,7 @@ static class LogicTrimmer
 
     /// <summary>Contains every string that was printed before.</summary>
     static readonly HashSet<string> s_seen = new(StringComparer.Ordinal);
-
+#endif
     /// <summary>Tests whether this logic is fulfilled by the set of inputs.</summary>
     /// <typeparam name="T">The type of collection for logic.</typeparam>
     /// <param name="that">The logic to test.</param>
