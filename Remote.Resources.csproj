@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <FileVersion>1.3.1</FileVersion>
+        <TargetFramework>netstandard2.0</TargetFramework>
+        <Description>Standalone Archipelago client, with dedicated feature-rich support for manual apworlds.</Description>
+        <PackageTags>Application MonoGame ImGui Archipelago MultiWorld MW MultiGame Multi Game Manual APWorld</PackageTags>
+    </PropertyGroup>
+    <ItemGroup>
+        <Compile Remove="Source/**/*.cs"/>
+        <Compile Include="Source/AssemblyMarker.cs" />
+        <Compile Remove="$(Morsels)/Compile/Source/References/**/*.cs"/>
+        <Compile Include="$(Morsels)/Compile/Source/References/*.cs" Link="Source/References/*.cs"/>
+        <EmbeddedResource Include="Fonts/alt.ttf" Link="Fonts/alt.ttf" CopyToOutputDirectory="Never" CopyToPublishDirectory="Never"/>
+        <EmbeddedResource Include="Fonts/main.ttf" Link="Fonts/main.ttf" CopyToOutputDirectory="Never" CopyToPublishDirectory="Never"/>
+        <EmbeddedResource Include="Fonts/thai.ttf" Link="Fonts/thai.ttf" CopyToOutputDirectory="Never" CopyToPublishDirectory="Never"/>
+        <EmbeddedResource Include="Fonts/korean.ttf" Link="Fonts/korean.ttf" CopyToOutputDirectory="Never" CopyToPublishDirectory="Never"/>
+        <EmbeddedResource Include="Fonts/chinese.ttf" Link="Fonts/chinese.ttf" CopyToOutputDirectory="Never" CopyToPublishDirectory="Never"/>
+        <EmbeddedResource Include="Fonts/japanese.ttf" Link="Fonts/japanese.ttf" CopyToOutputDirectory="Never" CopyToPublishDirectory="Never"/>
+        <Compile Include="$(Morsels)/Compile/Source/References/System/Diagnostics/Attributes.cs" Link="Source/References/System/Diagnostics/Attributes.cs"/>
+        <EmbeddedResource Include="Resources/Values/Extractor.py" Link="Resources/Values/Extractor.py" CopyToOutputDirectory="Never" CopyToPublishDirectory="Never"/>
+    </ItemGroup>
+</Project>

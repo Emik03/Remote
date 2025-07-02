@@ -540,14 +540,14 @@ public sealed partial class Preferences
     {
         var resource = FontLanguage switch
         {
-            Language.English => $"{nameof(Remote)}.Fonts.alt.ttf",
-            Language.Japanese => $"{nameof(Remote)}.Fonts.japanese.ttf",
-            Language.Korean => $"{nameof(Remote)}.Fonts.korean.ttf",
-            Language.Thai => $"{nameof(Remote)}.Fonts.thai.ttf",
-            _ => $"{nameof(Remote)}.Fonts.main.ttf",
+            Language.English => $"{nameof(Remote)}.{nameof(Resources)}.Fonts.alt.ttf",
+            Language.Japanese => $"{nameof(Remote)}.{nameof(Resources)}.Fonts.japanese.ttf",
+            Language.Korean => $"{nameof(Remote)}.{nameof(Resources)}.Fonts.korean.ttf",
+            Language.Thai => $"{nameof(Remote)}.{nameof(Resources)}.Fonts.thai.ttf",
+            _ => $"{nameof(Remote)}.{nameof(Resources)}.Fonts.main.ttf",
         };
 
-        if (typeof(RemoteGame).Assembly.GetManifestResourceStream(resource) is not { } stream)
+        if (typeof(AssemblyMarker).Assembly.GetManifestResourceStream(resource) is not { } stream)
             return default;
 
         var font = Read(stream);

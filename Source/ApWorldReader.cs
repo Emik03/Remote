@@ -195,8 +195,8 @@ public sealed record ApWorldReader(
     /// <returns>The python script that runs <c>Data.py</c>.</returns>
     static string? Script()
     {
-        using var stream = typeof(RemoteGame).Assembly.GetManifestResourceStream(
-            $"{nameof(Remote)}.Resources.Values.Extractor.py"
+        using var stream = typeof(AssemblyMarker).Assembly.GetManifestResourceStream(
+            $"{nameof(Remote)}.{nameof(Resources)}.Resources.Values.Extractor.py"
         );
 
         if (stream is null)
