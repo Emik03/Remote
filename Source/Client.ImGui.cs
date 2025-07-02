@@ -41,16 +41,13 @@ public sealed partial class Client
     [CLSCompliant(false)]
     public bool Draw(GameTime gameTime, Preferences preferences, out bool selected)
     {
-        const int Styles = 3;
-        var open = true;
+        const int Styles = 12;
         var pushedColor = AppColor.TryParse(_info.Color, out var color);
 
         if (pushedColor)
-        {
-            ImGui.PushStyleColor(ImGuiCol.TabSelected, color / preferences.ActiveTabDim);
-            ImGui.PushStyleColor(ImGuiCol.TabHovered, color / preferences.ActiveTabDim);
-            ImGui.PushStyleColor(ImGuiCol.Tab, color / preferences.InactiveTabDim);
-        }
+            PushStyleColor(preferences, color);
+
+        var open = true;
 
         if (preferences.UseTabs)
         {
@@ -114,6 +111,27 @@ public sealed partial class Client
 #else
             ClipboardService.SetText(text);
 #endif
+    }
+
+    /// <summary>Pushes the specific color into most widgets.</summary>
+    /// <param name="preferences">The user preferences</param>
+    /// <param name="color">The color.</param>
+    static void PushStyleColor(Preferences preferences, AppColor color)
+    {
+        var active = color / preferences.ActiveTabDim;
+        var inactive = color / preferences.InactiveTabDim;
+        ImGui.PushStyleColor(ImGuiCol.TabSelected, active);
+        ImGui.PushStyleColor(ImGuiCol.TabHovered, active);
+        ImGui.PushStyleColor(ImGuiCol.Tab, inactive);
+        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, active);
+        ImGui.PushStyleColor(ImGuiCol.ButtonActive, active);
+        ImGui.PushStyleColor(ImGuiCol.Button, inactive);
+        ImGui.PushStyleColor(ImGuiCol.HeaderHovered, active);
+        ImGui.PushStyleColor(ImGuiCol.HeaderActive, active);
+        ImGui.PushStyleColor(ImGuiCol.Header, inactive);
+        ImGui.PushStyleColor(ImGuiCol.FrameBgHovered, active);
+        ImGui.PushStyleColor(ImGuiCol.FrameBgActive, active);
+        ImGui.PushStyleColor(ImGuiCol.FrameBg, inactive);
     }
 
     /// <summary>Convenience function for displaying a tooltip with text scaled by the user preferences.</summary>
@@ -743,7 +761,7 @@ public sealed partial class Client
         _ = ImGui.Checkbox("Show Out of Logic Locations", ref _showOutOfLogic);
         var setter = GetNextItemOpenSetter();
         ImGui.SameLine();
-        var newValue = InlineButtons("Tick all", "Untick all");
+        var newValue = InlineButtons("Tick all expanded", "Untick all expanded");
         ShowLocationSearch(preferences);
 
         if (!ImGui.BeginChild("Locations", preferences.ChildSize(100)))
@@ -762,7 +780,6 @@ public sealed partial class Client
 
             var count = 0;
 
-            // ReSharper disable once ForeachCanBePartlyConvertedToQueryUsingAnotherGetEnumerator
             foreach (var location in locations)
             {
                 var status = this[location].Status;
