@@ -100,7 +100,7 @@ public sealed partial class Preferences
                 connection.Port,
                 connection.Game,
                 connection.GetLocationsOrEmpty().Union(locations ?? []),
-                color
+                color ?? connection.Color
             ) { }
 
         /// <summary>Initializes a new instance of the <see cref="Connection"/> struct.</summary>
