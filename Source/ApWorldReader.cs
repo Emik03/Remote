@@ -68,7 +68,7 @@ public sealed record ApWorldReader(
 
             if (o.TryGetPropertyValue("requires", out var requires) &&
                 requires?.GetValueKind() is JsonValueKind.String &&
-                Logic.TokenizeAndParse(requires.ToString().AsMemory()) is { } logic)
+                Logic.TokenizeAndParse(requires.ToString()) is { } logic)
                 locationsToLogic[name] = logic;
 
             if (Regions is not null &&
@@ -272,7 +272,7 @@ public sealed record ApWorldReader(
 
         logic ??= obj.TryGetPropertyValue("requires", out var requires) &&
             requires?.GetValueKind() is JsonValueKind.String
-                ? Logic.TokenizeAndParse(requires.ToString().AsMemory())
+                ? Logic.TokenizeAndParse(requires.ToString())
                 : null;
 
         if (current.Equals(target, StringComparison.Ordinal))
@@ -301,7 +301,7 @@ public sealed record ApWorldReader(
 
                 path |= l &
                     (exitRequires?[connectionString] is var exit && exit?.GetValueKind() is JsonValueKind.String
-                        ? Logic.TokenizeAndParse(exit.ToString().AsMemory())
+                        ? Logic.TokenizeAndParse(exit.ToString())
                         : null);
             }
 

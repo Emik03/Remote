@@ -86,24 +86,52 @@ public sealed partial class Logic(
         Function.Name.Span is "YamlCompare" or "YamlDisabled" or "YamlEnabled" || Grouping?.IsYamlFunction is true;
 
     /// <summary>Makes a requirement that either of the instances should be fulfilled.</summary>
-    /// <param name="left">The left-hand side.</param>
-    /// <param name="right">The right-hand side.</param>
+    /// <param name="l">The left-hand side.</param>
+    /// <param name="r">The right-hand side.</param>
     /// <returns>The new <see cref="Logic"/> instance.</returns>
-    [return: NotNullIfNotNull(nameof(left)), NotNullIfNotNull(nameof(right))]
+    [return: NotNullIfNotNull(nameof(l)), NotNullIfNotNull(nameof(r))]
     [Pure]
-    public static Logic? operator |(Logic? left, Logic? right) =>
-        left is null ? right :
-        right is null ? left : OfOr(left, right);
+    public static Logic? operator |(Logic? l, Logic? r) =>
+        l is null ? r : // Identity Law
+        r is null ? l :
+        l.StructuralEquals(r) ? l : // Idempotent Law
+        //    Input  -> Commutative Law -> Idempotent Law
+        // A + B + A ->    A + A + B    ->     A + B
+        l is { IsOr: true, Or: var (oll, olr) } && (oll.StructuralEquals(r) || olr.StructuralEquals(r)) ? l :
+        //    Input  -> Idempotent Law
+        // A + A + B ->     A + B
+        r is { IsOr: true, Or: var (orl, orr) } && (orl.StructuralEquals(r) || orr.StructuralEquals(r)) ? r :
+        //    Input    ->  Commutative Law  -> Absorption Law
+        // (A * B) + A ->    A + (A * B)    ->       A
+        l is { IsAnd: true, And: var (all, alr) } && (all.StructuralEquals(r) || alr.StructuralEquals(r)) ? r :
+        //    Input    -> Absorption Law
+        // A + (A * B) ->       A
+        r is { IsAnd: true, And: var (arl, arr) } && (arl.StructuralEquals(r) || arr.StructuralEquals(r)) ? l :
+        OfOr(l, r);
 
     /// <summary>Makes a requirement that both of the instances should be fulfilled.</summary>
-    /// <param name="left">The left-hand side.</param>
-    /// <param name="right">The right-hand side.</param>
+    /// <param name="l">The left-hand side.</param>
+    /// <param name="r">The right-hand side.</param>
     /// <returns>The new <see cref="Logic"/> instance.</returns>
-    [return: NotNullIfNotNull(nameof(left)), NotNullIfNotNull(nameof(right))]
+    [return: NotNullIfNotNull(nameof(l)), NotNullIfNotNull(nameof(r))]
     [Pure]
-    public static Logic? operator &(Logic? left, Logic? right) =>
-        left is null ? right :
-        right is null ? left : OfAnd(left, right);
+    public static Logic? operator &(Logic? l, Logic? r) =>
+        l is null ? r : // Annulment Law
+        r is null ? l :
+        l.StructuralEquals(r) ? l : // Idempotent Law
+        //    Input    ->  Commutative Law -> Absorption Law
+        // (A + B) * A ->    A * (A + B)   ->       A
+        l is { IsOr: true, Or: var (oll, olr) } && (oll.StructuralEquals(r) || olr.StructuralEquals(r)) ? r :
+        //    Input    ->  Absorption Law
+        // A * (A + B) ->        A
+        r is { IsOr: true, Or: var (orl, orr) } && (orl.StructuralEquals(r) || orr.StructuralEquals(r)) ? l :
+        //   Input   -> Commutative Law -> Idempotent Law
+        // A * B * A ->    A * A * B    ->     A * B
+        l is { IsAnd: true, And: var (all, alr) } && (all.StructuralEquals(r) || alr.StructuralEquals(r)) ? l :
+        //   Input   -> Idempotent Law
+        // A * A * B ->     A * B
+        r is { IsAnd: true, And: var (arl, arr) } && (arl.StructuralEquals(r) || arr.StructuralEquals(r)) ? r :
+        OfAnd(l, r);
 
     /// <summary>Parses the sequence of tokens into the <see cref="Logic"/> object.</summary>
     /// <typeparam name="T">The type of list of tokens.</typeparam>
@@ -116,6 +144,11 @@ public sealed partial class Logic(
         var ret = Binary(tokens, ref i);
         return tokens[i].IsEOL && i + 1 == tokens.Count ? ret : Error(tokens, i);
     }
+
+    /// <summary>Parses the <see cref="ReadOnlyMemory{T}"/> directly to the <see cref="Logic"/> object.</summary>
+    /// <param name="str">The sequences of characters to parse.</param>
+    /// <returns>The <see cref="Logic"/> object if parsing was successful, otherwise <see langword="null"/>.</returns>
+    public static Logic? TokenizeAndParse(string str) => TokenizeAndParse(str.AsMemory());
 
     /// <summary>Parses the <see cref="ReadOnlyMemory{T}"/> directly to the <see cref="Logic"/> object.</summary>
     /// <param name="memory">The sequences of characters to parse.</param>
@@ -132,6 +165,28 @@ public sealed partial class Logic(
 #pragma warning restore IDISP017
         return ret;
     }
+
+    /// <summary>Determines whether logic contains structurally the same data.</summary>
+    /// <param name="other">The logic to compare to.</param>
+    /// <returns>Whether both instances are equal.</returns>
+    public bool StructuralEquals(Logic other) =>
+        _discriminator == other._discriminator &&
+        (_and is not ({ } left, { } right) || // Commutative Law
+            left.StructuralEquals(other._and.Left) && right.StructuralEquals(other._and.Right) ||
+            left.StructuralEquals(other._and.Right) && right.StructuralEquals(other._and.Left)) &&
+        _item.Span.Equals(other._item.Span, StringComparison.Ordinal) &&
+        _itemCount.Item.Span.Equals(other._itemCount.Item.Span, StringComparison.Ordinal) &&
+        _itemCount.Count.Span.Equals(other._itemCount.Count.Span, StringComparison.Ordinal);
+
+    /// <summary>Converts this instance back into the <see cref="string"/> representation.</summary>
+    /// <param name="and">
+    /// The string to insert between two <see cref="Logic"/> instances to indicate an <c>AND</c> operation.
+    /// </param>
+    /// <param name="or">
+    /// The string to insert between two <see cref="Logic"/> instances to indicate an <c>OR</c> operation.
+    /// </param>
+    /// <returns>The <see cref="string"/> representation that can be used to reconstruct this instance.</returns>
+    public string BooleanAlgebra(string and, string or) => BooleanAlgebra(and, or, []);
 
     /// <summary>Converts this instance back into the <see cref="string"/> representation.</summary>
     /// <returns>The <see cref="string"/> representation that can be used to reconstruct this instance.</returns>
@@ -329,5 +384,33 @@ public sealed partial class Logic(
         _ = Task.Run(DisplayErrorAsync).ConfigureAwait(false);
 #pragma warning restore MA0134
         return null;
+    }
+
+    /// <summary>Converts this instance back into the <see cref="string"/> representation.</summary>
+    /// <param name="and">
+    /// The string to insert between two <see cref="Logic"/> instances to indicate an <c>AND</c> operation.
+    /// </param>
+    /// <param name="or">
+    /// The string to insert between two <see cref="Logic"/> instances to indicate an <c>OR</c> operation.
+    /// </param>
+    /// <param name="list">The assignments for variables.</param>
+    /// <returns>The <see cref="string"/> representation that can be used to reconstruct this instance.</returns>
+    string BooleanAlgebra(string and, string or, List<Logic> list)
+    {
+        if (Grouping is { } g)
+            return g.BooleanAlgebra(and, or, list);
+
+        if (IsAnd)
+            return $"({_and.Left.BooleanAlgebra(and, or, list)}{and}{_and.Right.BooleanAlgebra(and, or, list)})";
+
+        if (IsOr)
+            return $"({_and.Left.BooleanAlgebra(and, or, list)}{or}{_and.Right.BooleanAlgebra(and, or, list)})";
+
+        var index = list.FindIndex(StructuralEquals) is not -1 and var variable ? variable : list.Count;
+
+        if (index == list.Count)
+            list.Add(this);
+
+        return new([(char)((index %= 52) > 26 ? index - 26 + 'a' : index + 'A')]);
     }
 }

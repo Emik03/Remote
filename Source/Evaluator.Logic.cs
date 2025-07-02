@@ -50,14 +50,14 @@ public sealed partial record Evaluator
     /// <summary>Determines whether the <c>AND</c> condition is fulfilled.</summary>
     /// <param name="tuple">The tuple to deconstruct.</param>
     /// <returns>Whether the <c>AND</c> condition is fulfilled.</returns>
-    Logic? OnAnd((Logic Left, Logic Right) tuple) =>
+    Logic? OnAnd((Logic Left, Logic Right) tuple) => // Annulment Law
         In(tuple.Left) is var left && left is { IsYamlFunction: true } ? left :
         In(tuple.Right) is var right && right is { IsYamlFunction: true } ? right : left & right;
 
     /// <summary>Determines whether the <c>OR</c> condition is fulfilled.</summary>
     /// <param name="tuple">The tuple to deconstruct.</param>
     /// <returns>Whether the <c>OR</c> condition is fulfilled.</returns>
-    Logic? OnOr((Logic Left, Logic Right) tuple) =>
+    Logic? OnOr((Logic Left, Logic Right) tuple) => // Identity Law
         In(tuple.Left) is var left && In(tuple.Right) is var right && left is { IsYamlFunction: true } ? right :
         right is { IsYamlFunction: true } ? left : left | right;
 
