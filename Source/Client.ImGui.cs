@@ -203,27 +203,38 @@ public sealed partial class Client
         PushRange(span[last..], colored, ref braces);
     }
 
-    /// <summary>Gets the setter for the next item open.</summary>
-    /// <returns>The function that invokes <see cref="ImGui.SetNextItemOpen(bool)"/>.</returns>
-    static Action GetNextItemOpenSetter()
+    /// <summary>Creates two inline buttons.</summary>
+    /// <param name="first">The label of the first button.</param>
+    /// <param name="second">The label of the second button.</param>
+    /// <returns>
+    /// <see langword="false"/> means the button with the label of the parameter <paramref name="first"/> was pushed.
+    /// <see langword="null"/> means no button was pushed.
+    /// <see langword="true"/> means the button with the label of the parameter <paramref name="second"/> was pushed.
+    /// </returns>
+    static bool? InlineButtons(string first, string second)
     {
         bool? ret = null;
 
-        if (ImGui.Button("Expand all"))
+        if (ImGui.Button(first))
             ret = true;
 
         ImGui.SameLine();
 
-        if (ImGui.Button("Collapse all"))
+        if (ImGui.Button(second))
             ret = false;
 
-        return ret switch
+        return ret;
+    }
+
+    /// <summary>Gets the setter for the next item open.</summary>
+    /// <returns>The function that invokes <see cref="ImGui.SetNextItemOpen(bool)"/>.</returns>
+    static Action GetNextItemOpenSetter() =>
+        InlineButtons("Expand all", "Collapse all") switch
         {
             null => Noop,
             true => static () => ImGui.SetNextItemOpen(true),
             false => static () => ImGui.SetNextItemOpen(false),
         };
-    }
 
     /// <summary>Shows the components for entering slot information.</summary>
     /// <param name="preferences">The user preferences.</param>
@@ -730,9 +741,10 @@ public sealed partial class Client
     {
         Debug.Assert(_evaluator is not null);
         _ = ImGui.Checkbox("Show Out of Logic Locations", ref _showOutOfLogic);
-        ShowLocationSearch(preferences);
-        ImGui.SameLine();
         var setter = GetNextItemOpenSetter();
+        ImGui.SameLine();
+        var newValue = InlineButtons("Tick all", "Untick all");
+        ShowLocationSearch(preferences);
 
         if (!ImGui.BeginChild("Locations", preferences.ChildSize(100)))
         {
@@ -775,7 +787,7 @@ public sealed partial class Client
             // ReSharper disable once ForeachCanBePartlyConvertedToQueryUsingAnotherGetEnumerator
             foreach (var location in locations)
                 if (ShouldBeVisible(location))
-                    Checkbox(preferences, location, category);
+                    Checkbox(preferences, location, category, newValue);
         }
 
         return ret;
@@ -893,7 +905,7 @@ public sealed partial class Client
     /// <param name="preferences">The user preferences.</param>
     void ShowLocationSearch(Preferences preferences)
     {
-        ImGui.SetNextItemWidth(preferences.Width(450));
+        ImGui.SetNextItemWidth(preferences.Width(0));
         _ = ImGuiRenderer.InputTextWithHint("##LocationSearch", "Search...", ref _locationSearch, ushort.MaxValue);
     }
 
@@ -939,12 +951,16 @@ public sealed partial class Client
     /// <param name="preferences">The user preferences.</param>
     /// <param name="location">The location that this checkbox represents.</param>
     /// <param name="category">The category that the location falls under, used to ensure IDs remain distinct.</param>
-    void Checkbox(Preferences preferences, string location, string category)
+    /// <param name="overrideAll">The value to override the checkbox with.</param>
+    void Checkbox(Preferences preferences, string location, string category, bool? overrideAll = null)
     {
         ref var value = ref this[location];
         ImGui.PushStyleColor(ImGuiCol.Text, preferences[value.Status]);
         ImGui.Checkbox($"{location}###{location}:|{category}:|Location", ref value.Checked);
         CopyIfClicked(preferences, location);
+
+        if (overrideAll is { } all)
+            value.Checked = all;
 
         if (value.Logic is { } logic && ImGui.IsItemHovered())
             Tooltip(preferences, logic.DeparseExplicit(), true);
