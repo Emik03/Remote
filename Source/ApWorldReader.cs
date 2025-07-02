@@ -134,7 +134,7 @@ public sealed record ApWorldReader(
             foreach (var (phantomItem, countNode) in phantomItems)
                 if (countNode?.GetValueKind() is JsonValueKind.Number &&
                     countNode.GetValue<int>() is var c)
-                    (CollectionsMarshal.GetValueRefOrAddDefault(itemValues, phantomItem, out _) ??=
+                    (CollectionsMarshal.GetValueRefOrAddDefault(itemValues, nameString, out _) ??=
                         ImmutableArray.CreateBuilder<(string PhantomItem, int Count)>()).Add((phantomItem, c));
         }
 
