@@ -449,8 +449,8 @@ public sealed partial class Client
 
         var rm = _session.RoomState;
         ImGui.TextDisabled($"Hint cost percentage: {rm.HintCostPercentage}%% ({rm.HintCost.Conjugate("point")})");
-        var can = $"You can do {(rm.HintPoints / rm.HintCost).Conjugate("hint")} ({rm.HintPoints.Conjugate("point")})";
-        ImGui.TextDisabled(can);
+        var hintCount = rm.HintCost is 0 ? 0 : rm.HintPoints / rm.HintCost;
+        ImGui.TextDisabled($"You can do {hintCount.Conjugate("hint")} ({rm.HintPoints.Conjugate("point")})");
         _ = ImGui.Checkbox("Show obtained hints", ref _showObtainedHints);
         ImGui.SetNextItemWidth(preferences.Width(150));
         _ = ImGui.Combo("Filter", ref _hintIndex, s_hintOptions, s_hintOptions.Length);
@@ -704,7 +704,7 @@ public sealed partial class Client
     bool? ShowNonManualLocations(Preferences preferences)
     {
         Debug.Assert(_session is not null);
-        ShowLocationSearch();
+        ShowLocationSearch(preferences);
 
         if (!ImGui.BeginChild("Locations", preferences.ChildSize(100)))
         {
@@ -730,8 +730,9 @@ public sealed partial class Client
     {
         Debug.Assert(_evaluator is not null);
         _ = ImGui.Checkbox("Show Out of Logic Locations", ref _showOutOfLogic);
+        ShowLocationSearch(preferences);
+        ImGui.SameLine();
         var setter = GetNextItemOpenSetter();
-        ShowLocationSearch();
 
         if (!ImGui.BeginChild("Locations", preferences.ChildSize(100)))
         {
@@ -881,19 +882,27 @@ public sealed partial class Client
     }
 
     /// <summary>Shows the item search text field.</summary>
-    void ShowItemSearch() =>
+    /// <param name="preferences">The user preferences.</param>
+    void ShowItemSearch(Preferences preferences)
+    {
+        ImGui.SetNextItemWidth(preferences.Width(400));
         _ = ImGuiRenderer.InputTextWithHint("##ItemSearch", "Search...", ref _itemSearch, ushort.MaxValue);
+    }
 
     /// <summary>Shows the location search text field.</summary>
-    void ShowLocationSearch() =>
+    /// <param name="preferences">The user preferences.</param>
+    void ShowLocationSearch(Preferences preferences)
+    {
+        ImGui.SetNextItemWidth(preferences.Width(400));
         _ = ImGuiRenderer.InputTextWithHint("##LocationSearch", "Search...", ref _locationSearch, ushort.MaxValue);
+    }
 
     /// <summary>Shows non-manual items</summary>
     /// <param name="preferences">The user preferences.</param>
     void ShowNonManualItems(Preferences preferences)
     {
         const string Default = ApWorldReader.Uncategorized;
-        ShowItemSearch();
+        ShowItemSearch(preferences);
         GroupItems(Default, default).Where(x => x.IsMatch(_itemSearch)).Lazily(x => x.Show(preferences)).Enumerate();
     }
 
@@ -903,8 +912,9 @@ public sealed partial class Client
     {
         Debug.Assert(_evaluator is not null);
         _ = ImGui.Checkbox("Show pending items", ref _showYetToReceive);
+        ShowItemSearch(preferences);
+        ImGui.SameLine();
         var setter = GetNextItemOpenSetter();
-        ShowItemSearch();
 
         foreach (var (category, items) in _evaluator.CategoryToItems)
         {
