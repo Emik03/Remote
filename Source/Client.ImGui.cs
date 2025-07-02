@@ -947,7 +947,7 @@ public sealed partial class Client
         CopyIfClicked(preferences, location);
 
         if (value.Logic is { } logic && ImGui.IsItemHovered())
-            Tooltip(preferences, logic.DeparseDisplay(), true);
+            Tooltip(preferences, logic.DeparseExplicit(), true);
 
         ImGui.PopStyleColor();
         value.Checked &= value.Status is not LocationStatus.Checked;

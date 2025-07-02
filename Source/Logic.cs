@@ -81,32 +81,46 @@ public sealed partial class Logic(
     /// <summary>Whether to show errors in <see cref="MessageBox.Show"/>.</summary>
     static bool s_displayErrors = true;
 
+    /// <summary>Determines whether this node is optimized.</summary>
+    public bool IsOptimized { get; internal set; }
+
     /// <summary>Gets the value determines whether this instance is a yaml function.</summary>
     public bool IsYamlFunction =>
         Function.Name.Span is "YamlCompare" or "YamlDisabled" or "YamlEnabled" || Grouping?.IsYamlFunction is true;
+
+    /// <summary>Gets the number of <see cref="Logic"/> instances, including itself.</summary>
+    // ReSharper disable ConditionalAccessQualifierIsNonNullableAccordingToAPIContract
+    public int Count => (_grouping?.Count ?? 0) + (_and.Left?.Count ?? 0) + (_and.Right?.Count ?? 0) + 1;
 
     /// <summary>Makes a requirement that either of the instances should be fulfilled.</summary>
     /// <param name="l">The left-hand side.</param>
     /// <param name="r">The right-hand side.</param>
     /// <returns>The new <see cref="Logic"/> instance.</returns>
+    // ReSharper restore ConditionalAccessQualifierIsNonNullableAccordingToAPIContract
     [return: NotNullIfNotNull(nameof(l)), NotNullIfNotNull(nameof(r))]
-    [Pure]
+    [Pure] // ReSharper disable once ReturnTypeCanBeNotNullable
     public static Logic? operator |(Logic? l, Logic? r) =>
-        l is null ? r : // Identity Law
-        r is null ? l :
-        l.StructuralEquals(r) ? l : // Idempotent Law
+        l is null ? r.Check(l) : // Identity Law
+        r is null ? l.Check(r) :
+        l.StructuralEquals(r) ? l.Check(r) : // Idempotent Law
         //    Input  -> Commutative Law -> Idempotent Law
         // A + B + A ->    A + A + B    ->     A + B
-        l is { IsOr: true, Or: var (oll, olr) } && (oll.StructuralEquals(r) || olr.StructuralEquals(r)) ? l :
+        l is { IsOr: true, Or: var (oll, olr) } && (oll.StructuralEquals(r) || olr.StructuralEquals(r)) ? l.Check(r) :
         //    Input  -> Idempotent Law
         // A + A + B ->     A + B
-        r is { IsOr: true, Or: var (orl, orr) } && (orl.StructuralEquals(r) || orr.StructuralEquals(r)) ? r :
+        r is { IsOr: true, Or: var (orl, orr) } && (orl.StructuralEquals(r) || orr.StructuralEquals(r)) ? r.Check(l) :
         //    Input    ->  Commutative Law  -> Absorption Law
         // (A * B) + A ->    A + (A * B)    ->       A
-        l is { IsAnd: true, And: var (all, alr) } && (all.StructuralEquals(r) || alr.StructuralEquals(r)) ? r :
+        l is { IsAnd: true, And: var (all, alr) } && (all.StructuralEquals(r) || alr.StructuralEquals(r)) ? r.Check(l) :
         //    Input    -> Absorption Law
         // A + (A * B) ->       A
-        r is { IsAnd: true, And: var (arl, arr) } && (arl.StructuralEquals(r) || arr.StructuralEquals(r)) ? l :
+        r is { IsAnd: true, And: var (arl, arr) } && (arl.StructuralEquals(r) || arr.StructuralEquals(r)) ? l.Check(r) :
+        // This code was never in the bible.
+        l is { IsOr: true, Or: var (olll, olrl) } && (olrl | r) is { IsOptimized: true } ll ? OfOr(ll, olll) :
+        l is { IsOr: true, Or: var (ollr, olrr) } && (ollr | r) is { IsOptimized: true } rl ? OfOr(rl, olrr) :
+        r is { IsOr: true, Or: var (orll, orrl) } && (l | orrl) is { IsOptimized: true } lr ? OfOr(orll, lr) :
+        r is { IsOr: true, Or: var (orlr, orrr) } && (l | orlr) is { IsOptimized: true } rr ? OfOr(orrr, rr) :
+        // We cannot optimize this.
         OfOr(l, r);
 
     /// <summary>Makes a requirement that both of the instances should be fulfilled.</summary>
@@ -114,23 +128,31 @@ public sealed partial class Logic(
     /// <param name="r">The right-hand side.</param>
     /// <returns>The new <see cref="Logic"/> instance.</returns>
     [return: NotNullIfNotNull(nameof(l)), NotNullIfNotNull(nameof(r))]
-    [Pure]
+    [Pure] // ReSharper disable once ReturnTypeCanBeNotNullable
     public static Logic? operator &(Logic? l, Logic? r) =>
-        l is null ? r : // Annulment Law
-        r is null ? l :
-        l.StructuralEquals(r) ? l : // Idempotent Law
+        l is null ? r.Check(l) : // Annulment Law
+        r is null ? l.Check(r) :
+        l.StructuralEquals(r) ? l.Check(r) : // Idempotent Law
         //    Input    ->  Commutative Law -> Absorption Law
         // (A + B) * A ->    A * (A + B)   ->       A
-        l is { IsOr: true, Or: var (oll, olr) } && (oll.StructuralEquals(r) || olr.StructuralEquals(r)) ? r :
+        l is { IsOr: true, Or: var (oll, olr) } &&
+        (oll.StructuralEquals(r) || olr.StructuralEquals(r)) ? r.Check(l) :
         //    Input    ->  Absorption Law
         // A * (A + B) ->        A
-        r is { IsOr: true, Or: var (orl, orr) } && (orl.StructuralEquals(r) || orr.StructuralEquals(r)) ? l :
+        r is { IsOr: true, Or: var (orl, orr) } &&
+        (orl.StructuralEquals(r) || orr.StructuralEquals(r)) ? l.Check(r) :
         //   Input   -> Commutative Law -> Idempotent Law
         // A * B * A ->    A * A * B    ->     A * B
-        l is { IsAnd: true, And: var (all, alr) } && (all.StructuralEquals(r) || alr.StructuralEquals(r)) ? l :
+        l is { IsAnd: true, And: var (all, alr) } && (all.StructuralEquals(r) || alr.StructuralEquals(r)) ? l.Check(r) :
         //   Input   -> Idempotent Law
         // A * A * B ->     A * B
-        r is { IsAnd: true, And: var (arl, arr) } && (arl.StructuralEquals(r) || arr.StructuralEquals(r)) ? r :
+        r is { IsAnd: true, And: var (arl, arr) } && (arl.StructuralEquals(r) || arr.StructuralEquals(r)) ? r.Check(l) :
+        // This code was never in the bible.
+        l is { IsAnd: true, And: var (alll, alrl) } && (alll & r) is { IsOptimized: true } ll ? OfAnd(ll, alrl) :
+        l is { IsAnd: true, And: var (allr, alrr) } && (allr & r) is { IsOptimized: true } rl ? OfAnd(rl, alrr) :
+        r is { IsAnd: true, And: var (arll, arrl) } && (l & arll) is { IsOptimized: true } lr ? OfAnd(arrl, lr) :
+        r is { IsAnd: true, And: var (arlr, arrr) } && (l & arlr) is { IsOptimized: true } rr ? OfAnd(arrr, rr) :
+        // We cannot optimize this.
         OfAnd(l, r);
 
     /// <summary>Parses the sequence of tokens into the <see cref="Logic"/> object.</summary>
@@ -170,13 +192,16 @@ public sealed partial class Logic(
     /// <param name="other">The logic to compare to.</param>
     /// <returns>Whether both instances are equal.</returns>
     public bool StructuralEquals(Logic other) =>
-        _discriminator == other._discriminator &&
-        (_and is not ({ } left, { } right) || // Commutative Law
-            left.StructuralEquals(other._and.Left) && right.StructuralEquals(other._and.Right) ||
-            left.StructuralEquals(other._and.Right) && right.StructuralEquals(other._and.Left)) &&
-        _item.Span.Equals(other._item.Span, StringComparison.Ordinal) &&
-        _itemCount.Item.Span.Equals(other._itemCount.Item.Span, StringComparison.Ordinal) &&
-        _itemCount.Count.Span.Equals(other._itemCount.Count.Span, StringComparison.Ordinal);
+        other._grouping is { } otherGrouping // ReSharper disable once TailRecursiveCall
+            ? StructuralEquals(otherGrouping)
+            : _grouping?.StructuralEquals(other) ??
+            _discriminator == other._discriminator &&
+            (_and is not ({ } left, { } right) || // Commutative Law
+                left.StructuralEquals(other._and.Left) && right.StructuralEquals(other._and.Right) ||
+                left.StructuralEquals(other._and.Right) && right.StructuralEquals(other._and.Left)) &&
+            _item.Span.Equals(other._item.Span, StringComparison.Ordinal) &&
+            _itemCount.Item.Span.Equals(other._itemCount.Item.Span, StringComparison.Ordinal) &&
+            _itemCount.Count.Span.Equals(other._itemCount.Count.Span, StringComparison.Ordinal);
 
     /// <summary>Converts this instance back into the <see cref="string"/> representation.</summary>
     /// <param name="and">
@@ -206,11 +231,11 @@ public sealed partial class Logic(
 
     /// <summary>Converts this instance back into the <see cref="string"/> representation.</summary>
     /// <returns>The <see cref="string"/> representation that can be used to reconstruct this instance.</returns>
-    public string DeparseDisplay() =>
+    public string DeparseExplicit() =>
         Map(
-            x => $"({x?.DeparseDisplay()})",
-            x => $"({x.Left.DeparseDisplay()} AND {x.Right.DeparseDisplay()})",
-            x => $"({x.Left.DeparseDisplay()} OR {x.Right.DeparseDisplay()})",
+            x => $"{x?.DeparseExplicit()}",
+            x => $"({x.Left.DeparseExplicit()} AND {x.Right.DeparseExplicit()})",
+            x => $"({x.Left.DeparseExplicit()} OR {x.Right.DeparseExplicit()})",
             x => $"|{x}|",
             x => $"|@{x}|",
             x => $"|{x.Item}:{x.Count}|",
