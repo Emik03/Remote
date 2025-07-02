@@ -416,14 +416,18 @@ public sealed partial class Client(Yaml? yaml = null)
         Debug.Assert(_session is not null);
         _releaseIndex = _messages.Count;
         _session.Locations.CompleteLocationChecks([.._locations.Where(x => x.Value.Checked).Select(ToId).Filter()]);
+        IList<string> keys = [.._locations.Where(x => x.Value.Checked).Select(x => x.Key)];
         _isAttemptingToRelease = null;
 
-        if (_canGoal is false && _locations.Any(IsGoal))
+        if (_canGoal is false && keys.Any(IsGoal))
             _canGoal = null;
 
-        IList<string> keys = [.._locations.Where(x => x.Value.Checked).Select(x => x.Key)];
-        _info = new(_info, keys.Where(NeedsToBeTrackedLocally));
-        preferences.Sync(ref _info);
+        if (keys.Where(NeedsToBeTrackedLocally) is ({ } first, { } rest))
+        {
+            _info = new(_info, rest.Prepend(first));
+            preferences.Sync(ref _info);
+            (rest as IDisposable)?.Dispose();
+        }
 
         foreach (var key in keys)
         {
@@ -478,10 +482,10 @@ public sealed partial class Client(Yaml? yaml = null)
                 Update(location, locationHelper);
     }
 
-    /// <summary>Determines whether the pair matches the current goal.</summary>
-    /// <param name="kvp">The key-value pair.</param>
-    /// <returns>Whether the parameter <paramref name="kvp"/> matches the current goal.</returns>
-    bool IsGoal(KeyValuePair<string, CheckboxStatus> kvp) => _yaml.Goal.Equals(kvp.Key, StringComparison.Ordinal);
+    /// <summary>Determines whether the location matches the current goal.</summary>
+    /// <param name="location">The location.</param>
+    /// <returns>Whether the parameter <paramref name="location"/> matches the current goal.</returns>
+    bool IsGoal(string location) => _yaml.Goal.Equals(location, StringComparison.Ordinal);
 
     /// <summary>Whether the location should be visible based on the status given.</summary>
     /// <param name="location">The location.</param>
