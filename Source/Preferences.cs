@@ -170,7 +170,7 @@ public sealed partial class Preferences
     readonly Connection.List _list = Connection.List.Load();
 
     /// <summary>Whether to use tabs or separate windows.</summary>
-    bool _holdToConfirm = true, _useTabs = true, _moveToChatTab = true;
+    bool _alwaysShowChat, _holdToConfirm = true, _useTabs = true, _moveToChatTab = true;
 
     /// <summary>Contains the current port.</summary>
     int _language, _port;
@@ -224,6 +224,13 @@ public sealed partial class Preferences
 
     /// <summary>Contains the path to the preferences file to read and write from.</summary>
     public static string FilePath { get; } = PathTo(PreferencesFile, "REMOTE_PREFERENCES_PATH");
+
+    /// <summary>Gets or sets the value determining whether to always show the chat.</summary>
+    public bool AlwaysShowChat
+    {
+        get => _alwaysShowChat;
+        [UsedImplicitly] private set => _alwaysShowChat = value;
+    }
 
     /// <summary>Gets or sets the value determining whether to have holding to confirm location releases.</summary>
     public bool HoldToConfirm
@@ -643,6 +650,7 @@ public sealed partial class Preferences
         _ = ImGuiRenderer.InputTextWithHint("Python", "python", ref _python, ushort.MaxValue);
         ImGui.SeparatorText("Navigation");
         _ = ImGui.Checkbox("Tabs instead of separate windows", ref _useTabs);
+        _ = ImGui.Checkbox("Always show chat", ref _alwaysShowChat);
         _ = ImGui.Checkbox("Move to chat tab when releasing", ref _moveToChatTab);
         _ = ImGui.Checkbox("Hold to confirm location release", ref _holdToConfirm);
         ImGui.SeparatorText("UI Settings");

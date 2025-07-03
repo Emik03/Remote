@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MPL-2.0
 namespace Remote;
 
+using Vector2 = System.Numerics.Vector2;
+
 /// <inheritdoc cref="Client"/>
 public sealed partial class Client
 {
@@ -313,7 +315,7 @@ public sealed partial class Client
         ShowLocationTab(gameTime, preferences);
         ShowItemTab(preferences);
         ShowHintTab(preferences);
-        ShowSettings(preferences);
+        ShowSettingsTab(preferences);
         ImGui.EndTabBar();
     }
 
@@ -321,7 +323,6 @@ public sealed partial class Client
     /// <param name="preferences">The user preferences.</param>
     void ShowChatTab(Preferences preferences)
     {
-        const ImGuiInputTextFlags Flags = Preferences.TextFlags | ImGuiInputTextFlags.AllowTabInput;
         Debug.Assert(_session is not null);
         var isForced = preferences.MoveToChatTab && IsReleasing;
         var flags = isForced ? ImGuiTabItemFlags.SetSelected : ImGuiTabItemFlags.None;
@@ -336,48 +337,7 @@ public sealed partial class Client
         if (ret)
             return;
 
-        if (!ImGui.BeginChild("Chat"))
-        {
-            ImGui.EndChild();
-            return;
-        }
-
-        ImGui.TextDisabled("TIP: Right click text or checkboxes to copy them!");
-        ShowLog(preferences);
-        ImGui.SeparatorText("Message");
-        ImGui.SetNextItemWidth(preferences.Width(250));
-        ImGui.SetKeyboardFocusHere();
-
-        if (ImGui.IsKeyPressed(ImGuiKey.DownArrow))
-            MoveSentMessageIndex(1);
-
-        if (ImGui.IsKeyPressed(ImGuiKey.UpArrow))
-            MoveSentMessageIndex(-1);
-
-        ref var latestMessage = ref CollectionsMarshal.AsSpan(_sentMessages)[^1];
-        var enter = ImGui.InputText("##Message", ref latestMessage, ushort.MaxValue, Flags);
-        ImGui.SameLine();
-
-        if (ImGui.Button("Send") || enter)
-        {
-            _session.Say(latestMessage);
-            _sentMessages.Add("");
-            _sentMessagesIndex = _sentMessages.Count - 1;
-        }
-
-        ImGui.SameLine();
-        ImGui.TextDisabled("(?)");
-
-        if (ImGui.IsItemHovered())
-            Tooltip(preferences, HelpMessage1);
-
-        ImGui.SameLine();
-        ImGui.TextDisabled("(?)");
-
-        if (ImGui.IsItemHovered())
-            Tooltip(preferences, HelpMessage2);
-
-        ImGui.EndChild();
+        ShowChat(preferences, true);
         ImGui.EndTabItem();
     }
 
@@ -390,6 +350,8 @@ public sealed partial class Client
 
         if (!ImGui.BeginTabItem("Players"))
             return;
+
+        ShowChat(preferences);
 
         if (!ImGui.BeginChild("Players"))
         {
@@ -419,6 +381,8 @@ public sealed partial class Client
         if (!ImGui.BeginTabItem("Locations"))
             return;
 
+        ShowChat(preferences);
+
         if (!ImGui.BeginChild("Locations"))
         {
             ImGui.EndChild();
@@ -442,6 +406,8 @@ public sealed partial class Client
 
         if (!ImGui.BeginTabItem("Items"))
             return;
+
+        ShowChat(preferences);
 
         if (!ImGui.BeginChild("Items"))
         {
@@ -469,6 +435,8 @@ public sealed partial class Client
             _hintTask = Task.FromResult<Hint[]?>(null);
             return;
         }
+
+        ShowChat(preferences);
 
         if (!ImGui.BeginChild("Hints"))
         {
@@ -500,12 +468,14 @@ public sealed partial class Client
     }
 
     /// <summary>Displays the color edit widget.</summary>
-    void ShowSettings(Preferences preferences)
+    void ShowSettingsTab(Preferences preferences)
     {
         Debug.Assert(_session is not null);
 
         if (!ImGui.BeginTabItem("Settings"))
             return;
+
+        ShowChat(preferences);
 
         if (!ImGui.BeginChild("Settings"))
         {
@@ -542,23 +512,60 @@ public sealed partial class Client
         ImGui.EndTabItem();
     }
 
-    /// <summary>Shows the message log.</summary>
-    /// <param name="preferences">The user preferences</param>
-    void ShowLog(Preferences preferences)
+    void ShowChat(Preferences preferences, bool isChatTab = false)
     {
-        ImGui.SeparatorText("Log");
+        const ImGuiInputTextFlags Flags = Preferences.TextFlags | ImGuiInputTextFlags.AllowTabInput;
+        Debug.Assert(_session is not null);
 
-        if (!ImGui.BeginChild("Log", preferences.ChildSize()))
+        if (!isChatTab && !preferences.AlwaysShowChat)
+            return;
+
+        var avail = ImGui.GetContentRegionAvail();
+
+        if (isChatTab ? !ImGui.BeginChild("Chat") : !ImGui.BeginChild("Chat", avail with { Y = avail.Y / 2 }))
         {
             ImGui.EndChild();
             return;
         }
 
-        ImGui.SetWindowFontScale(preferences.UiScale);
-        ShowMessages(preferences, 0);
+        if (isChatTab)
+            ImGui.TextDisabled("TIP: Right click text or checkboxes to copy them!");
 
-        if (ImGui.GetScrollY() >= ImGui.GetScrollMaxY())
-            ImGui.SetScrollHereY(1);
+        ShowLog(preferences);
+        ImGui.SeparatorText("Message");
+        ImGui.SetNextItemWidth(preferences.Width(250));
+
+        if (isChatTab)
+            ImGui.SetKeyboardFocusHere();
+
+        if (ImGui.IsKeyPressed(ImGuiKey.DownArrow))
+            MoveSentMessageIndex(1);
+
+        if (ImGui.IsKeyPressed(ImGuiKey.UpArrow))
+            MoveSentMessageIndex(-1);
+
+        ref var latestMessage = ref CollectionsMarshal.AsSpan(_sentMessages)[^1];
+        var enter = ImGui.InputText("##Message", ref latestMessage, ushort.MaxValue, Flags);
+        ImGui.SameLine();
+
+        if (ImGui.Button("Send") || enter)
+        {
+            _session.Say(latestMessage);
+            _sentMessages.Add("");
+            _sentMessagesIndex = _sentMessages.Count - 1;
+        }
+
+        ImGui.SameLine();
+        ImGui.TextDisabled("(?)");
+
+        if (ImGui.IsItemHovered())
+            Tooltip(preferences, HelpMessage1);
+
+        ImGui.SameLine();
+        ImGui.TextDisabled("(?)");
+
+        if (ImGui.IsItemHovered())
+            Tooltip(preferences, HelpMessage2);
 
         ImGui.EndChild();
     }
@@ -693,6 +700,27 @@ public sealed partial class Client
         _canGoal = true;
         _session.SetGoalAchieved();
         _session.SetClientState(ArchipelagoClientState.ClientGoal);
+    }
+
+    /// <summary>Shows the message log.</summary>
+    /// <param name="preferences">The user preferences</param>
+    void ShowLog(Preferences preferences)
+    {
+        ImGui.SeparatorText("Log");
+
+        if (!ImGui.BeginChild("Log", preferences.ChildSize()))
+        {
+            ImGui.EndChild();
+            return;
+        }
+
+        ImGui.SetWindowFontScale(preferences.UiScale);
+        ShowMessages(preferences, 0);
+
+        if (ImGui.GetScrollY() >= ImGui.GetScrollMaxY())
+            ImGui.SetScrollHereY(1);
+
+        ImGui.EndChild();
     }
 
     /// <summary>Moves the index by an amount.</summary>
