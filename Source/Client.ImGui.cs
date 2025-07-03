@@ -585,7 +585,10 @@ public sealed partial class Client
         foreach (var player in _session.Players.AllPlayers)
         {
             ImGui.TableNextRow();
-            ImGui.TableNextColumn();
+
+            if (!ImGui.TableNextColumn())
+                continue;
+
             var playerName = player.ToString();
             var isSelf = player.Slot == _session.Players.ActivePlayer.Slot;
             var selfColor = preferences[isSelf ? AppPalette.Useful : AppPalette.Neutral];
@@ -599,7 +602,9 @@ public sealed partial class Client
                 ? (rest.SplitOn('_')[..^1].ToString(), true)
                 : (player.Game, false);
 
-            ImGui.TableNextColumn();
+            if (!ImGui.TableNextColumn())
+                continue;
+
             ImGui.TextColored(preferences[isManual ? AppPalette.Progression : AppPalette.Neutral], gameName);
             CopyIfClicked(preferences, gameName);
 
@@ -607,14 +612,19 @@ public sealed partial class Client
                 Tooltip(preferences, "Manual Game");
 
             var slotName = player.Slot.ToString();
-            ImGui.TableNextColumn();
+
+            if (!ImGui.TableNextColumn())
+                continue;
+
             ImGui.TextColored(selfColor, slotName);
             CopyIfClicked(preferences, slotName);
 
             if (isSelf && ImGui.IsItemHovered())
                 Tooltip(preferences, FlavorText);
 
-            ImGui.TableNextColumn();
+            if (!ImGui.TableNextColumn())
+                continue;
+
             var teamName = player.Team.ToString();
             var isTeammate = player.Team == _session.Players.ActivePlayer.Team;
             ImGui.TextColored(preferences[isTeammate ? AppPalette.Neutral : AppPalette.Checked], teamName);
