@@ -372,9 +372,13 @@ public sealed partial class Preferences
     /// <returns>The new color.</returns>
     public static AppColor ShowColorEdit(string name, AppColor color)
     {
+        const ImGuiColorEditFlags DragFlags = ImGuiColorEditFlags.NoSmallPreview |
+            ImGuiColorEditFlags.DisplayHSV |
+            ImGuiColorEditFlags.InputHSV;
+
         var v = color.Vector;
         ImGui.ColorEdit4(name, ref v, ImGuiColorEditFlags.DisplayHex);
-        ImGui.ColorEdit4($"##{name}", ref v, ImGuiColorEditFlags.DisplayHSV | ImGuiColorEditFlags.NoSmallPreview);
+        ImGui.ColorEdit4($"##{name}", ref v, DragFlags);
         return new(v);
     }
 
