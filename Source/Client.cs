@@ -274,6 +274,7 @@ public sealed partial class Client(Yaml? yaml = null)
 
             await Task.Yield();
             var session = ArchipelagoSessionFactory.CreateSession(address, port);
+            session.MessageLog.OnMessageReceived += OnMessageReceived;
             string[] tags = ["AP", nameof(Remote)];
             _connectionMessage = "Attempting new connection.\nConnecting... (1/5)";
             _ = await session.ConnectAsync();
@@ -283,6 +284,7 @@ public sealed partial class Client(Yaml? yaml = null)
 
             if (login is LoginFailure failure)
             {
+                session.MessageLog.OnMessageReceived -= OnMessageReceived;
                 _errors = failure.Errors;
                 return;
             }
@@ -302,8 +304,6 @@ public sealed partial class Client(Yaml? yaml = null)
             preferences.Prepend(_info);
             preferences.Sync(ref _info);
             _session = session;
-            _session.Items.ItemReceived += UpdateStatus;
-            _session.MessageLog.OnMessageReceived += OnMessageReceived;
         }
 
         async Task? TryConnectAsync()
