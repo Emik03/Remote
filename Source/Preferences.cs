@@ -119,10 +119,10 @@ public sealed partial class Preferences
         /// <inheritdoc />
         public bool Equals(Connection other) =>
             Port == other.Port &&
-            StringComparer.Ordinal.Equals(Name, other.Name) &&
-            StringComparer.Ordinal.Equals(Game, other.Game) &&
-            StringComparer.Ordinal.Equals(Host, other.Host) &&
-            StringComparer.Ordinal.Equals(Password ?? "", other.Password ?? "");
+            FrozenSortedDictionary.Comparer.Equals(Name, other.Name) &&
+            FrozenSortedDictionary.Comparer.Equals(Game, other.Game) &&
+            FrozenSortedDictionary.Comparer.Equals(Host, other.Host) &&
+            FrozenSortedDictionary.Comparer.Equals(Password ?? "", other.Password ?? "");
 
         /// <inheritdoc />
         public override int GetHashCode() => HashCode.Combine(Port, Name, Game, Host, Password ?? "");

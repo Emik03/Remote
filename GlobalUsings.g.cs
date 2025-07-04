@@ -211,6 +211,9 @@ global using global::CommunityToolkit.HighPerformance.Memory;
 global using global::CommunityToolkit.HighPerformance.Memory.Internals;
 global using global::CommunityToolkit.HighPerformance.Memory.Views;
 global using global::CommunityToolkit.HighPerformance.Streams;
+global using global::DesktopNotifications;
+global using global::DesktopNotifications.FreeDesktop;
+global using global::DesktopNotifications.Windows;
 global using global::DotNetProjectFile;
 global using global::DotNetProjectFile.Analyzers;
 global using global::DotNetProjectFile.Analyzers.EditorConfig;
@@ -409,6 +412,11 @@ global using global::Microsoft.Extensions.DependencyInjection.Extensions;
 global using global::Microsoft.Extensions.Internal;
 global using global::Microsoft.SqlServer;
 global using global::Microsoft.SqlServer.Server;
+global using global::Microsoft.Toolkit;
+global using global::Microsoft.Toolkit.Uwp;
+global using global::Microsoft.Toolkit.Uwp.Notifications;
+global using global::Microsoft.Toolkit.Uwp.Notifications.Adaptive;
+global using global::Microsoft.Toolkit.Uwp.Notifications.Adaptive.Elements;
 global using global::Microsoft.VisualBasic;
 global using global::Microsoft.VisualBasic.CompilerServices;
 global using global::Microsoft.VisualBasic.FileIO;
@@ -456,6 +464,11 @@ global using global::Scifa.CheckedExceptions.Attributes;
 global using global::StbImageSharp;
 global using global::StbImageWriteSharp;
 global using global::TextCopy;
+global using global::Tmds;
+global using global::Tmds.DBus;
+global using global::Tmds.DBus.CodeGen;
+global using global::Tmds.DBus.Protocol;
+global using global::Tmds.DBus.Transports;
 global using global::YamlDotNet;
 global using global::YamlDotNet.Core;
 global using global::YamlDotNet.Core.Events;
@@ -902,6 +915,12 @@ namespace CommunityToolkit.HighPerformance.Memory.Views { }
 
 namespace CommunityToolkit.HighPerformance.Streams { }
 
+namespace DesktopNotifications { }
+
+namespace DesktopNotifications.FreeDesktop { }
+
+namespace DesktopNotifications.Windows { }
+
 namespace DotNetProjectFile { }
 
 namespace DotNetProjectFile.Analyzers { }
@@ -1298,6 +1317,16 @@ namespace Microsoft.SqlServer { }
 
 namespace Microsoft.SqlServer.Server { }
 
+namespace Microsoft.Toolkit { }
+
+namespace Microsoft.Toolkit.Uwp { }
+
+namespace Microsoft.Toolkit.Uwp.Notifications { }
+
+namespace Microsoft.Toolkit.Uwp.Notifications.Adaptive { }
+
+namespace Microsoft.Toolkit.Uwp.Notifications.Adaptive.Elements { }
+
 namespace Microsoft.VisualBasic { }
 
 namespace Microsoft.VisualBasic.CompilerServices { }
@@ -1391,6 +1420,16 @@ namespace StbImageSharp { }
 namespace StbImageWriteSharp { }
 
 namespace TextCopy { }
+
+namespace Tmds { }
+
+namespace Tmds.DBus { }
+
+namespace Tmds.DBus.CodeGen { }
+
+namespace Tmds.DBus.Protocol { }
+
+namespace Tmds.DBus.Transports { }
 
 namespace YamlDotNet { }
 

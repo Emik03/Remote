@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MPL-2.0
 namespace Remote;
 
-using Vector2 = System.Numerics.Vector2;
-
 /// <inheritdoc cref="Client"/>
 public sealed partial class Client
 {

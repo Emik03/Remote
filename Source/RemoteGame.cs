@@ -58,6 +58,9 @@ public sealed class RemoteGame : Game
     {
         if (disposing)
         {
+#if !ANDROID
+            Window.FileDrop -= OnFileDrop;
+#endif
             _renderer.Dispose();
             _preferences.Save();
         }

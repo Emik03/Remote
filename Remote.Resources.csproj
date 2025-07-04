@@ -9,6 +9,8 @@
         <Compile Remove="Source/**/*.cs"/>
         <Compile Include="Source/AssemblyMarker.cs" />
         <Compile Remove="$(Morsels)/Compile/Source/References/**/*.cs"/>
+        <PackageReference Include="DesktopNotifications.Windows" Version="1.3.1"/>
+        <PackageReference Include="DesktopNotifications.FreeDesktop" Version="1.3.1"/>
         <EmbeddedResource Include="Fonts/alt.ttf" Link="Fonts/alt.ttf" CopyToOutputDirectory="Never" CopyToPublishDirectory="Never"/>
         <EmbeddedResource Include="Fonts/main.ttf" Link="Fonts/main.ttf" CopyToOutputDirectory="Never" CopyToPublishDirectory="Never"/>
         <EmbeddedResource Include="Fonts/thai.ttf" Link="Fonts/thai.ttf" CopyToOutputDirectory="Never" CopyToPublishDirectory="Never"/>

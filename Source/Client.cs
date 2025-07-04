@@ -27,12 +27,12 @@ public sealed partial class Client(Yaml? yaml = null)
 
     /// <summary>Wraps the importance of an item and where it was obtained.</summary>
     /// <param name="Flags">The priority of the obtained item.</param>
-    /// <param name="DisplayName">The item name.</param>
+    /// <param name="Name">The item name.</param>
     /// <param name="Count">The number of times this item was obtained.</param>
     /// <param name="Locations">The locations that obtained this item.</param>
     readonly record struct ReceivedItem(
         ItemFlags? Flags,
-        string? DisplayName,
+        string? Name,
         int Count,
         IReadOnlyList<(string LocationDisplayName, string LocationGame)>? Locations
     )
@@ -42,7 +42,7 @@ public sealed partial class Client(Yaml? yaml = null)
         public ReceivedItem(ICollection<ItemInfo?> info)
             : this(
                 info.Nth(0)?.Flags,
-                info.Nth(0)?.ItemDisplayName,
+                info.Nth(0)?.ItemName,
                 info.Count,
                 [..info.Filter().Select(x => (x.LocationDisplayName, x.LocationGame))]
             ) { }
@@ -51,13 +51,13 @@ public sealed partial class Client(Yaml? yaml = null)
         /// <param name="preferences">The user preferences.</param>
         public void Show(Preferences preferences)
         {
-            if (DisplayName is null)
+            if (Name is null)
                 return;
 
-            var text = $"{DisplayName}{(Count is 1 ? "" : $" ({Count})")}";
+            var text = $"{Name}{(Count is 1 ? "" : $" ({Count})")}";
             ImGui.PushStyleColor(ImGuiCol.Text, ColorOf(Flags, preferences));
             ImGui.BulletText(text);
-            CopyIfClicked(preferences, DisplayName);
+            CopyIfClicked(preferences, Name);
 
             if (Locations is not null and not [] && ImGui.IsItemHovered())
                 Tooltip(preferences, Locations.Select(ToString).Conjoin('\n'));
@@ -68,7 +68,7 @@ public sealed partial class Client(Yaml? yaml = null)
         /// <summary>Determines whether this instance matches the search result.</summary>
         /// <param name="search">The filter.</param>
         /// <returns>Whether this instance contains the parameter <paramref name="search"/> as a substring.</returns>
-        public bool IsMatch(string search) => DisplayName?.Contains(search, StringComparison.OrdinalIgnoreCase) is true;
+        public bool IsMatch(string search) => Name?.Contains(search, StringComparison.OrdinalIgnoreCase) is true;
 
         /// <summary>Gets the string representation of the tuple.</summary>
         /// <param name="tuple">The tuple to get the string representation of.</param>
@@ -129,6 +129,11 @@ public sealed partial class Client(Yaml? yaml = null)
                     For example !hint_location atomic-bomb to get a spoiler peek for that location.
             """;
 
+    /// <summary>The notification manager.</summary>
+    static readonly INotificationManager? s_manager =
+        OperatingSystem.IsFreeBSD() || OperatingSystem.IsLinux() ? new FreeDesktopNotificationManager() :
+        OperatingSystem.IsWindows() ? new WindowsNotificationManager() : null;
+
     /// <summary>Whether to show errors in <see cref="MessageBox.Show"/>.</summary>
     static bool s_displayErrors = true;
 
@@ -175,6 +180,12 @@ public sealed partial class Client(Yaml? yaml = null)
     /// <summary>The current web socket connection.</summary>
     ArchipelagoSession? _session;
 
+    /// <summary>When <see cref="_session"/> was created.</summary>
+    DateTime _sessionCreatedTimestamp;
+
+    /// <summary>The last set of items with count.</summary>
+    Dictionary<string, int> _lastItems = [];
+
     /// <summary>The logic evaluator.</summary>
     Evaluator? _evaluator;
 
@@ -199,6 +210,13 @@ public sealed partial class Client(Yaml? yaml = null)
     internal Client(Preferences.Connection connection)
         : this(connection.ToYaml()) =>
         _info = connection;
+
+    /// <summary>Initializes the manager.</summary>
+    static Client()
+    {
+        if (s_manager is not null)
+            _ = Task.Run(s_manager.Initialize);
+    }
 
     /// <summary>Gets or adds this location and retrieves the checkbox status of that location.</summary>
     /// <param name="key">The key to add or get.</param>
@@ -303,6 +321,7 @@ public sealed partial class Client(Yaml? yaml = null)
             _info = new(_yaml, password, address, port, _info.Color);
             preferences.Prepend(_info);
             preferences.Sync(ref _info);
+            _sessionCreatedTimestamp = DateTime.Now;
             _session = session;
         }
 
@@ -444,18 +463,18 @@ public sealed partial class Client(Yaml? yaml = null)
         _confirmationTimer = outOfLogic ? TimeSpan.FromSeconds(4) : TimeSpan.FromSeconds(1);
 
     /// <summary>Invoked when logic needs to be updated. Computes what locations are reachable.</summary>
-    /// <param name="_">The discard for the hook.</param>
-    void UpdateStatus(ReceivedItemsHelper? _ = null)
+    /// <param name="helper">The discard for the hook.</param>
+    void UpdateStatus([UsedImplicitly] ReceivedItemsHelper? helper = null)
     {
-        void Update(string location, ILocationCheckHelper itemHelper)
+        void Update(string location, ILocationCheckHelper helper)
         {
             ref var value = ref this[location];
 
             (value.Logic, value.Status) = 0 switch
             {
-                _ when itemHelper.GetLocationIdFromName(_yaml.Game, location) is var id &&
-                    itemHelper.AllLocations.Contains(id) &&
-                    !itemHelper.AllMissingLocations.Contains(id) ||
+                _ when helper.GetLocationIdFromName(_yaml.Game, location) is var id &&
+                    helper.AllLocations.Contains(id) &&
+                    !helper.AllMissingLocations.Contains(id) ||
                     _info.GetLocationsOrEmpty().Contains(location) =>
                     (null, LocationStatus.Checked),
                 _ when _evaluator is null => (null, LocationStatus.ProbablyReachable),
@@ -466,6 +485,22 @@ public sealed partial class Client(Yaml? yaml = null)
 
         Debug.Assert(_session is not null);
         Debug.Assert(_locationSearch is not null);
+
+        var items = _session.Items.AllItemsReceived.GroupBy(x => x.ItemName, FrozenSortedDictionary.Comparer)
+           .ToDictionary(x => x.Key, x => x.Count(), FrozenSortedDictionary.Comparer);
+
+        if (s_manager is not null && _sessionCreatedTimestamp + TimeSpan.FromSeconds(5) < DateTime.Now)
+        {
+            var body = items.Where(x => !_lastItems.TryGetValue(x.Key, out var value) && x.Value != value)
+               .Select(x => $"• {x.Key}{(x.Value is 1 ? "" : $" ({x.Value})")}")
+               .Conjoin('\n');
+
+            if (!string.IsNullOrWhiteSpace(body))
+                _ = Task.Run(() => s_manager.ShowNotification(new() { Title = "New items received!", Body = body }));
+        }
+
+        _lastItems = items;
+
         var locationHelper = _session.Locations;
 
         if (_evaluator is null)
@@ -555,10 +590,9 @@ public sealed partial class Client(Yaml? yaml = null)
             return new([..items]);
         }
 
-        bool Contains(FrozenSortedDictionary.Element lookup, ItemInfo x) =>
-            x.ItemDisplayName.Contains(_itemSearch, StringComparison.OrdinalIgnoreCase) &&
+        bool Contains(FrozenSortedDictionary.Element lookup, ItemInfo info) =>
 #pragma warning disable MA0002
-            lookup.Contains(x.ItemDisplayName);
+            info.ItemName.Contains(_itemSearch, StringComparison.OrdinalIgnoreCase) && lookup.Contains(info.ItemName);
 #pragma warning restore MA0002
         Debug.Assert(_session is not null);
         Debug.Assert(_itemSearch is not null);
@@ -578,7 +612,7 @@ public sealed partial class Client(Yaml? yaml = null)
             var max = _evaluator.ItemCount.GetValueOrDefault(next, 1);
 
             for (var i = 0; i < list.Count && list[i] is var item; i++)
-                if (next.Equals(item.DisplayName, StringComparison.Ordinal))
+                if (next.Equals(item.Name, StringComparison.Ordinal))
                     if (item.Count == max)
                         goto NoAdding;
                     else
