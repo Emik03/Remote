@@ -137,6 +137,9 @@ public sealed partial class Client(Yaml? yaml = null)
     /// <summary>Whether to show errors in <see cref="MessageBox.Show"/>.</summary>
     static bool s_displayErrors = true;
 
+    /// <summary>Whether to send push notifications for receiving new items.</summary>
+    bool _pushNotifs;
+
     /// <summary>Contains the number of instances that have been created. Used to make each instance unique.</summary>
     static int s_instances;
 
@@ -489,7 +492,7 @@ public sealed partial class Client(Yaml? yaml = null)
         var items = _session.Items.AllItemsReceived.GroupBy(x => x.ItemName, FrozenSortedDictionary.Comparer)
            .ToDictionary(x => x.Key, x => x.Count(), FrozenSortedDictionary.Comparer);
 
-        if (s_manager is not null && _sessionCreatedTimestamp + TimeSpan.FromSeconds(5) < DateTime.Now)
+        if (s_manager is not null && _pushNotifs && _sessionCreatedTimestamp + TimeSpan.FromSeconds(5) < DateTime.Now)
         {
             var body = items.Where(x => !_lastItems.TryGetValue(x.Key, out var value) && x.Value != value)
                .Select(x => $"• {x.Key}{(x.Value is 1 ? "" : $" ({x.Value})")}")

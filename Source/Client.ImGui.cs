@@ -292,6 +292,7 @@ public sealed partial class Client
     void ShowConnected(GameTime gameTime, Preferences preferences)
     {
         Debug.Assert(_session is not null);
+        _pushNotifs = preferences.DesktopNotifications;
 
         if (_session.Items.AllItemsReceived.Count is var itemCount && _lastItemCount < itemCount)
         {

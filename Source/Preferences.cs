@@ -170,7 +170,7 @@ public sealed partial class Preferences
     readonly Connection.List _list = Connection.List.Load();
 
     /// <summary>Whether to use tabs or separate windows.</summary>
-    bool _alwaysShowChat, _holdToConfirm = true, _useTabs = true, _moveToChatTab = true;
+    bool _alwaysShowChat, _desktopNotifications, _holdToConfirm = true, _useTabs = true, _moveToChatTab = true;
 
     /// <summary>Contains the current port.</summary>
     int _language, _port;
@@ -230,6 +230,13 @@ public sealed partial class Preferences
     {
         get => _alwaysShowChat;
         [UsedImplicitly] private set => _alwaysShowChat = value;
+    }
+
+    /// <summary>Gets or sets the value determining whether to have desktop notifications.</summary>
+    public bool DesktopNotifications
+    {
+        get => _desktopNotifications;
+        [UsedImplicitly] private set => _desktopNotifications = value;
     }
 
     /// <summary>Gets or sets the value determining whether to have holding to confirm location releases.</summary>
@@ -653,6 +660,7 @@ public sealed partial class Preferences
         _ = ImGui.Checkbox("Always show chat", ref _alwaysShowChat);
         _ = ImGui.Checkbox("Move to chat tab when releasing", ref _moveToChatTab);
         _ = ImGui.Checkbox("Hold to confirm location release", ref _holdToConfirm);
+        _ = ImGui.Checkbox("Push notifications for new items", ref _desktopNotifications);
         ImGui.SeparatorText("UI Settings");
         Slider("UI Scale", ref _uiScale, 0.4f, 2, "%.2f");
         Slider("UI Padding", ref _uiPadding, 0, 20);
