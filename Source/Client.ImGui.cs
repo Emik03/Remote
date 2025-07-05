@@ -72,9 +72,12 @@ public sealed partial class Client
 
         ImGui.SetWindowFontScale(preferences.UiScale);
 
-        if (_session is null)
+        if (!_connectingTask.IsCompleted)
+            ImGui.TextDisabled(_connectionMessage);
+        else if (_session is null)
             ShowBuilder(preferences);
-        else
+
+        if (_session is not null)
             ShowConnected(gameTime, preferences);
 
         if (preferences.UseTabs)
@@ -263,12 +266,6 @@ public sealed partial class Client
     /// <param name="preferences">The user preferences.</param>
     void ShowBuilder(Preferences preferences)
     {
-        if (!_connectingTask.IsCompleted)
-        {
-            ImGui.TextDisabled(_connectionMessage);
-            return;
-        }
-
         ImGui.SeparatorText("Slot");
         ImGui.SetNextItemWidth(preferences.Width(100));
         _ = ImGuiRenderer.InputText("Game", ref _yaml.Game, ushort.MaxValue, Preferences.TextFlags);

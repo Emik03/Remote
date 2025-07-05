@@ -313,7 +313,7 @@ public sealed partial class Client(Yaml? yaml = null)
             _errors = null;
             _windowName = $"{_yaml.Name}###{_instance}";
             _connectionMessage = "Logged in!\nReading slot data... (3/5)";
-            session.SetClientState(ArchipelagoClientState.ClientPlaying);
+            (_session = session).SetClientState(ArchipelagoClientState.ClientPlaying);
 
             foreach (var (key, value) in await session.DataStorage.GetSlotDataAsync())
                 ((IDictionary<string, object?>)_yaml)[key] = value;
@@ -325,7 +325,10 @@ public sealed partial class Client(Yaml? yaml = null)
             preferences.Prepend(_info);
             preferences.Sync(ref _info);
             _sessionCreatedTimestamp = DateTime.Now;
-            _session = session;
+            _connectionMessage = "";
+
+            if (_evaluator is not null)
+                UpdateStatus();
         }
 
         async Task? TryConnectAsync()
@@ -503,7 +506,6 @@ public sealed partial class Client(Yaml? yaml = null)
         }
 
         _lastItems = items;
-
         var locationHelper = _session.Locations;
 
         if (_evaluator is null)
