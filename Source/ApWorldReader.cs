@@ -232,15 +232,16 @@ public sealed record ApWorldReader(
                 continue;
 
             var visited = regions
-               .Where(x => !x.Key.Equals(name, StringComparison.Ordinal) && IsStarting(x.Value))
+               .Where(x => !FrozenSortedDictionary.Equals(x.Key, name) && IsStarting(x.Value))
                .Select(x => x.Key)
                .ToSet(FrozenSortedDictionary.Comparer);
 
             var foundTarget = false;
+
             var branch = Find(name, target, regions, regionToLogic, visited, ref foundTarget);
 
             if (foundTarget)
-                path |= branch;
+                path = path is null ? branch : path | branch;
         }
 
         return path;
@@ -270,12 +271,10 @@ public sealed record ApWorldReader(
 
         ref var logic = ref CollectionsMarshal.GetValueRefOrAddDefault(regionToLogic, current, out _);
 
-        logic ??= obj.TryGetPropertyValue("requires", out var requires) &&
-            requires?.GetValueKind() is JsonValueKind.String
-                ? Logic.TokenizeAndParse(requires.ToString())
-                : null;
+        if (logic is null && obj.TryGetPropertyValue("requires", out var requires))
+            logic = TokenizeAndParse(requires);
 
-        if (current.Equals(target, StringComparison.Ordinal))
+        if (FrozenSortedDictionary.Equals(current, target))
         {
             foundTarget = true;
             return logic;
@@ -292,21 +291,26 @@ public sealed record ApWorldReader(
                 connection.ToString() is var connectionString)
             {
                 var innerFoundTarget = false;
-                var l = Find(connectionString, target, regions, regionToLogic, visited.ToSet(), ref innerFoundTarget);
+
+                var innerLogic =
+                    Find(connectionString, target, regions, regionToLogic, visited.ToSet(), ref innerFoundTarget);
 
                 if (!innerFoundTarget)
                     continue;
 
                 foundTarget = true;
-
-                path |= l &
-                    (exitRequires?[connectionString] is var exit && exit?.GetValueKind() is JsonValueKind.String
-                        ? Logic.TokenizeAndParse(exit.ToString())
-                        : null);
+                var and = innerLogic & TokenizeAndParse(exitRequires?[connectionString]);
+                path = path is null ? and : path | and;
             }
 
         return foundTarget ? logic & path : null;
     }
+
+    /// <summary>Tokenizes and parses the <see cref="JsonNode"/>.</summary>
+    /// <param name="requires">The requires string to parse.</param>
+    /// <returns>The <see cref="Logic"/> of the parameter <paramref name="requires"/>.</returns>
+    static Logic? TokenizeAndParse(JsonNode? requires) =>
+        requires?.GetValueKind() is JsonValueKind.String ? Logic.TokenizeAndParse(requires.ToString()) : null;
 
     /// <summary>Converts the <see cref="JsonArray"/> into the <see cref="HashSet{T}"/>.</summary>
     /// <param name="array">The array to convert.</param>
