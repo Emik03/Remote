@@ -118,7 +118,7 @@ public sealed partial record Evaluator(
     )
     {
         var (wrapper, helper) = interfaces;
-        ApWorldReader reader = new(path, preferences);
+        ApWorldReader reader = new(path, preferences.GetPythonPath(), preferences.Repo);
         yaml.CopyFrom(reader.Options);
 
         return reader.ExtractCategories() is ({ } hiddenCategories, var categoryToYaml) &&

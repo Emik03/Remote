@@ -32,9 +32,10 @@ public sealed record ApWorldReader(
 
     /// <summary>Initializes a new instance of the <see cref="ApWorldReader"/> class.</summary>
     /// <param name="path">The path to read.</param>
-    /// <param name="preferences">The user preferences.</param>
-    public ApWorldReader(string path, Preferences preferences)
-        : this(Read(path, preferences, out var c, out var i, out var l, out var o, out var r), c, i, l, o, r) { }
+    /// <param name="python">The path to the python binary to execute python.</param>
+    /// <param name="ap">The path to the archipelago repository.</param>
+    public ApWorldReader(string path, string? python = "python", string? ap = null)
+        : this(Read(path, python, ap, out var c, out var i, out var l, out var o, out var r), c, i, l, o, r) { }
 
     /// <summary>Extracts all categories.</summary>
     /// <returns>The categories.</returns>
@@ -351,18 +352,19 @@ public sealed record ApWorldReader(
 
     /// <summary>Attempts to get the world data from executing python.</summary>
     /// <param name="path">The path to the <c>.apworld</c>.</param>
-    /// <param name="preferences">The user preferences.</param>
+    /// <param name="python">The path to the python binary to execute python.</param>
+    /// <param name="ap">The path to the archipelago repository.</param>
     /// <returns>The world data, or <see langword="null"/> if it was unable to execute the script.</returns>
-    static JsonObject? GetWorldDataFromPython(string path, Preferences preferences)
+    static JsonObject? GetWorldDataFromPython(string path, string? python = "python", string? ap = null)
     {
-        if (string.IsNullOrWhiteSpace(preferences.Repo))
+        if (string.IsNullOrWhiteSpace(python) || string.IsNullOrWhiteSpace(ap))
             return null;
 
         using var process = Process.Start(
-            new ProcessStartInfo(preferences.GetPythonPath())
+            new ProcessStartInfo(python)
             {
                 CreateNoWindow = true,
-                Environment = { ["APWORLD_PATH"] = path, ["ARCHIPELAGO_REPO_PATH"] = preferences.Repo },
+                Environment = { ["APWORLD_PATH"] = path, ["ARCHIPELAGO_REPO_PATH"] = ap },
                 ErrorDialog = false,
                 RedirectStandardError = true,
                 RedirectStandardInput = true,
@@ -386,7 +388,8 @@ public sealed record ApWorldReader(
 
     /// <summary>Reads the <c>.apworld</c>.</summary>
     /// <param name="path"></param>
-    /// <param name="preferences">The user preferences.</param>
+    /// <param name="python">The path to the python binary to execute python.</param>
+    /// <param name="ap">The path to the archipelago repository.</param>
     /// <param name="categories">The categories.</param>
     /// <param name="items">The items.</param>
     /// <param name="locations">The locations.</param>
@@ -395,7 +398,8 @@ public sealed record ApWorldReader(
     /// <returns>The game.</returns>
     static JsonObject? Read(
         string path,
-        Preferences preferences,
+        string? python,
+        string? ap,
         out JsonObject? categories,
         out JsonArray? items,
         out JsonArray? locations,
@@ -415,7 +419,7 @@ public sealed record ApWorldReader(
             return Extract<JsonObject>(zip, "/data/game.json");
         }
 
-        if (GetWorldDataFromPython(path, preferences) is not { } obj)
+        if (GetWorldDataFromPython(path, python, ap) is not { } obj)
             return Fail(out categories, out options, out regions);
 
         items = Index<JsonArray>(obj, "items.json");
