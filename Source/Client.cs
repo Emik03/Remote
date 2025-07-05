@@ -523,7 +523,7 @@ public sealed partial class Client(Yaml? yaml = null)
     /// <summary>Determines whether the location matches the current goal.</summary>
     /// <param name="location">The location.</param>
     /// <returns>Whether the parameter <paramref name="location"/> matches the current goal.</returns>
-    bool IsGoal(string location) => _yaml.Goal.Equals(location, StringComparison.Ordinal);
+    bool IsGoal(string location) => FrozenSortedDictionary.Comparer.Equals(_yaml.Goal, location);
 
     /// <summary>Whether the location should be visible based on the status given.</summary>
     /// <param name="location">The location.</param>
@@ -615,7 +615,7 @@ public sealed partial class Client(Yaml? yaml = null)
             var max = _evaluator.ItemCount.GetValueOrDefault(next, 1);
 
             for (var i = 0; i < list.Count && list[i] is var item; i++)
-                if (next.Equals(item.Name, StringComparison.Ordinal))
+                if (FrozenSortedDictionary.Comparer.Equals(next, item.Name))
                     if (item.Count == max)
                         goto NoAdding;
                     else

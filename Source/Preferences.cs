@@ -163,7 +163,7 @@ public sealed partial class Preferences
 
     /// <summary>Gets the <see cref="ImGuiCol"/> set that represents background colors.</summary>
     static readonly FrozenSet<ImGuiCol> s_backgrounds = Enum.GetValues<ImGuiCol>()
-       .Where(x => x.ToString().EndsWith("BG", StringComparison.OrdinalIgnoreCase))
+       .Where(x => x.ToString() is [.., 'B' or 'b', 'G' or 'g'])
        .ToFrozenSet();
 
     /// <summary>Contains the history.</summary>
