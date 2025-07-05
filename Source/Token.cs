@@ -241,9 +241,11 @@ public readonly partial struct Token
     )
         where T : ICollection<Token>
     {
-        switch (memory.Span[i])
+        var span = memory.Span;
+
+        switch (span[i])
         {
-            case ')':
+            case ')' when i != span.Length && span[i + 1] is '}':
                 AddIdentifier(memory, ref tokens, ref start, i);
                 state = State.ReadingFunction;
                 tokens.Add(OfRightParen());
