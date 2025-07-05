@@ -25,7 +25,7 @@ sealed partial class Preferences
         AppColor.Orange, // BK
         // ImGuiCol
         AppColor.Foreground, // Text
-        AppColor.Comment, // TextDisabled
+        new(AppColor.Foreground.Vector with { W = 0.75f }), // TextDisabled
         AppColor.Black, // WindowBg
         AppColor.Black, // ChildBg
         AppColor.Black, // PopupBg

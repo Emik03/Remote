@@ -149,6 +149,11 @@ public sealed partial class Client
         }
 
         ImGui.SetWindowFontScale(preferences.UiScale);
+
+        if (Preferences.ShownTooltip)
+            ImGui.NewLine();
+
+        Preferences.ShownTooltip = true;
         Wrapped(text, ImGui.GetMainViewport().Size.X, colored);
         ImGui.EndTooltip();
         ImGui.PopStyleColor();
@@ -927,7 +932,7 @@ public sealed partial class Client
                 if (!first || (first = false))
                     ImGui.SameLine(0, 0);
 
-                var palette = part.PaletteColor switch
+                var priority = part.PaletteColor switch
                 {
                     PaletteColor.SlateBlue => AppPalette.Useful,
                     PaletteColor.Salmon => AppPalette.Trap,
@@ -935,12 +940,21 @@ public sealed partial class Client
                     _ => AppPalette.Neutral,
                 };
 
+                var palette = priority switch
+                {
+                    not AppPalette.Neutral => priority,
+                    _ when _session is null => AppPalette.Neutral,
+                    _ when _yaml.Name == part.Text => AppPalette.Useful,
+                    _ when _session.Players.AllPlayers.Any(x => x.Name == part.Text) => AppPalette.Progression,
+                    _ => AppPalette.Neutral,
+                };
+
                 ImGui.PushStyleColor(ImGuiCol.Text, preferences[palette]);
                 ImGui.TextUnformatted(part.Text);
                 ImGui.PopStyleColor();
 
-                if (palette is not AppPalette.Neutral && ImGui.IsItemHovered())
-                    Tooltip(preferences, $"Item Class: {palette}");
+                if (priority is not AppPalette.Neutral && ImGui.IsItemHovered())
+                    Tooltip(preferences, $"Item Class: {priority}");
 
                 CopyIfClicked(preferences, message);
             }

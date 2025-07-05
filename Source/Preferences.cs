@@ -222,6 +222,9 @@ public sealed partial class Preferences
         "Archipelago"
     );
 
+    /// <summary>Gets or sets the value determining the tooltip was shown in this frame.</summary>
+    public static bool ShownTooltip { get; set; }
+
     /// <summary>Contains the path to the preferences file to read and write from.</summary>
     public static string FilePath { get; } = PathTo(PreferencesFile, "REMOTE_PREFERENCES_PATH");
 
@@ -624,6 +627,7 @@ public sealed partial class Preferences
     int? Show(GameTime gameTime, IList<Client> clients)
     {
         int? ret = null;
+        ShownTooltip = false;
 
         for (var i = clients.Count - 1; i >= 0 && clients[i] is var c; i--)
         {
