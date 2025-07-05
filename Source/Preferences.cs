@@ -120,9 +120,7 @@ public sealed partial class Preferences
         public bool Equals(Connection other) =>
             Port == other.Port &&
             FrozenSortedDictionary.Comparer.Equals(Name, other.Name) &&
-            FrozenSortedDictionary.Comparer.Equals(Game, other.Game) &&
-            FrozenSortedDictionary.Comparer.Equals(Host, other.Host) &&
-            FrozenSortedDictionary.Comparer.Equals(Password ?? "", other.Password ?? "");
+            FrozenSortedDictionary.Comparer.Equals(Host, other.Host);
 
         /// <inheritdoc />
         public override int GetHashCode() => HashCode.Combine(Port, Name, Game, Host, Password ?? "");
