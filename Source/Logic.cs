@@ -164,7 +164,7 @@ public sealed partial class Logic(
     {
         var i = 0;
         var ret = Binary(tokens, ref i);
-        return tokens[i].IsEOL && i + 1 == tokens.Count ? ret : Error(tokens, i);
+        return i + 1 == tokens.Count && tokens[i].IsEOL ? ret : Error(tokens, i, false);
     }
 
     /// <summary>Parses the <see cref="ReadOnlyMemory{T}"/> directly to the <see cref="Logic"/> object.</summary>
