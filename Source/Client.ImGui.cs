@@ -1017,7 +1017,7 @@ public sealed partial class Client
             value.Checked = all;
 
         if (value.Logic is { } logic && ImGui.IsItemHovered())
-            Tooltip(preferences, logic.DeparseExplicit(), true);
+            Tooltip(preferences, logic.ToMinimalString(), true);
 
         ImGui.PopStyleColor();
         value.Checked &= value.Status is not LocationStatus.Checked;

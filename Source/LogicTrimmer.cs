@@ -16,7 +16,7 @@ static class LogicTrimmer
     const int MaxVariableCountForAssertions = 16;
 
     /// <summary>Contains every string that was printed before.</summary>
-    static readonly HashSet<string> s_seen = new(StringComparer.Ordinal);
+    static readonly HashSet<string> s_seen = new(FrozenSortedDictionary.Comparer);
 #endif
     /// <summary>Tests whether this logic is fulfilled by the set of inputs.</summary>
     /// <typeparam name="T">The type of collection for logic.</typeparam>
@@ -30,8 +30,8 @@ static class LogicTrimmer
         {
             null => true,
             { IsGrouping: true, Grouping: var g } => g.Test(lookup, inputs),
-            { IsOr: true, Or: var (l, r) } => l.Test(lookup, inputs) | r.Test(lookup, inputs),
             { IsAnd: true, And: var (l, r) } => l.Test(lookup, inputs) & r.Test(lookup, inputs),
+            { IsOr: true, Or: var (l, r) } => l.Test(lookup, inputs) | r.Test(lookup, inputs),
             _ => TestUnary(that, lookup, inputs),
         };
 

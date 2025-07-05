@@ -100,8 +100,8 @@ public sealed partial class Logic(
     [return: NotNullIfNotNull(nameof(l)), NotNullIfNotNull(nameof(r))]
     [Pure] // ReSharper disable once ReturnTypeCanBeNotNullable
     public static Logic? operator |(Logic? l, Logic? r) =>
-        l is null ? r.Check(l) : // Identity Law
-        r is null ? l.Check(r) :
+        l is null ? l.Check(r) : // Identity Law
+        r is null ? r.Check(l) :
         l.StructuralEquals(r) ? l.Check(r) : // Idempotent Law
         //    Input  -> Commutative Law -> Idempotent Law
         // A + B + A ->    A + A + B    ->     A + B
@@ -211,31 +211,19 @@ public sealed partial class Logic(
     /// The string to insert between two <see cref="Logic"/> instances to indicate an <c>OR</c> operation.
     /// </param>
     /// <returns>The <see cref="string"/> representation that can be used to reconstruct this instance.</returns>
-    public string BooleanAlgebra(string and, string or) => BooleanAlgebra(and, or, []);
+    public string ToBooleanAlgebra(string and, string or) => ToBooleanAlgebra(and, or, []);
 
     /// <summary>Converts this instance back into the <see cref="string"/> representation.</summary>
     /// <returns>The <see cref="string"/> representation that can be used to reconstruct this instance.</returns>
-    public string Deparse() =>
-        Map(
-            x => $"({x?.Deparse()})",
-            x => $"{x.Left.Deparse()} AND {x.Right.Deparse()}",
-            x => $"{x.Left.Deparse()} OR {x.Right.Deparse()}",
-            x => $"|{x}|",
-            x => $"|@{x}|",
-            x => $"|{x.Item}:{x.Count}|",
-            x => $"|@{x.Category}:{x.Count}|",
-            x => $"|{x.Item}:{x.Percent}%|",
-            x => $"|@{x.Category}:{x.Percent}%|",
-            x => $"{{{x.Name}({x.Args})}}"
-        );
+    public string ToMinimalString() => ToSimpleString(null);
 
     /// <summary>Converts this instance back into the <see cref="string"/> representation.</summary>
     /// <returns>The <see cref="string"/> representation that can be used to reconstruct this instance.</returns>
-    public string DeparseExplicit() =>
+    public override string ToString() =>
         Map(
-            x => $"{x?.DeparseExplicit()}",
-            x => $"({x.Left.DeparseExplicit()} AND {x.Right.DeparseExplicit()})",
-            x => $"({x.Left.DeparseExplicit()} OR {x.Right.DeparseExplicit()})",
+            x => $"({x})",
+            x => $"{x.Left} AND {x.Right}",
+            x => $"{x.Left} OR {x.Right}",
             x => $"|{x}|",
             x => $"|@{x}|",
             x => $"|{x.Item}:{x.Count}|",
@@ -420,16 +408,16 @@ public sealed partial class Logic(
     /// </param>
     /// <param name="list">The assignments for variables.</param>
     /// <returns>The <see cref="string"/> representation that can be used to reconstruct this instance.</returns>
-    string BooleanAlgebra(string and, string or, List<Logic> list)
+    string ToBooleanAlgebra(string and, string or, List<Logic> list)
     {
         if (Grouping is { } g)
-            return g.BooleanAlgebra(and, or, list);
+            return g.ToBooleanAlgebra(and, or, list);
 
         if (IsAnd)
-            return $"({_and.Left.BooleanAlgebra(and, or, list)}{and}{_and.Right.BooleanAlgebra(and, or, list)})";
+            return $"({_and.Left.ToBooleanAlgebra(and, or, list)}{and}{_and.Right.ToBooleanAlgebra(and, or, list)})";
 
         if (IsOr)
-            return $"({_and.Left.BooleanAlgebra(and, or, list)}{or}{_and.Right.BooleanAlgebra(and, or, list)})";
+            return $"({_and.Left.ToBooleanAlgebra(and, or, list)}{or}{_and.Right.ToBooleanAlgebra(and, or, list)})";
 
         var index = list.FindIndex(StructuralEquals) is not -1 and var variable ? variable : list.Count;
 
@@ -438,4 +426,20 @@ public sealed partial class Logic(
 
         return new([(char)((index %= 52) > 26 ? index - 26 + 'a' : index + 'A')]);
     }
+
+    /// <summary>Converts this instance back into the <see cref="string"/> representation.</summary>
+    /// <param name="state">The state.</param>
+    /// <returns>The <see cref="string"/> representation that can be used to reconstruct this instance.</returns>
+    string ToSimpleString(bool? state) =>
+        this switch
+        {
+            { IsGrouping: true, Grouping: var x } => x.ToSimpleString(state),
+            { IsAnd: true, And: var (al, ar) } => state is false
+                ? $"({al.ToSimpleString(true)} AND {ar.ToSimpleString(true)})"
+                : $"{al.ToSimpleString(true)} AND {ar.ToSimpleString(true)}",
+            { IsOr: true, Or: var (ol, or) } => state is true
+                ? $"({ol.ToSimpleString(false)} OR {or.ToSimpleString(false)})"
+                : $"{ol.ToSimpleString(false)} OR {or.ToSimpleString(false)}",
+            _ => ToString(),
+        };
 }
