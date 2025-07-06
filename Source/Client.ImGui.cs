@@ -11,7 +11,12 @@ public sealed partial class Client
     readonly List<string> _sentMessages = [""];
 
     /// <summary>Whether to show the dialog.</summary>
-    bool _showAlreadyChecked, _showConfirmationDialog, _showObtainedHints, _showOutOfLogic, _showYetToReceive;
+    bool _showAlreadyChecked,
+        _showConfirmationDialog,
+        _showLocationFooter,
+        _showObtainedHints,
+        _showOutOfLogic,
+        _showYetToReceive;
 
     /// <summary>Whether the user is attempting to release.</summary>
     /// <remarks><para>
@@ -696,14 +701,15 @@ public sealed partial class Client
         var stuck = _evaluator is null ? ShowNonManualLocations(preferences) : ShowManualLocations(preferences);
         ImGui.EndChild();
         ImGui.Separator();
-
         var isAnyReleasable = _locations.Any(IsReleasable);
+        var showStatus = stuck is null or true;
+        _showLocationFooter = isAnyReleasable || showStatus;
 
         if (isAnyReleasable && (ImGui.Button("Check") || ImGui.IsKeyDown(ImGuiKey.Enter)))
             _showConfirmationDialog = true;
 
-        if (isAnyReleasable && stuck is null or true)
-            ImGui.SameLine();
+        if (isAnyReleasable && showStatus)
+            ImGui.SameLine(0, 20);
 
         switch (stuck)
         {
@@ -794,7 +800,7 @@ public sealed partial class Client
         Debug.Assert(_session is not null);
         ShowLocationSearch(preferences);
 
-        if (!ImGui.BeginChild("Locations", preferences.ChildSize(100)))
+        if (!ImGui.BeginChild("Locations", preferences.ChildSize(_showLocationFooter ? 100 : 10)))
         {
             ImGui.EndChild();
             return false;
@@ -823,7 +829,7 @@ public sealed partial class Client
         var newValue = InlineButtons("Tick all expanded", "Untick all expanded");
         ShowLocationSearch(preferences);
 
-        if (!ImGui.BeginChild("Locations", preferences.ChildSize(100)))
+        if (!ImGui.BeginChild("Locations", preferences.ChildSize(_showLocationFooter ? 100 : 10)))
         {
             ImGui.EndChild();
             return false;
