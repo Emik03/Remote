@@ -277,7 +277,7 @@ public sealed partial class Client
                 if (!string.IsNullOrEmpty(error))
                 {
                     ImGui.PushStyleColor(ImGuiCol.Text, preferences[AppPalette.Trap]);
-                    ImGui.TextWrapped(error);
+                    ImGui.TextUnformatted(error);
                     CopyIfClicked(preferences, error);
                     ImGui.PopStyleColor();
                 }
@@ -593,7 +593,9 @@ public sealed partial class Client
             var playerName = player.ToString();
             var isSelf = player.Slot == _session.Players.ActivePlayer.Slot;
             var selfColor = preferences[isSelf ? AppPalette.Useful : AppPalette.Neutral];
-            ImGui.TextColored(selfColor, playerName);
+            ImGui.PushStyleColor(ImGuiCol.Text, selfColor);
+            ImGui.TextUnformatted(playerName);
+            ImGui.PopStyleColor();
             CopyIfClicked(preferences, playerName);
 
             if (isSelf && ImGui.IsItemHovered())
@@ -606,7 +608,9 @@ public sealed partial class Client
             if (!ImGui.TableNextColumn())
                 continue;
 
-            ImGui.TextColored(preferences[isManual ? AppPalette.Progression : AppPalette.Neutral], gameName);
+            ImGui.PushStyleColor(ImGuiCol.Text, preferences[isManual ? AppPalette.Progression : AppPalette.Neutral]);
+            ImGui.TextUnformatted(gameName);
+            ImGui.PopStyleColor();
             CopyIfClicked(preferences, gameName);
 
             if (isManual && ImGui.IsItemHovered())
@@ -617,7 +621,9 @@ public sealed partial class Client
             if (!ImGui.TableNextColumn())
                 continue;
 
-            ImGui.TextColored(selfColor, slotName);
+            ImGui.PushStyleColor(ImGuiCol.Text, selfColor);
+            ImGui.TextUnformatted(slotName);
+            ImGui.PopStyleColor();
             CopyIfClicked(preferences, slotName);
 
             if (isSelf && ImGui.IsItemHovered())
@@ -628,7 +634,9 @@ public sealed partial class Client
 
             var teamName = player.Team.ToString();
             var isTeammate = player.Team == _session.Players.ActivePlayer.Team;
-            ImGui.TextColored(preferences[isTeammate ? AppPalette.Neutral : AppPalette.Checked], teamName);
+            ImGui.PushStyleColor(ImGuiCol.Text, preferences[isTeammate ? AppPalette.Neutral : AppPalette.Checked]);
+            ImGui.TextUnformatted(teamName);
+            ImGui.PopStyleColor();
             CopyIfClicked(preferences, teamName);
         }
     }
