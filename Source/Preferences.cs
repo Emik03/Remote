@@ -666,7 +666,10 @@ public sealed partial class Preferences
         _ = ImGui.Checkbox("Always show chat", ref _alwaysShowChat);
         _ = ImGui.Checkbox("Move to chat tab when releasing", ref _moveToChatTab);
         _ = ImGui.Checkbox("Hold to confirm location release", ref _holdToConfirm);
-        _ = ImGui.Checkbox("Push notifications for new items", ref _desktopNotifications);
+
+        if (OperatingSystem.IsFreeBSD() || OperatingSystem.IsLinux())
+            _ = ImGui.Checkbox("Push notifications for new items", ref _desktopNotifications);
+
         ImGui.SeparatorText("UI Settings");
         Slider("UI Scale", ref _uiScale, 0.4f, 2, "%.2f");
         Slider("UI Padding", ref _uiPadding, 0, 20);
