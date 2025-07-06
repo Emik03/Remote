@@ -130,9 +130,8 @@ public sealed partial class Client(Yaml? yaml = null)
             """;
 
     /// <summary>The notification manager.</summary>
-    static readonly INotificationManager? s_manager =
-        OperatingSystem.IsFreeBSD() || OperatingSystem.IsLinux() ? new FreeDesktopNotificationManager() :
-        OperatingSystem.IsWindows() ? new WindowsNotificationManager() : null;
+    static readonly FreeDesktopNotificationManager? s_manager =
+        OperatingSystem.IsFreeBSD() || OperatingSystem.IsLinux() ? new() : null;
 
     /// <summary>Whether to show errors in <see cref="MessageBox.Show"/>.</summary>
     static bool s_displayErrors = true;
@@ -447,12 +446,11 @@ public sealed partial class Client(Yaml? yaml = null)
         if (_canGoal is false && keys.Any(IsGoal))
             _canGoal = null;
 
-        if (keys.Where(NeedsToBeTrackedLocally) is ({ } first, { } rest))
-        {
-            _info = new(_info, rest.Prepend(first));
+        var count = _info.GetLocationsOrEmpty().Count;
+        _info = new(_info, keys.Where(NeedsToBeTrackedLocally));
+
+        if (_info.GetLocationsOrEmpty().Count != count)
             preferences.Sync(ref _info);
-            (rest as IDisposable)?.Dispose();
-        }
 
         foreach (var key in keys)
         {
@@ -605,7 +603,8 @@ public sealed partial class Client(Yaml? yaml = null)
         var query = _session.Items.AllItemsReceived
            .Where(x => Contains(lookup, x))
            .GroupBy(x => x.ItemId)
-           .Select(ConsCount);
+           .Select(ConsCount)
+           .OrderBy(x => x.Name, FrozenSortedDictionary.Comparer);
 
         if (!_showYetToReceive || _evaluator is null)
             return query;
