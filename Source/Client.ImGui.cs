@@ -704,7 +704,7 @@ public sealed partial class Client
         if (isAnyReleasable && stuck is null or true)
             ImGui.SameLine();
 
-        if (isAnyReleasable && ImGui.Button("Check"))
+        if (isAnyReleasable && (ImGui.Button("Check") || ImGui.IsKeyDown(ImGuiKey.Enter)))
             _showConfirmationDialog = true;
 
         if (_canGoal is not null)
