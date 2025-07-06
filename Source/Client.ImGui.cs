@@ -179,6 +179,16 @@ public sealed partial class Client
         ImGui.PushStyleColor(ImGuiCol.FrameBg, inactive);
     }
 
+    /// <summary>Creates text that is colored and unformatted.</summary>
+    /// <param name="color">The color of the text.</param>
+    /// <param name="text">The text.</param>
+    static void TextColoredUnformatted(AppColor color, string text)
+    {
+        ImGui.PushStyleColor(ImGuiCol.Text, color);
+        ImGui.TextUnformatted(text);
+        ImGui.PopStyleColor();
+    }
+
     /// <summary>Convenience function for displaying a tooltip with text scaled by the user preferences.</summary>
     /// <param name="preferences">The user preferences.</param>
     /// <param name="text">The text to display.</param>
@@ -288,10 +298,8 @@ public sealed partial class Client
             foreach (var error in _errors.AsSpan())
                 if (!string.IsNullOrEmpty(error))
                 {
-                    ImGui.PushStyleColor(ImGuiCol.Text, preferences[AppPalette.Trap]);
-                    ImGui.TextUnformatted(error);
+                    TextColoredUnformatted(preferences[AppPalette.Trap], error);
                     CopyIfClicked(preferences, error);
-                    ImGui.PopStyleColor();
                 }
 
         ImGui.SeparatorText("Create");
@@ -605,9 +613,7 @@ public sealed partial class Client
             var playerName = player.ToString();
             var isSelf = player.Slot == _session.Players.ActivePlayer.Slot;
             var selfColor = preferences[isSelf ? AppPalette.Useful : AppPalette.Neutral];
-            ImGui.PushStyleColor(ImGuiCol.Text, selfColor);
-            ImGui.TextUnformatted(playerName);
-            ImGui.PopStyleColor();
+            TextColoredUnformatted(selfColor, playerName);
             CopyIfClicked(preferences, playerName);
 
             if (isSelf && ImGui.IsItemHovered())
@@ -620,9 +626,7 @@ public sealed partial class Client
             if (!ImGui.TableNextColumn())
                 continue;
 
-            ImGui.PushStyleColor(ImGuiCol.Text, preferences[isManual ? AppPalette.Progression : AppPalette.Neutral]);
-            ImGui.TextUnformatted(gameName);
-            ImGui.PopStyleColor();
+            TextColoredUnformatted(preferences[isManual ? AppPalette.Progression : AppPalette.Neutral], gameName);
             CopyIfClicked(preferences, gameName);
 
             if (isManual && ImGui.IsItemHovered())
@@ -633,9 +637,7 @@ public sealed partial class Client
             if (!ImGui.TableNextColumn())
                 continue;
 
-            ImGui.PushStyleColor(ImGuiCol.Text, selfColor);
-            ImGui.TextUnformatted(slotName);
-            ImGui.PopStyleColor();
+            TextColoredUnformatted(selfColor, slotName);
             CopyIfClicked(preferences, slotName);
 
             if (isSelf && ImGui.IsItemHovered())
@@ -646,9 +648,7 @@ public sealed partial class Client
 
             var teamName = player.Team.ToString();
             var isTeammate = player.Team == _session.Players.ActivePlayer.Team;
-            ImGui.PushStyleColor(ImGuiCol.Text, preferences[isTeammate ? AppPalette.Neutral : AppPalette.Checked]);
-            ImGui.TextUnformatted(teamName);
-            ImGui.PopStyleColor();
+            TextColoredUnformatted(preferences[isTeammate ? AppPalette.Neutral : AppPalette.Checked], teamName);
             CopyIfClicked(preferences, teamName);
         }
     }
@@ -966,9 +966,7 @@ public sealed partial class Client
                     _ => AppPalette.Neutral,
                 };
 
-                ImGui.PushStyleColor(ImGuiCol.Text, preferences[palette]);
-                ImGui.TextUnformatted(part.Text);
-                ImGui.PopStyleColor();
+                TextColoredUnformatted(preferences[palette], part.Text);
 
                 if (priority is not AppPalette.Neutral && ImGui.IsItemHovered())
                     Tooltip(preferences, $"Item Class: {priority}");
