@@ -2,6 +2,7 @@
     <PropertyGroup>
         <OutputType>Exe</OutputType>
         <FileVersion>1.3.1</FileVersion>
+        <NoWarn>$(NoWarn);CS0419</NoWarn>
         <RootNamespace>Remote</RootNamespace>
         <AndroidUseAapt2>false</AndroidUseAapt2>
         <ApplicationId>dev.emik.remote</ApplicationId>
