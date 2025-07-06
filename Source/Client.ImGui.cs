@@ -116,6 +116,48 @@ public sealed partial class Client
 #endif
     }
 
+    /// <summary>Pushes the text.</summary>
+    /// <param name="span">The span.</param>
+    /// <param name="makeColorful">Whether or not to make it colorful.</param>
+    /// <param name="braces">The number of braces.</param>
+    /// <param name="isIdentifier">Whether or not it is processing an identifier.</param>
+    static void PushRange(ReadOnlySpan<char> span, bool makeColorful, ref int braces, ref bool isIdentifier)
+    {
+        static void Push(char c, bool makeColorful, in int braces)
+        {
+            const int L = 3;
+
+            if (makeColorful)
+            {
+                var index = (braces * L + braces * L / Preferences.TabColors.Length) % Preferences.TabColors.Length;
+                ImGui.PushStyleColor(ImGuiCol.Text, Preferences.TabColors[index]);
+            }
+
+            ImGui.TextUnformatted([c]);
+            ImGui.SameLine(0, 0);
+
+            if (makeColorful)
+                ImGui.PopStyleColor();
+        }
+
+        foreach (var c in span)
+            switch (c)
+            {
+                case '(':
+                    Push(c, makeColorful, isIdentifier ? braces : ++braces);
+                    break;
+                case ')':
+                    Push(c, makeColorful, isIdentifier ? braces : braces--);
+                    break;
+                case '|':
+                    isIdentifier ^= isIdentifier;
+                    goto default;
+                default:
+                    Push(c, makeColorful, braces);
+                    break;
+            }
+    }
+
     /// <summary>Pushes the specific color into most widgets.</summary>
     /// <param name="preferences">The user preferences</param>
     /// <param name="color">The color.</param>
@@ -169,39 +211,9 @@ public sealed partial class Client
     /// <returns>The wrapped version of the parameter <paramref name="text"/>.</returns>
     static void Wrapped(string text, float maxWidth, bool colored)
     {
-        static void PushRange(ReadOnlySpan<char> span, bool colored, ref int braces)
-        {
-            static void Push(char c, bool makeColorful, in int braces)
-            {
-                if (makeColorful)
-                    ImGui.PushStyleColor(ImGuiCol.Text, Preferences.TabColors[braces % Preferences.TabColors.Length]);
-
-                ImGui.TextUnformatted([c]);
-                ImGui.SameLine(0, 0);
-
-                if (makeColorful)
-                    ImGui.PopStyleColor();
-            }
-
-            foreach (var c in span)
-                switch (c)
-                {
-                    case '(':
-                        braces++;
-                        Push(c, colored, braces);
-                        break;
-                    case ')':
-                        Push(c, colored, braces);
-                        braces--;
-                        break;
-                    default:
-                        Push(c, colored, braces);
-                        break;
-                }
-        }
-
         var sum = 0f;
         var span = text.AsSpan();
+        var isIdentifier = false;
         int braces = 0, last = 0, replace = 0;
         SearchValues<char> br = Whitespaces.BreakingSearch.GetSpan()[0], ws = Whitespaces.UnicodeSearch.GetSpan()[0];
 
@@ -210,7 +222,7 @@ public sealed partial class Client
             {
                 case var _ when br.Contains(c):
                     sum = 0;
-                    PushRange(span[last..i], colored, ref braces);
+                    PushRange(span[last..i], colored, ref braces, ref isIdentifier);
                     replace = last = i + 1;
                     ImGui.NewLine();
                     break;
@@ -219,14 +231,14 @@ public sealed partial class Client
                     break;
                 case var _ when sum <= maxWidth: break;
                 default:
-                    PushRange(span[last..replace], colored, ref braces);
+                    PushRange(span[last..replace], colored, ref braces, ref isIdentifier);
                     sum = ImGui.CalcTextSize(span[replace..i]).X;
                     last = replace + 1;
                     ImGui.NewLine();
                     break;
             }
 
-        PushRange(span[last..], colored, ref braces);
+        PushRange(span[last..], colored, ref braces, ref isIdentifier);
     }
 
     /// <summary>Creates two inline buttons.</summary>
@@ -711,7 +723,7 @@ public sealed partial class Client
             return;
 
         if (isAnyReleasable || stuck is null or true)
-            ImGui.SameLine();
+            ImGui.SameLine(preferences.Width(100), 0);
 
         if (!ImGui.Button("Goal"))
             return;

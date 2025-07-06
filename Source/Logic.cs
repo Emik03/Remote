@@ -215,7 +215,7 @@ public sealed partial class Logic(
 
     /// <summary>Converts this instance back into the <see cref="string"/> representation.</summary>
     /// <returns>The <see cref="string"/> representation that can be used to reconstruct this instance.</returns>
-    public string ToMinimalString() => ToSimpleString(null);
+    public string ToMinimalString() => ToMinimalString(null);
 
     /// <summary>Converts this instance back into the <see cref="string"/> representation.</summary>
     /// <returns>The <see cref="string"/> representation that can be used to reconstruct this instance.</returns>
@@ -430,16 +430,16 @@ public sealed partial class Logic(
     /// <summary>Converts this instance back into the <see cref="string"/> representation.</summary>
     /// <param name="state">The state.</param>
     /// <returns>The <see cref="string"/> representation that can be used to reconstruct this instance.</returns>
-    string ToSimpleString(bool? state) =>
+    string ToMinimalString(bool? state) =>
         this switch
         {
-            { IsGrouping: true, Grouping: var x } => x.ToSimpleString(state),
+            { IsGrouping: true, Grouping: var x } => x.ToMinimalString(state),
             { IsAnd: true, And: var (al, ar) } => state is false
-                ? $"({al.ToSimpleString(true)} AND {ar.ToSimpleString(true)})"
-                : $"{al.ToSimpleString(true)} AND {ar.ToSimpleString(true)}",
+                ? $"({al.ToMinimalString(true)} AND {ar.ToMinimalString(true)})"
+                : $"{al.ToMinimalString(true)} AND {ar.ToMinimalString(true)}",
             { IsOr: true, Or: var (ol, or) } => state is true
-                ? $"({ol.ToSimpleString(false)} OR {or.ToSimpleString(false)})"
-                : $"{ol.ToSimpleString(false)} OR {or.ToSimpleString(false)}",
+                ? $"({ol.ToMinimalString(false)} OR {or.ToMinimalString(false)})"
+                : $"{ol.ToMinimalString(false)} OR {or.ToMinimalString(false)}",
             _ => ToString(),
         };
 }
