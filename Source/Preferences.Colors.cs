@@ -85,12 +85,11 @@ sealed partial class Preferences
     ];
 
     /// <summary>Contains the colors for random tabs.</summary>
-    /// <seealso href="https://sronpersonalpages.nl/~pault/"/>
-    public static ImmutableArray<AppColor> Sron { get; } =
+    public static ImmutableArray<AppColor> TabColors { get; } =
     [
-        0x77aaddff, 0x99ddffff, 0x448899ff, 0xbbcc33ff, 0xaaaa00ff, 0xeedd88ff, 0xee8866ff, 0xffaabbff,
-        0xee7733ff, 0xcc3311ff, 0xee3377ff, 0xcc6677ff, 0x882255ff, 0xaa4499ff, 0xee0000ff, 0x00ee00ff,
-        0x99cceeff, 0xbbeeffff, 0x66aabbff, 0xdddd55ff, 0xcccc22ff, 0xffeeaaff, 0xffaa88ff, 0xffccddff,
-        0xff9955ff, 0xdd5533ff, 0xff5599ff, 0xdd8899ff, 0xaa4477ff, 0xcc66bbff, 0xff2222ff, 0x22ff22ff,
+        0xFF7B7BFF, 0xF89F72FF, 0xFEB464FF, 0xEFD25FFF,
+        0xC0ED5EFF, 0x83ED66FF, 0x40EFAFFF, 0x5FD0EFFF,
+        0x65A0FFFF, 0x7B83FFFF, 0xAA76FFFF, 0xD268F9FF,
+        0xFC6AE2FF, 0xFF79A8FF, 0xABA9A9FF, 0x6B6B6BFF,
     ];
 }

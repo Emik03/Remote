@@ -469,7 +469,7 @@ public sealed partial class Preferences
     {
         string FindNextAvailableColor()
         {
-            foreach (var color in Sron)
+            foreach (var color in TabColors)
             {
                 var history = CollectionsMarshal.AsSpan(_list.History);
 
@@ -486,7 +486,7 @@ public sealed partial class Preferences
             Next: ;
             }
 
-            return Sron.PickRandom().ToString();
+            return TabColors.PickRandom().ToString();
         }
 
         var history = CollectionsMarshal.AsSpan(_list.History);

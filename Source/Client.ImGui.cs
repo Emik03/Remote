@@ -174,7 +174,7 @@ public sealed partial class Client
             static void Push(char c, bool makeColorful, in int braces)
             {
                 if (makeColorful)
-                    ImGui.PushStyleColor(ImGuiCol.Text, Preferences.Sron[braces % Preferences.Sron.Length]);
+                    ImGui.PushStyleColor(ImGuiCol.Text, Preferences.TabColors[braces % Preferences.TabColors.Length]);
 
                 ImGui.TextUnformatted([c]);
                 ImGui.SameLine(0, 0);
