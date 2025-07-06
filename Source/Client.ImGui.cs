@@ -697,6 +697,14 @@ public sealed partial class Client
         ImGui.EndChild();
         ImGui.Separator();
 
+        var isAnyReleasable = _locations.Any(IsReleasable);
+
+        if (isAnyReleasable && (ImGui.Button("Check") || ImGui.IsKeyDown(ImGuiKey.Enter)))
+            _showConfirmationDialog = true;
+
+        if (isAnyReleasable && stuck is null or true)
+            ImGui.SameLine();
+
         switch (stuck)
         {
             case null:
@@ -711,19 +719,11 @@ public sealed partial class Client
                 break;
         }
 
-        var isAnyReleasable = _locations.Any(IsReleasable);
-
-        if (isAnyReleasable && stuck is null or true)
-            ImGui.SameLine();
-
-        if (isAnyReleasable && (ImGui.Button("Check") || ImGui.IsKeyDown(ImGuiKey.Enter)))
-            _showConfirmationDialog = true;
-
         if (_canGoal is not null)
             return;
 
         if (isAnyReleasable || stuck is null or true)
-            ImGui.SameLine(preferences.Width(100), 0);
+            ImGui.SameLine(preferences.Width(75), 0);
 
         if (!ImGui.Button("Goal"))
             return;
