@@ -15,6 +15,9 @@ public sealed partial class Client(Yaml? yaml = null)
         /// <summary>This location has already been checked and doesn't need to be sent again.</summary>
         Checked,
 
+        /// <summary>This location is hidden.</summary>
+        Hidden,
+
         /// <summary>This location is reachable.</summary>
         Reachable,
 
@@ -478,14 +481,13 @@ public sealed partial class Client(Yaml? yaml = null)
         void Update(string location, ILocationCheckHelper helper)
         {
             ref var value = ref this[location];
+            var id = helper.GetLocationIdFromName(_yaml.Game, location);
 
             (value.Logic, value.Status) = 0 switch
             {
-                _ when helper.GetLocationIdFromName(_yaml.Game, location) is var id &&
-                    helper.AllLocations.Contains(id) &&
-                    !helper.AllMissingLocations.Contains(id) ||
-                    _info.GetLocationsOrEmpty().Contains(location) =>
-                    (null, LocationStatus.Checked),
+                _ when id is -1 && !IsGoal(location) => (null, LocationStatus.Hidden),
+                _ when helper.AllLocations.Contains(id) && !helper.AllMissingLocations.Contains(id) ||
+                    _info.GetLocationsOrEmpty().Contains(location) => (null, LocationStatus.Checked),
                 _ when _evaluator is null => (null, LocationStatus.ProbablyReachable),
                 _ when _evaluator.InLogic(location) is { } logic => (logic, LocationStatus.OutOfLogic),
                 _ => (null, LocationStatus.Reachable),
@@ -540,6 +542,7 @@ public sealed partial class Client(Yaml? yaml = null)
         location.Contains(_locationSearch, StringComparison.OrdinalIgnoreCase) &&
         this[location].Status switch
         {
+            LocationStatus.Hidden => false,
             LocationStatus.Reachable => true,
             LocationStatus.ProbablyReachable => true,
             LocationStatus.OutOfLogic => _showOutOfLogic,
