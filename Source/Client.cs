@@ -30,12 +30,14 @@ public sealed partial class Client(Yaml? yaml = null)
     /// <param name="Name">The item name.</param>
     /// <param name="Count">The number of times this item was obtained.</param>
     /// <param name="Locations">The locations that obtained this item.</param>
+#pragma warning disable MA0097
     readonly record struct ReceivedItem(
+#pragma warning restore MA0097
         ItemFlags? Flags,
         string? Name,
         int Count,
         IReadOnlyList<(string LocationDisplayName, string LocationGame)>? Locations
-    )
+    ) : IComparable<ReceivedItem>
     {
         /// <summary>Initializes a new instance of the <see cref="ReceivedItem"/> struct.</summary>
         /// <param name="info">The <see cref="ItemInfo"/> to deconstruct.</param>
@@ -69,6 +71,9 @@ public sealed partial class Client(Yaml? yaml = null)
         /// <param name="search">The filter.</param>
         /// <returns>Whether this instance contains the parameter <paramref name="search"/> as a substring.</returns>
         public bool IsMatch(string search) => Name?.Contains(search, StringComparison.OrdinalIgnoreCase) is true;
+
+        /// <inheritdoc />
+        public int CompareTo(ReceivedItem other) => FrozenSortedDictionary.Comparer.Compare(Name, other.Name);
 
         /// <summary>Gets the string representation of the tuple.</summary>
         /// <param name="tuple">The tuple to get the string representation of.</param>
@@ -609,7 +614,7 @@ public sealed partial class Client(Yaml? yaml = null)
         if (!_showYetToReceive || _evaluator is null)
             return query;
 
-        var list = query.ToIList();
+        var list = query.ToList();
 
         foreach (var next in _evaluator.CategoryToItems[category])
         {
@@ -626,6 +631,7 @@ public sealed partial class Client(Yaml? yaml = null)
         NoAdding: ;
         }
 
+        list.Sort();
         return list;
     }
 }
