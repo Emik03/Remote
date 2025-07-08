@@ -4,6 +4,7 @@ namespace Remote;
 using JsonIgnoreAttribute = System.Text.Json.Serialization.JsonIgnoreAttribute;
 using JsonSerializer = System.Text.Json.JsonSerializer;
 using Vector2 = System.Numerics.Vector2;
+using ConnectionGroup = IGrouping<(string? Host, ushort Port), Preferences.Connection>;
 
 /// <summary>Contains the preferences that are stored persistently.</summary>
 public sealed partial class Preferences
@@ -25,6 +26,16 @@ public sealed partial class Preferences
 
         /// <summary>The thai font.</summary>
         Thai,
+    }
+
+    /// <summary>Contains the orderings for history.</summary>
+    public enum HistoryOrder
+    {
+        /// <summary>This value indicates to sort the history by date, newest to oldest.</summary>
+        Date,
+
+        /// <summary>This value indicates to sort the history alphabetically.</summary>
+        Name,
     }
 
     /// <summary>Holds a previous connection info.</summary>
@@ -81,6 +92,14 @@ public sealed partial class Preferences
                     JsonSerializer.Serialize(History, RemoteJsonSerializerContext.Default.ListConnection)
                 );
 
+            /// <summary>Finds the index that matches the key of the group.</summary>
+            /// <param name="group">The group.</param>
+            /// <returns>The index that matches the parameter <paramref name="group"/>.</returns>
+            public int Find(ConnectionGroup group) =>
+                History.FindIndex(
+                    x => group.Key.Port == x.Port && FrozenSortedDictionary.Comparer.Equals(group.Key.Host, x.Host)
+                );
+
             static List<Connection>? Deserialize() =>
                 JsonSerializer.Deserialize<List<Connection>>(
                     File.OpenRead(FilePath),
@@ -125,9 +144,6 @@ public sealed partial class Preferences
         /// <inheritdoc />
         public override int GetHashCode() => HashCode.Combine(Port, Name, Game, Host, Password ?? "");
 
-        /// <inheritdoc />
-        public override string ToString() => $"{Name} ({Host}:{Port})";
-
         /// <summary>Gets the locations.</summary>
         /// <returns>The locations.</returns>
         public ImmutableHashSet<string> GetLocationsOrEmpty() => Locations ?? ImmutableHashSet<string>.Empty;
@@ -157,7 +173,8 @@ public sealed partial class Preferences
     const string DefaultAddress = "archipelago.gg", PreferencesFile = "preferences.cfg";
 
     /// <summary>Gets the languages.</summary>
-    static readonly string s_languages = Enum.GetNames<Language>().Append("\0").Conjoin('\0');
+    static readonly string s_historyOrder = NamesSeparatedByZeros<HistoryOrder>(),
+        s_languages = NamesSeparatedByZeros<Language>();
 
     /// <summary>Gets the <see cref="ImGuiCol"/> set that represents background colors.</summary>
     static readonly FrozenSet<ImGuiCol> s_backgrounds = Enum.GetValues<ImGuiCol>()
@@ -168,7 +185,7 @@ public sealed partial class Preferences
     readonly Connection.List _list = Connection.List.Load();
 
     /// <summary>Whether to use tabs or separate windows.</summary>
-    bool _alwaysShowChat, _desktopNotifications, _holdToConfirm = true, _useTabs = true, _moveToChatTab = true;
+    bool _alwaysShowChat, _desktopNotifications, _holdToConfirm = true, _moveToChatTab = true, _useTabs = true;
 
     /// <summary>Contains the current port.</summary>
     int _language, _port;
@@ -191,6 +208,8 @@ public sealed partial class Preferences
         _repo = "",
         _yamlFilePath = "";
 
+    HistoryOrder _sortHistoryBy;
+
     /// <summary>Gets the color of the <see cref="Client.LocationStatus"/></summary>
     /// <param name="status">The status to get the color of.</param>
     /// <exception cref="ArgumentOutOfRangeException">
@@ -199,6 +218,7 @@ public sealed partial class Preferences
     public AppColor this[Client.LocationStatus status] =>
         status switch
         {
+            Client.LocationStatus.Hidden => default,
             Client.LocationStatus.Checked => this[AppPalette.Checked],
             Client.LocationStatus.Reachable => this[AppPalette.Reachable],
             Client.LocationStatus.OutOfLogic => this[AppPalette.OutOfLogic],
@@ -360,6 +380,13 @@ public sealed partial class Preferences
         [UsedImplicitly] private set => _repo = value;
     }
 
+    /// <summary>Gets or sets the value determining whether to sort the history by name or by last used.</summary>
+    public HistoryOrder SortHistoryBy
+    {
+        get => _sortHistoryBy;
+        [UsedImplicitly] private set => _sortHistoryBy = value;
+    }
+
     /// <summary>Gets or sets the font language.</summary>
     public Language FontLanguage
     {
@@ -405,6 +432,15 @@ public sealed partial class Preferences
         fromMemory.Save();
         return fromMemory;
     }
+
+    /// <summary>Gets the names separated by the null (<c>\0</c>) character.</summary>
+    /// <typeparam name="T">The type to get the names of.</typeparam>
+    /// <returns>
+    /// The <see cref="string"/> containing the values in the type parameter <typeparamref name="T"/>.
+    /// </returns>
+    static string NamesSeparatedByZeros<T>()
+        where T : struct, Enum =>
+        Enum.GetNames<T>().Append("\0").Conjoin('\0');
 
     /// <summary>Prepends the element to the beginning of the history.</summary>
     /// <param name="connection">The connection to prepend.</param>
@@ -783,6 +819,8 @@ public sealed partial class Preferences
         Sanitize();
         var ret = ImGui.Button("Enter slot manually") || enter;
         ImGui.SeparatorText("History");
+        ImGui.SetNextItemWidth(Width(100));
+        _ = ImGui.Combo("Sort", ref Unsafe.As<HistoryOrder, int>(ref _sortHistoryBy), s_historyOrder);
 
         if (_list.History.Count is not 0)
             ImGui.TextDisabled("Left click to join. Right click to delete.");
@@ -793,20 +831,73 @@ public sealed partial class Preferences
 
             if (current.IsInvalid || history[..i].Contains(current))
                 _list.History.RemoveAt(i--);
-            else if (ImGui.Button(current.ToString()))
-            {
-                Client client = new(current);
-                client.Connect(this, current.Host ?? Address, current.Port, current.Password);
-                clients = [client];
-            }
-            else if (ImGui.IsItemClicked(ImGuiMouseButton.Middle) || ImGui.IsItemClicked(ImGuiMouseButton.Right))
-                _list.History.RemoveAt(i--);
         }
 
+        clients = Order(_list.History.GroupBy(x => (x.Host, x.Port)))
+           .SelectMany(ShowHistoryHeader)
+           .Filter()
+#pragma warning disable IDE0305
+           .ToList();
+#pragma warning restore IDE0305
         if (_list.History.Count is 0)
             ImGui.Text("Join a game for buttons to appear here!");
 
         ImGui.EndTabItem();
         return ret;
     }
+
+    /// <summary>Shows the connection.</summary>
+    /// <param name="connection">The connection to show.</param>
+    /// <returns>Whether the button was clicked.</returns>
+    bool ShowHistoryButton(Connection connection)
+    {
+        var ret = ImGui.Button(connection.Name);
+
+        if (ImGui.IsItemClicked(ImGuiMouseButton.Middle) || ImGui.IsItemClicked(ImGuiMouseButton.Right))
+            _list.History.Remove(connection);
+
+        return ret;
+    }
+
+    /// <summary>Connects to the server using the <see cref="Connection"/> instance.</summary>
+    /// <param name="connection">The connection to use.</param>
+    /// <returns>The <see cref="Client"/> created based on the parameter <paramref name="connection"/>.</returns>
+    Client ConnectAndReturn(Connection connection)
+    {
+        Client client = new(connection);
+        client.Connect(this, connection.Host ?? Address, connection.Port, connection.Password);
+        return client;
+    }
+
+    /// <summary>Shows the group of history.</summary>
+    /// <param name="group">The group of history.</param>
+    /// <returns>The clients created.</returns>
+    IEnumerable<Client> ShowHistoryHeader(ConnectionGroup group) =>
+        group.ToIList() is [var first, ..] connections &&
+        ImGui.CollapsingHeader($"{first.Host}:{first.Port}{(connections.Count is 1 ? "" : $" ({connections.Count})")}")
+            ? Order(connections).Where(ShowHistoryButton).Select(ConnectAndReturn)
+            : [];
+
+    /// <summary>Orders the connections.</summary>
+    /// <param name="connections">The connections.</param>
+    /// <returns>The ordered enumerable of the parameter <paramref name="connections"/>.</returns>
+    IOrderedEnumerable<Connection> Order(IEnumerable<Connection> connections) =>
+        _sortHistoryBy switch
+        {
+            HistoryOrder.Date => connections.OrderBy(_list.History.IndexOf),
+            HistoryOrder.Name => connections.OrderBy(x => x.Name, FrozenSortedDictionary.Comparer),
+            _ => throw new ArgumentOutOfRangeException(nameof(connections), _sortHistoryBy, null),
+        };
+
+    /// <summary>Orders the connection group.</summary>
+    /// <param name="connections">The connections.</param>
+    /// <returns>The ordered enumerable of the parameter <paramref name="connections"/>.</returns>
+    IEnumerable<ConnectionGroup> Order(IEnumerable<ConnectionGroup> connections) =>
+        _sortHistoryBy switch
+        {
+            HistoryOrder.Date => connections.OrderBy(_list.Find),
+            HistoryOrder.Name =>
+                connections.OrderBy(x => x.Key.Host, FrozenSortedDictionary.Comparer).ThenBy(x => x.Key.Port),
+            _ => [],
+        };
 }

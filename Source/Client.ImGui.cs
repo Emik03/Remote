@@ -4,9 +4,6 @@ namespace Remote;
 /// <inheritdoc cref="Client"/>
 public sealed partial class Client
 {
-    /// <summary>Contains the options for the hint setting.</summary>
-    static readonly string[] s_hintOptions = ["Show sent hints", "Show received hints"];
-
     /// <summary>Contains the list of sent messages, with the drafting message at the end.</summary>
     readonly List<string> _sentMessages = [""];
 
@@ -476,7 +473,7 @@ public sealed partial class Client
         ImGui.TextDisabled($"You can do {hintCount.Conjugate("hint")} ({rm.HintPoints.Conjugate("point")})");
         _ = ImGui.Checkbox("Show obtained hints", ref _showObtainedHints);
         ImGui.SetNextItemWidth(preferences.Width(150));
-        _ = ImGui.Combo("Filter", ref _hintIndex, s_hintOptions, s_hintOptions.Length);
+        _ = ImGui.Combo("Filter", ref _hintIndex, "Show sent hints\0Show received hints\0\0");
 
         if (LastHints is { } hints)
             foreach (var (itemFlags, message) in hints.Where(ShouldBeVisible)

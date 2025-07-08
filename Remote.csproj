@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <FileVersion>1.4</FileVersion>
+        <FileVersion>1.5</FileVersion>
         <OutputType>WinExe</OutputType>
         <PublishTrimmed>false</PublishTrimmed>
         <TargetFramework>net10.0</TargetFramework>
