@@ -410,12 +410,8 @@ public sealed partial class Preferences
     /// <returns>The new color.</returns>
     public static AppColor ShowColorEdit(string name, AppColor color)
     {
-        const ImGuiColorEditFlags DragFlags = ImGuiColorEditFlags.NoSmallPreview |
-            ImGuiColorEditFlags.DisplayHSV;
-
         var v = color.Vector;
         ImGui.ColorEdit4(name, ref v, ImGuiColorEditFlags.DisplayHex);
-        ImGui.ColorEdit4($"##{name}", ref v, DragFlags);
         return new(v);
     }
 
@@ -752,6 +748,7 @@ public sealed partial class Preferences
         ImGui.SetNextItemWidth(Width(250));
         _ = ImGui.Combo("Font Language", ref _language, s_languages);
         ImGui.SeparatorText("Theming");
+        ImGui.TextDisabled("Press on the color for more options!");
 
         if (ImGui.CollapsingHeader("Theme"))
             for (var i = 0; i < Colors.Count.Min((int)AppPalette.Count); i++)
