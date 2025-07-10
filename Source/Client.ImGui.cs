@@ -924,6 +924,14 @@ public sealed partial class Client
 
         if (IsReleasing)
         {
+            if (preferences.AlwaysShowChat)
+            {
+                Release(preferences);
+                ClearChecked();
+                _showConfirmationDialog = false;
+                return;
+            }
+
             ImGui.TextColored(preferences[AppPalette.Released], ReleaseMessage());
             ImGui.TextDisabled("Press left click to return to the previous screen");
             Release(preferences);
