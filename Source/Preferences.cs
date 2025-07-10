@@ -184,11 +184,16 @@ public sealed partial class Preferences
     /// <summary>Contains the history.</summary>
     readonly Connection.List _list = Connection.List.Load();
 
-    /// <summary>Whether to use tabs or separate windows.</summary>
-    bool _alwaysShowChat, _desktopNotifications, _holdToConfirm = true, _moveToChatTab = true, _useTabs = true;
+    /// <summary>Contains boolean settings.</summary>
+    bool _alwaysShowChat,
+        _desktopNotifications,
+        _holdToConfirm = true,
+        _moveToChatTab = true,
+        _sideBySide,
+        _useTabs = true;
 
-    /// <summary>Contains the current port.</summary>
-    int _language, _port;
+    /// <summary>Contains integer settings.</summary>
+    int _language, _port, _sortHistoryBy;
 
     /// <summary>Contains the current UI settings.</summary>
     float _activeTabDim = 1.25f,
@@ -208,7 +213,9 @@ public sealed partial class Preferences
         _repo = "",
         _yamlFilePath = "";
 
-    HistoryOrder _sortHistoryBy;
+    /// <summary>Gets the color of the <see cref="AppPalette"/></summary>
+    /// <param name="color">The color to get the preference's color of.</param>
+    public AppColor this[AppPalette color] => Colors[(int)color];
 
     /// <summary>Gets the color of the <see cref="Client.LocationStatus"/></summary>
     /// <param name="status">The status to get the color of.</param>
@@ -225,10 +232,6 @@ public sealed partial class Preferences
             Client.LocationStatus.ProbablyReachable => this[AppPalette.Neutral],
             _ => throw new ArgumentOutOfRangeException(nameof(status), status, null),
         };
-
-    /// <summary>Gets the color of the <see cref="AppPalette"/></summary>
-    /// <param name="color">The color to get the preference's color of.</param>
-    public AppColor this[AppPalette color] => Colors[(int)color];
 
     /// <summary>Gets the default installation path of Archipelago.</summary>
     public static string DefaultDirectory { get; } = Path.Join(
@@ -279,6 +282,13 @@ public sealed partial class Preferences
     {
         get => _moveToChatTab;
         [UsedImplicitly] private set => _moveToChatTab = value;
+    }
+
+    /// <summary>Gets or sets the value determining whether to display the chat side-by-side.</summary>
+    public bool SideBySide
+    {
+        get => _sideBySide;
+        [UsedImplicitly] private set => _sideBySide = value;
     }
 
     /// <summary>Gets or sets the active tab dim.</summary>
@@ -383,8 +393,8 @@ public sealed partial class Preferences
     /// <summary>Gets or sets the value determining whether to sort the history by name or by last used.</summary>
     public HistoryOrder SortHistoryBy
     {
-        get => _sortHistoryBy;
-        [UsedImplicitly] private set => _sortHistoryBy = value;
+        get => (HistoryOrder)_sortHistoryBy;
+        [UsedImplicitly] private set => _sortHistoryBy = (int)value;
     }
 
     /// <summary>Gets or sets the font language.</summary>
@@ -541,6 +551,16 @@ public sealed partial class Preferences
             current = connection;
         }
     }
+
+    /// <summary>Invokes <see cref="ImGui.BeginChild(string)"/>.</summary>
+    /// <param name="id">The id.</param>
+    /// <returns>Whether to continue rendering.</returns>
+    public bool BeginChild(string id) =>
+        _alwaysShowChat &&
+        ImGui.GetContentRegionAvail() is var available &&
+        (_sideBySide ? available.X /= 2 : available.Y /= 2) is var _
+            ? ImGui.BeginChild(id, available)
+            : ImGui.BeginChild(id);
 
     /// <summary>Shows the preferences window.</summary>
     /// <param name="gameTime">The time elapsed.</param>
@@ -700,7 +720,11 @@ public sealed partial class Preferences
         ImGui.SeparatorText("Navigation");
         _ = ImGui.Checkbox("Tabs instead of separate windows", ref _useTabs);
         _ = ImGui.Checkbox("Always show chat", ref _alwaysShowChat);
-        _ = ImGui.Checkbox("Move to chat tab when releasing", ref _moveToChatTab);
+
+        _ = _alwaysShowChat
+            ? ImGui.Checkbox("Side by side", ref _sideBySide)
+            : ImGui.Checkbox("Move to chat tab when releasing", ref _moveToChatTab);
+
         _ = ImGui.Checkbox("Hold to confirm location release", ref _holdToConfirm);
 
         if (OperatingSystem.IsFreeBSD() || OperatingSystem.IsLinux())
@@ -820,7 +844,7 @@ public sealed partial class Preferences
         var ret = ImGui.Button("Enter slot manually") || enter;
         ImGui.SeparatorText("History");
         ImGui.SetNextItemWidth(Width(100));
-        _ = ImGui.Combo("Sort", ref Unsafe.As<HistoryOrder, int>(ref _sortHistoryBy), s_historyOrder);
+        _ = ImGui.Combo("Sort", ref _sortHistoryBy, s_historyOrder);
 
         if (_list.History.Count is not 0)
             ImGui.TextDisabled("Left click to join. Right click to delete.");
@@ -882,18 +906,18 @@ public sealed partial class Preferences
     /// <param name="connections">The connections.</param>
     /// <returns>The ordered enumerable of the parameter <paramref name="connections"/>.</returns>
     IOrderedEnumerable<Connection> Order(IEnumerable<Connection> connections) =>
-        _sortHistoryBy switch
+        SortHistoryBy switch
         {
             HistoryOrder.Date => connections.OrderBy(_list.History.IndexOf),
             HistoryOrder.Name => connections.OrderBy(x => x.Name, FrozenSortedDictionary.Comparer),
-            _ => throw new ArgumentOutOfRangeException(nameof(connections), _sortHistoryBy, null),
+            var x => throw new ArgumentOutOfRangeException(nameof(connections), x, null),
         };
 
     /// <summary>Orders the connection group.</summary>
     /// <param name="connections">The connections.</param>
     /// <returns>The ordered enumerable of the parameter <paramref name="connections"/>.</returns>
     IEnumerable<ConnectionGroup> Order(IEnumerable<ConnectionGroup> connections) =>
-        _sortHistoryBy switch
+        SortHistoryBy switch
         {
             HistoryOrder.Date => connections.OrderBy(_list.Find),
             HistoryOrder.Name =>

@@ -253,15 +253,6 @@ public sealed partial class Client
         PushRange(span[last..], colored, ref braces, ref isIdentifier);
     }
 
-    /// <summary>Invokes <see cref="ImGui.BeginChild(string)"/>.</summary>
-    /// <param name="id">The id.</param>
-    /// <param name="isHalved">Whether to make the the region half as large.</param>
-    /// <returns></returns>
-    static bool BeginChild(string id, bool isHalved = false) =>
-        isHalved && ImGui.GetContentRegionAvail() is var available && (available.Y /= 2) is var _
-            ? ImGui.BeginChild(id, available)
-            : ImGui.BeginChild(id);
-
     /// <summary>Creates two inline buttons.</summary>
     /// <param name="first">The label of the first button.</param>
     /// <param name="second">The label of the second button.</param>
@@ -383,7 +374,7 @@ public sealed partial class Client
         if (!ImGui.BeginTabItem("Players"))
             return;
 
-        if (!BeginChild("Players", preferences.AlwaysShowChat))
+        if (!preferences.BeginChild("Players"))
         {
             ImGui.EndChild();
             return;
@@ -412,7 +403,7 @@ public sealed partial class Client
         if (!ImGui.BeginTabItem("Locations"))
             return;
 
-        if (!BeginChild("Locations", preferences.AlwaysShowChat))
+        if (!preferences.BeginChild("Locations"))
         {
             ImGui.EndChild();
             return;
@@ -437,7 +428,7 @@ public sealed partial class Client
         if (!ImGui.BeginTabItem("Items"))
             return;
 
-        if (!BeginChild("Items", preferences.AlwaysShowChat))
+        if (!preferences.BeginChild("Items"))
         {
             ImGui.EndChild();
             return;
@@ -465,7 +456,7 @@ public sealed partial class Client
             return;
         }
 
-        if (!BeginChild("Hints", preferences.AlwaysShowChat))
+        if (!preferences.BeginChild("Hints"))
         {
             ImGui.EndChild();
             return;
@@ -503,7 +494,7 @@ public sealed partial class Client
         if (!ImGui.BeginTabItem("Settings"))
             return;
 
-        if (!BeginChild("Settings", preferences.AlwaysShowChat))
+        if (!preferences.BeginChild("Settings"))
         {
             ImGui.EndChild();
             return;
@@ -547,7 +538,7 @@ public sealed partial class Client
         if (!isChatTab && !preferences.AlwaysShowChat)
             return;
 
-        if (!BeginChild("Chat"))
+        if (!ImGui.BeginChild("Chat"))
         {
             ImGui.EndChild();
             return;
