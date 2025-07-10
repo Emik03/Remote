@@ -10,6 +10,11 @@ AppDomain.CurrentDomain.AssemblyResolve +=
         )
         : null;
 
+AppDomain.CurrentDomain.UnhandledException += (_, e) => File.WriteAllText(
+    Path.Join(Path.GetTempPath(), $"{nameof(Remote)}.{DateTime.Now.ToString("s").Replace(':', '_')}.crash.txt"),
+    e.ExceptionObject.ToString()
+);
+
 using RemoteGame game = new();
 game.Run();
 #endif
