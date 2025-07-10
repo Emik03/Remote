@@ -411,8 +411,7 @@ public sealed partial class Preferences
     public static AppColor ShowColorEdit(string name, AppColor color)
     {
         const ImGuiColorEditFlags DragFlags = ImGuiColorEditFlags.NoSmallPreview |
-            ImGuiColorEditFlags.DisplayHSV |
-            ImGuiColorEditFlags.InputHSV;
+            ImGuiColorEditFlags.DisplayHSV;
 
         var v = color.Vector;
         ImGui.ColorEdit4(name, ref v, ImGuiColorEditFlags.DisplayHex);
