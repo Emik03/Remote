@@ -404,6 +404,61 @@ public sealed partial class Preferences
         [UsedImplicitly] private set => _language = (int)value;
     }
 
+    /// <summary>Shows the text.</summary>
+    /// <param name="text">The text to show.</param>
+    /// <param name="color">The color of the text.</param>
+    /// <param name="disabled">Whether the text is disabled.</param>
+    public static unsafe void ShowText(string text, AppColor? color = null, bool disabled = false)
+    {
+        var pushed = true;
+
+        if (disabled && ImGui.GetStyleColorVec4(ImGuiCol.TextDisabled) is not null and var ptr)
+            ImGui.PushStyleColor(ImGuiCol.Text, *ptr);
+        else if (color is { } v)
+            ImGui.PushStyleColor(ImGuiCol.Text, v);
+        else
+            pushed = false;
+
+        foreach (var word in text.SplitSpanWhitespace())
+        {
+            if (ImGui.GetContentRegionAvail().X is var avail &&
+                ImGui.CalcTextSize(word).X + ImGui.CalcTextSize([' ']).X is var width &&
+                avail <= width)
+            {
+                ImGui.NewLine();
+                avail = ImGui.GetContentRegionAvail().X;
+            }
+
+            if (avail > width)
+            {
+                ImGui.TextUnformatted(word);
+                ImGui.SameLine(0, 0);
+                ImGui.TextUnformatted([' ']);
+                ImGui.SameLine(0, 0);
+                continue;
+            }
+
+            var drain = word;
+
+            for (var i = 2; i <= drain.Length; i++)
+                if (ImGui.GetContentRegionAvail().X <= ImGui.CalcTextSize(drain[..i]).X)
+                {
+                    var letters = drain[..(i - 1)];
+                    ImGui.TextUnformatted(letters);
+                    drain = drain[letters.Length..];
+                    i = 2;
+                }
+
+            ImGui.TextUnformatted(drain);
+            ImGui.SameLine(0, 0);
+        }
+
+        ImGui.NewLine();
+
+        if (pushed)
+            ImGui.PopStyleColor();
+    }
+
     /// <summary>Shows the color edit widget.</summary>
     /// <param name="name">The displayed text.</param>
     /// <param name="color">The color that will change.</param>
@@ -437,15 +492,6 @@ public sealed partial class Preferences
         fromMemory.Save();
         return fromMemory;
     }
-
-    /// <summary>Gets the names separated by the null (<c>\0</c>) character.</summary>
-    /// <typeparam name="T">The type to get the names of.</typeparam>
-    /// <returns>
-    /// The <see cref="string"/> containing the values in the type parameter <typeparamref name="T"/>.
-    /// </returns>
-    static string NamesSeparatedByZeros<T>()
-        where T : struct, Enum =>
-        Enum.GetNames<T>().Append("\0").Conjoin('\0');
 
     /// <summary>Prepends the element to the beginning of the history.</summary>
     /// <param name="connection">The connection to prepend.</param>
@@ -503,6 +549,16 @@ public sealed partial class Preferences
         _list.Save();
     }
 
+    /// <summary>Shows the text.</summary>
+    /// <param name="text">The text to show.</param>
+    /// <param name="color">The color of the text.</param>
+    public void ShowText(string text, AppPalette color) => ShowText(text, this[color]);
+
+    /// <summary>Shows the text.</summary>
+    /// <param name="text">The text to show.</param>
+    /// <param name="color">The color of the text.</param>
+    public void ShowText(string text, Client.LocationStatus color) => ShowText(text, this[color]);
+
     /// <summary>Synchronizes the connection with the one found within the internal collection.</summary>
     /// <param name="connection">The connection to synchronize.</param>
     [CLSCompliant(false)]
@@ -558,9 +614,12 @@ public sealed partial class Preferences
 
         var available = ImGui.GetContentRegionAvail();
 
-        if (!sameLine)
-            _ = _sideBySide ? available.X /= 2 : available.Y /= 2;
-        else if (_sideBySide)
+        if (_sideBySide)
+            available.X /= 2;
+        else if (!sameLine)
+            available.Y /= 2;
+
+        if (sameLine && _sideBySide)
             ImGui.SameLine();
 
         return ImGui.BeginChild(id, available);
@@ -666,6 +725,15 @@ public sealed partial class Preferences
         return ret;
     }
 
+    /// <summary>Gets the names separated by the null (<c>\0</c>) character.</summary>
+    /// <typeparam name="T">The type to get the names of.</typeparam>
+    /// <returns>
+    /// The <see cref="string"/> containing the values in the type parameter <typeparamref name="T"/>.
+    /// </returns>
+    static string NamesSeparatedByZeros<T>()
+        where T : struct, Enum =>
+        Enum.GetNames<T>().Append("\0").Conjoin('\0');
+
     /// <summary>Gets the full path to the file.</summary>
     /// <param name="file">The file path to get.</param>
     /// <param name="environment">The environment variable that allows users to override the return.</param>
@@ -748,7 +816,7 @@ public sealed partial class Preferences
         ImGui.SetNextItemWidth(Width(250));
         _ = ImGui.Combo("Font Language", ref _language, s_languages);
         ImGui.SeparatorText("Theming");
-        ImGui.TextDisabled("Press on the color for more options!");
+        ShowText("Press on the color for more options!", disabled: true);
 
         if (ImGui.CollapsingHeader("Theme"))
             for (var i = 0; i < Colors.Count.Min((int)AppPalette.Count); i++)
@@ -843,7 +911,7 @@ public sealed partial class Preferences
         );
 
         ImGui.SeparatorText("Join");
-        ImGui.TextDisabled("Drop a YAML file to start playing, or...");
+        ShowText("Drop a YAML file to start playing, or...", disabled: true);
         ShowPasteTextField(ref clients);
         Sanitize();
         var ret = ImGui.Button("Enter slot manually") || enter;
@@ -852,7 +920,7 @@ public sealed partial class Preferences
         _ = ImGui.Combo("Sort", ref _sortHistoryBy, s_historyOrder);
 
         if (_list.History.Count is not 0)
-            ImGui.TextDisabled("Left click to join. Right click to delete.");
+            ShowText("Left click to join. Right click to delete.", disabled: true);
 
         for (var i = 0; i < _list.History.Count && CollectionsMarshal.AsSpan(_list.History) is var history; i++)
         {
@@ -869,7 +937,7 @@ public sealed partial class Preferences
            .ToList();
 #pragma warning restore IDE0305
         if (_list.History.Count is 0)
-            ImGui.Text("Join a game for buttons to appear here!");
+            ShowText("Join a game for buttons to appear here!");
 
         ImGui.EndTabItem();
         return ret;

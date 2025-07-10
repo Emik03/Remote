@@ -98,7 +98,7 @@ public sealed class RemoteGame : Game
             ImGui.SetNextWindowSize(new(GraphicsDevice.Width(), GraphicsDevice.Height()));
         }
 
-        if (ImGui.Begin(s_name, ImGuiWindowFlags.HorizontalScrollbar | tab))
+        if (ImGui.Begin(s_name, Client.WindowFlags | tab))
         {
             if (_preferences.Show(gameTime, _clients, out _tab, out var fromHistory))
                 _ = Add(new());

@@ -4,6 +4,9 @@ namespace Remote;
 /// <inheritdoc cref="Client"/>
 public sealed partial class Client
 {
+    /// <summary>The window flags.</summary>
+    public const ImGuiWindowFlags WindowFlags = ImGuiWindowFlags.HorizontalScrollbar | ImGuiWindowFlags.NoScrollbar;
+
     /// <summary>Contains the list of sent messages, with the drafting message at the end.</summary>
     readonly List<string> _sentMessages = [""];
 
@@ -62,7 +65,7 @@ public sealed partial class Client
                 return Close(preferences, open);
             }
         }
-        else if (!ImGui.Begin(_windowName, ref open, ImGuiWindowFlags.HorizontalScrollbar) || !open)
+        else if (!ImGui.Begin(_windowName, ref open, WindowFlags) || !open)
         {
             if (pushedColor)
                 ImGui.PopStyleColor(Styles);
@@ -181,16 +184,6 @@ public sealed partial class Client
         ImGui.PushStyleColor(ImGuiCol.FrameBg, inactive);
     }
 
-    /// <summary>Creates text that is colored and unformatted.</summary>
-    /// <param name="color">The color of the text.</param>
-    /// <param name="text">The text.</param>
-    static void TextColoredUnformatted(AppColor color, string text)
-    {
-        ImGui.PushStyleColor(ImGuiCol.Text, color);
-        ImGui.TextUnformatted(text);
-        ImGui.PopStyleColor();
-    }
-
     /// <summary>Convenience function for displaying a tooltip with text scaled by the user preferences.</summary>
     /// <param name="preferences">The user preferences.</param>
     /// <param name="text">The text to display.</param>
@@ -300,7 +293,7 @@ public sealed partial class Client
             foreach (var error in _errors.AsSpan())
                 if (!string.IsNullOrEmpty(error))
                 {
-                    TextColoredUnformatted(preferences[AppPalette.Trap], error);
+                    preferences.ShowText(error, AppPalette.Trap);
                     CopyIfClicked(preferences, error);
                 }
 
@@ -463,9 +456,9 @@ public sealed partial class Client
         }
 
         var rm = _session.RoomState;
-        ImGui.TextDisabled($"Hint cost percentage: {rm.HintCostPercentage}%% ({rm.HintCost.Conjugate("point")})");
+        Preferences.ShowText($"Hint cost percentage: {rm.HintCostPercentage}% ({rm.HintCost.Conjugate("point")})");
         var hintCount = rm.HintCost is 0 ? 0 : rm.HintPoints / rm.HintCost;
-        ImGui.TextDisabled($"You can do {hintCount.Conjugate("hint")} ({rm.HintPoints.Conjugate("point")})");
+        Preferences.ShowText($"You can do {hintCount.Conjugate("hint")} ({rm.HintPoints.Conjugate("point")})");
         _ = ImGui.Checkbox("Show obtained hints", ref _showObtainedHints);
         ImGui.SetNextItemWidth(preferences.Width(150));
         _ = ImGui.Combo("Filter", ref _hintIndex, "Show sent hints\0Show received hints\0\0");
@@ -548,7 +541,7 @@ public sealed partial class Client
         }
 
         if (isChatTab)
-            ImGui.TextDisabled("TIP: Right click text or checkboxes to copy them!");
+            Preferences.ShowText("TIP: Right click text or checkboxes to copy them!", disabled: true);
 
         ShowLog(preferences);
         ImGui.SeparatorText("Message");
@@ -575,13 +568,13 @@ public sealed partial class Client
         }
 
         ImGui.SameLine();
-        ImGui.TextDisabled("(?)");
+        Preferences.ShowText("(?)", disabled: true);
 
         if (ImGui.IsItemHovered())
             Tooltip(preferences, HelpMessage1);
 
         ImGui.SameLine();
-        ImGui.TextDisabled("(?)");
+        Preferences.ShowText("(?)", disabled: true);
 
         if (ImGui.IsItemHovered())
             Tooltip(preferences, HelpMessage2);
@@ -660,10 +653,10 @@ public sealed partial class Client
         switch (stuck)
         {
             case null:
-                ImGui.TextColored(preferences[AppPalette.BK], "BK");
+                preferences.ShowText("BK", AppPalette.BK);
                 break;
             case true:
-                ImGui.TextColored(preferences[AppPalette.Released], "Done");
+                preferences.ShowText("Done", AppPalette.Released);
 
                 if (_canGoal is false)
                     _canGoal = null;
@@ -721,7 +714,7 @@ public sealed partial class Client
         var playerName = player.ToString();
         var isSelf = player.Slot == _session.Players.ActivePlayer.Slot;
         var selfColor = preferences[isSelf ? AppPalette.Useful : AppPalette.Neutral];
-        TextColoredUnformatted(selfColor, playerName);
+        Preferences.ShowText(playerName, selfColor);
         CopyIfClicked(preferences, playerName);
 
         if (isSelf && ImGui.IsItemHovered())
@@ -734,7 +727,7 @@ public sealed partial class Client
         if (!ImGui.TableNextColumn())
             return;
 
-        TextColoredUnformatted(preferences[isManual ? AppPalette.Progression : AppPalette.Neutral], gameName);
+        preferences.ShowText(gameName, isManual ? AppPalette.Progression : AppPalette.Neutral);
         CopyIfClicked(preferences, gameName);
 
         if (isManual && ImGui.IsItemHovered())
@@ -745,7 +738,7 @@ public sealed partial class Client
         if (!ImGui.TableNextColumn())
             return;
 
-        TextColoredUnformatted(selfColor, slotName);
+        Preferences.ShowText(slotName, selfColor);
         CopyIfClicked(preferences, slotName);
 
         if (isSelf && ImGui.IsItemHovered())
@@ -756,7 +749,7 @@ public sealed partial class Client
 
         var teamName = player.Team.ToString();
         var isTeammate = player.Team == _session.Players.ActivePlayer.Team;
-        TextColoredUnformatted(preferences[isTeammate ? AppPalette.Neutral : AppPalette.Checked], teamName);
+        preferences.ShowText(teamName, isTeammate ? AppPalette.Neutral : AppPalette.Checked);
         CopyIfClicked(preferences, teamName);
     }
 
@@ -933,8 +926,8 @@ public sealed partial class Client
                 return;
             }
 
-            ImGui.TextColored(preferences[AppPalette.Released], ReleaseMessage());
-            ImGui.TextDisabled("Press left click to return to the previous screen");
+            preferences.ShowText(ReleaseMessage(), AppPalette.Released);
+            Preferences.ShowText("Press left click to return to the previous screen", disabled: true);
             Release(preferences);
 
             if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
@@ -943,9 +936,8 @@ public sealed partial class Client
             return;
         }
 
-        var color = preferences[outOfLogic ? AppPalette.ReleasingOutOfLogic : AppPalette.Releasing];
         _confirmationTimer = preferences.HoldToConfirm ? _confirmationTimer - gameTime.ElapsedGameTime : new(-1);
-        ImGui.TextColored(color, ReleasingMessage());
+        preferences.ShowText(ReleasingMessage(), outOfLogic ? AppPalette.ReleasingOutOfLogic : AppPalette.Releasing);
     }
 
     /// <summary>Displays all messages starting from the index provided.</summary>
@@ -980,7 +972,7 @@ public sealed partial class Client
                     _ => AppPalette.Neutral,
                 };
 
-                TextColoredUnformatted(preferences[palette], part.Text);
+                preferences.ShowText(part.Text, palette);
 
                 if (priority is not AppPalette.Neutral && ImGui.IsItemHovered())
                     Tooltip(preferences, $"Item Class: {priority}");
