@@ -253,6 +253,15 @@ public sealed partial class Client
         PushRange(span[last..], colored, ref braces, ref isIdentifier);
     }
 
+    /// <summary>Invokes <see cref="ImGui.BeginChild(string)"/>.</summary>
+    /// <param name="id">The id.</param>
+    /// <param name="isHalved">Whether to make the the region half as large.</param>
+    /// <returns></returns>
+    static bool BeginChild(string id, bool isHalved = false) =>
+        isHalved && ImGui.GetContentRegionAvail() is var available && (available.Y /= 2) is var _
+            ? ImGui.BeginChild(id, available)
+            : ImGui.BeginChild(id);
+
     /// <summary>Creates two inline buttons.</summary>
     /// <param name="first">The label of the first button.</param>
     /// <param name="second">The label of the second button.</param>
@@ -347,7 +356,7 @@ public sealed partial class Client
     void ShowChatTab(Preferences preferences)
     {
         Debug.Assert(_session is not null);
-        var isForced = preferences.MoveToChatTab && IsReleasing;
+        var isForced = preferences is { AlwaysShowChat: false, MoveToChatTab: true } && IsReleasing;
         var flags = isForced ? ImGuiTabItemFlags.SetSelected : ImGuiTabItemFlags.None;
         var ret = !ImGuiRenderer.BeginTabItem("Chat", ref Unsafe.NullRef<bool>(), flags);
 
@@ -374,9 +383,7 @@ public sealed partial class Client
         if (!ImGui.BeginTabItem("Players"))
             return;
 
-        ShowChat(preferences);
-
-        if (!ImGui.BeginChild("Players"))
+        if (!BeginChild("Players", preferences.AlwaysShowChat))
         {
             ImGui.EndChild();
             return;
@@ -391,6 +398,7 @@ public sealed partial class Client
         ShowPlayers(preferences);
         ImGui.EndTable();
         ImGui.EndChild();
+        ShowChat(preferences);
         ImGui.EndTabItem();
     }
 
@@ -404,9 +412,7 @@ public sealed partial class Client
         if (!ImGui.BeginTabItem("Locations"))
             return;
 
-        ShowChat(preferences);
-
-        if (!ImGui.BeginChild("Locations"))
+        if (!BeginChild("Locations", preferences.AlwaysShowChat))
         {
             ImGui.EndChild();
             return;
@@ -418,6 +424,7 @@ public sealed partial class Client
             ShowLocations(preferences);
 
         ImGui.EndChild();
+        ShowChat(preferences);
         ImGui.EndTabItem();
     }
 
@@ -430,9 +437,7 @@ public sealed partial class Client
         if (!ImGui.BeginTabItem("Items"))
             return;
 
-        ShowChat(preferences);
-
-        if (!ImGui.BeginChild("Items"))
+        if (!BeginChild("Items", preferences.AlwaysShowChat))
         {
             ImGui.EndChild();
             return;
@@ -444,6 +449,7 @@ public sealed partial class Client
             ShowManualItems(preferences);
 
         ImGui.EndChild();
+        ShowChat(preferences);
         ImGui.EndTabItem();
     }
 
@@ -459,9 +465,7 @@ public sealed partial class Client
             return;
         }
 
-        ShowChat(preferences);
-
-        if (!ImGui.BeginChild("Hints"))
+        if (!BeginChild("Hints", preferences.AlwaysShowChat))
         {
             ImGui.EndChild();
             return;
@@ -487,6 +491,7 @@ public sealed partial class Client
             }
 
         ImGui.EndChild();
+        ShowChat(preferences);
         ImGui.EndTabItem();
     }
 
@@ -498,9 +503,7 @@ public sealed partial class Client
         if (!ImGui.BeginTabItem("Settings"))
             return;
 
-        ShowChat(preferences);
-
-        if (!ImGui.BeginChild("Settings"))
+        if (!BeginChild("Settings", preferences.AlwaysShowChat))
         {
             ImGui.EndChild();
             return;
@@ -532,6 +535,7 @@ public sealed partial class Client
             _info = _info with { Color = newColor.ToString() };
 
         ImGui.EndChild();
+        ShowChat(preferences);
         ImGui.EndTabItem();
     }
 
@@ -543,9 +547,7 @@ public sealed partial class Client
         if (!isChatTab && !preferences.AlwaysShowChat)
             return;
 
-        var avail = ImGui.GetContentRegionAvail();
-
-        if (isChatTab ? !ImGui.BeginChild("Chat") : !ImGui.BeginChild("Chat", avail with { Y = avail.Y / 2 }))
+        if (!BeginChild("Chat"))
         {
             ImGui.EndChild();
             return;
