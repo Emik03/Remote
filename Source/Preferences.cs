@@ -554,13 +554,22 @@ public sealed partial class Preferences
 
     /// <summary>Invokes <see cref="ImGui.BeginChild(string)"/>.</summary>
     /// <param name="id">The id.</param>
+    /// <param name="sameLine">Whether to call <see cref="ImGui.SameLine()"/></param>
     /// <returns>Whether to continue rendering.</returns>
-    public bool BeginChild(string id) =>
-        _alwaysShowChat &&
-        ImGui.GetContentRegionAvail() is var available &&
-        (_sideBySide ? available.X /= 2 : available.Y /= 2) is var _
-            ? ImGui.BeginChild(id, available)
-            : ImGui.BeginChild(id);
+    public bool BeginChild(string id, bool sameLine = false)
+    {
+        if (!_alwaysShowChat)
+            return ImGui.BeginChild(id);
+
+        var available = ImGui.GetContentRegionAvail();
+
+        if (!sameLine)
+            _ = _sideBySide ? available.X /= 2 : available.Y /= 2;
+        else if (_sideBySide)
+            ImGui.SameLine();
+
+        return ImGui.BeginChild(id, available);
+    }
 
     /// <summary>Shows the preferences window.</summary>
     /// <param name="gameTime">The time elapsed.</param>

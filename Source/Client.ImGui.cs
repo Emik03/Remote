@@ -530,6 +530,9 @@ public sealed partial class Client
         ImGui.EndTabItem();
     }
 
+    /// <summary>Shows the chat.</summary>
+    /// <param name="preferences">The user preferences.</param>
+    /// <param name="isChatTab">Whether this was called from the chat tab.</param>
     void ShowChat(Preferences preferences, bool isChatTab = false)
     {
         const ImGuiInputTextFlags Flags = Preferences.TextFlags | ImGuiInputTextFlags.AllowTabInput;
@@ -538,7 +541,7 @@ public sealed partial class Client
         if (!isChatTab && !preferences.AlwaysShowChat)
             return;
 
-        if (!ImGui.BeginChild("Chat"))
+        if (isChatTab ? !ImGui.BeginChild("Chat") : !preferences.BeginChild("Chat", true))
         {
             ImGui.EndChild();
             return;
@@ -590,7 +593,6 @@ public sealed partial class Client
     /// <param name="preferences">The user preferences.</param>
     void ShowPlayers(Preferences preferences)
     {
-        const string FlavorText = "Despite everything, it's still you.";
         Debug.Assert(_session is not null);
         ImGui.TableSetupColumn("Name", ImGuiTableColumnFlags.None, preferences.UiScale * 10);
         ImGui.TableSetupColumn("Game", ImGuiTableColumnFlags.None, preferences.UiScale * 10);
@@ -599,53 +601,7 @@ public sealed partial class Client
         ImGui.TableHeadersRow();
 
         foreach (var player in _session.Players.AllPlayers)
-        {
-            ImGui.TableNextRow();
-
-            if (!ImGui.TableNextColumn())
-                continue;
-
-            var playerName = player.ToString();
-            var isSelf = player.Slot == _session.Players.ActivePlayer.Slot;
-            var selfColor = preferences[isSelf ? AppPalette.Useful : AppPalette.Neutral];
-            TextColoredUnformatted(selfColor, playerName);
-            CopyIfClicked(preferences, playerName);
-
-            if (isSelf && ImGui.IsItemHovered())
-                Tooltip(preferences, FlavorText);
-
-            var (gameName, isManual) = player.Game is ['M', 'a', 'n', 'u', 'a', 'l', '_', .. var rest]
-                ? (rest.SplitOn('_')[..^1].ToString(), true)
-                : (player.Game, false);
-
-            if (!ImGui.TableNextColumn())
-                continue;
-
-            TextColoredUnformatted(preferences[isManual ? AppPalette.Progression : AppPalette.Neutral], gameName);
-            CopyIfClicked(preferences, gameName);
-
-            if (isManual && ImGui.IsItemHovered())
-                Tooltip(preferences, "Manual Game");
-
-            var slotName = player.Slot.ToString();
-
-            if (!ImGui.TableNextColumn())
-                continue;
-
-            TextColoredUnformatted(selfColor, slotName);
-            CopyIfClicked(preferences, slotName);
-
-            if (isSelf && ImGui.IsItemHovered())
-                Tooltip(preferences, FlavorText);
-
-            if (!ImGui.TableNextColumn())
-                continue;
-
-            var teamName = player.Team.ToString();
-            var isTeammate = player.Team == _session.Players.ActivePlayer.Team;
-            TextColoredUnformatted(preferences[isTeammate ? AppPalette.Neutral : AppPalette.Checked], teamName);
-            CopyIfClicked(preferences, teamName);
-        }
+            ShowPlayer(preferences, player);
     }
 
     /// <summary>Shows the confirmation dialog for releasing locations.</summary>
@@ -730,7 +686,7 @@ public sealed partial class Client
     }
 
     /// <summary>Shows the message log.</summary>
-    /// <param name="preferences">The user preferences</param>
+    /// <param name="preferences">The user preferences.</param>
     void ShowLog(Preferences preferences)
     {
         ImGui.SeparatorText("Log");
@@ -748,6 +704,60 @@ public sealed partial class Client
             ImGui.SetScrollHereY(1);
 
         ImGui.EndChild();
+    }
+
+    /// <summary>Shows the player within a table.</summary>
+    /// <param name="preferences">The user preferences.</param>
+    /// <param name="player">The player to show.</param>
+    void ShowPlayer(Preferences preferences, PlayerInfo player)
+    {
+        const string FlavorText = "Despite everything, it's still you.";
+        Debug.Assert(_session is not null);
+        ImGui.TableNextRow();
+
+        if (!ImGui.TableNextColumn())
+            return;
+
+        var playerName = player.ToString();
+        var isSelf = player.Slot == _session.Players.ActivePlayer.Slot;
+        var selfColor = preferences[isSelf ? AppPalette.Useful : AppPalette.Neutral];
+        TextColoredUnformatted(selfColor, playerName);
+        CopyIfClicked(preferences, playerName);
+
+        if (isSelf && ImGui.IsItemHovered())
+            Tooltip(preferences, FlavorText);
+
+        var (gameName, isManual) = player.Game is ['M', 'a', 'n', 'u', 'a', 'l', '_', .. var rest]
+            ? (rest.SplitOn('_')[..^1].ToString(), true)
+            : (player.Game, false);
+
+        if (!ImGui.TableNextColumn())
+            return;
+
+        TextColoredUnformatted(preferences[isManual ? AppPalette.Progression : AppPalette.Neutral], gameName);
+        CopyIfClicked(preferences, gameName);
+
+        if (isManual && ImGui.IsItemHovered())
+            Tooltip(preferences, "Manual Game");
+
+        var slotName = player.Slot.ToString();
+
+        if (!ImGui.TableNextColumn())
+            return;
+
+        TextColoredUnformatted(selfColor, slotName);
+        CopyIfClicked(preferences, slotName);
+
+        if (isSelf && ImGui.IsItemHovered())
+            Tooltip(preferences, FlavorText);
+
+        if (!ImGui.TableNextColumn())
+            return;
+
+        var teamName = player.Team.ToString();
+        var isTeammate = player.Team == _session.Players.ActivePlayer.Team;
+        TextColoredUnformatted(preferences[isTeammate ? AppPalette.Neutral : AppPalette.Checked], teamName);
+        CopyIfClicked(preferences, teamName);
     }
 
     /// <summary>Moves the index by an amount.</summary>
