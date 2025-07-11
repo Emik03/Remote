@@ -689,7 +689,7 @@ public sealed partial class Client
 
             ImGui.SameLine();
 
-            if (ImGui.Button("Toggle user-defined category"))
+            if (ImGui.Button("Move in or out of user category"))
             {
                 _info = _info with
                 {
