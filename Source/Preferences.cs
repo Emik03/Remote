@@ -53,6 +53,7 @@ public sealed partial class Preferences
         string? Host,
         ushort Port,
         string? Game,
+        ImmutableDictionary<string, int>? Items,
         ImmutableHashSet<string>? Locations,
         string? Alias,
         string? Color
@@ -111,16 +112,23 @@ public sealed partial class Preferences
         /// <summary>Initializes a new instance of the <see cref="Connection"/> struct.</summary>
         /// <param name="connection">The connection to copy.</param>
         /// <param name="locations">The locations to inherit.</param>
+        /// <param name="alias">The alias for the history header.</param>
         /// <param name="color">The color for the tab or window.</param>
-        public Connection(Connection connection, IEnumerable<string>? locations, string? color = null)
+        public Connection(
+            Connection connection,
+            IEnumerable<string>? locations,
+            string? alias = null,
+            string? color = null
+        )
             : this(
                 connection.Name,
                 connection.Password,
                 connection.Host,
                 connection.Port,
                 connection.Game,
+                connection.Items,
                 connection.GetLocationsOrEmpty().Union(locations ?? []),
-                connection.Alias,
+                connection.Alias ?? alias,
                 color ?? connection.Color
             ) { }
 
@@ -131,7 +139,7 @@ public sealed partial class Preferences
         /// <param name="port">The port of the host.</param>
         /// <param name="color">The color for the tab or window.</param>
         public Connection(Yaml yaml, string? password, string? host, ushort port, string? color = null)
-            : this(yaml.Name, password, host, port, yaml.Game, [], null, color) { }
+            : this(yaml.Name, password, host, port, yaml.Game, [], [], null, color) { }
 
         /// <summary>Determines whether this instance is invalid, usually from default construction.</summary>
         [JsonIgnore]
@@ -149,6 +157,10 @@ public sealed partial class Preferences
         /// <summary>Gets the alias.</summary>
         /// <returns>The alias.</returns>
         public string GetAliasOrEmpty() => Alias ?? "";
+
+        /// <summary>Gets the items.</summary>
+        /// <returns>The items.</returns>
+        public ImmutableDictionary<string, int> GetItemsOrEmpty() => Items ?? ImmutableDictionary<string, int>.Empty;
 
         /// <summary>Gets the locations.</summary>
         /// <returns>The locations.</returns>
@@ -242,6 +254,18 @@ public sealed partial class Preferences
             Client.LocationStatus.OutOfLogic => this[AppPalette.OutOfLogic],
             Client.LocationStatus.ProbablyReachable => this[AppPalette.Neutral],
             _ => throw new ArgumentOutOfRangeException(nameof(status), status, null),
+        };
+
+    /// <summary>Gets the color of the <see cref="ItemFlags"/>.</summary>
+    /// <param name="flags">The flags to get the color of.</param>
+    public AppColor this[ItemFlags? flags] =>
+        flags switch
+        {
+            ItemFlags.None => this[AppPalette.Neutral],
+            { } f when f.Has(ItemFlags.Advancement) => this[AppPalette.Progression],
+            { } f when f.Has(ItemFlags.NeverExclude) => this[AppPalette.Useful],
+            { } f when f.Has(ItemFlags.Trap) => this[AppPalette.Trap],
+            _ => this[AppPalette.PendingItem],
         };
 
     /// <summary>Gets the default installation path of Archipelago.</summary>
@@ -591,10 +615,11 @@ public sealed partial class Preferences
     /// <param name="color">The color of the text.</param>
     public void ShowText(string text, AppPalette color) => ShowText(text, this[color]);
 
-    /// <summary>Shows the text.</summary>
-    /// <param name="text">The text to show.</param>
-    /// <param name="color">The color of the text.</param>
+    /// <inheritdoc cref="ShowText(string, AppPalette)"/>
     public void ShowText(string text, Client.LocationStatus color) => ShowText(text, this[color]);
+
+    /// <inheritdoc cref="ShowText(string, AppPalette)"/>
+    public void ShowText(string text, ItemFlags? color) => ShowText(text, this[color]);
 
     /// <summary>Synchronizes the connection with the one found within the internal collection.</summary>
     /// <param name="connection">The connection to synchronize.</param>
@@ -627,16 +652,16 @@ public sealed partial class Preferences
 
         for (var i = 0; i < history.Length; i++)
         {
-            ref var current = ref history[i];
+            ref var next = ref history[i];
 
-            if (string.IsNullOrWhiteSpace(connection.Color) && string.IsNullOrWhiteSpace(current.Color))
-                current = current with { Color = FindNextAvailableColor() };
+            if (string.IsNullOrWhiteSpace(connection.Color) && string.IsNullOrWhiteSpace(next.Color))
+                next = next with { Color = FindNextAvailableColor() };
 
-            if (!connection.Equals(current))
+            if (!connection.Equals(next))
                 continue;
 
-            connection = new(connection, current.GetLocationsOrEmpty(), connection.Color ?? current.Color);
-            current = connection;
+            connection = new(connection, next.GetLocationsOrEmpty(), next.Alias, connection.Color ?? next.Color);
+            next = connection;
         }
     }
 

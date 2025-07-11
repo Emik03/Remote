@@ -75,28 +75,57 @@ public sealed partial class Client(Yaml? yaml = null)
                 [..info.Filter().Select(x => (x.LocationDisplayName, x.LocationGame))]
             ) { }
 
+        /// <summary>Determines whether this instance matches the search result.</summary>
+        /// <param name="search">The filter.</param>
+        /// <returns>Whether this instance contains the parameter <paramref name="search"/> as a substring.</returns>
+        [MemberNotNullWhen(true, nameof(Name))]
+        public bool IsMatch(string search) => Name?.Contains(search, StringComparison.OrdinalIgnoreCase) is true;
+
+        /// <summary>Determines whether this instance matches the preferences for showing used items.</summary>
+        /// <param name="connection">The items that were used.</param>
+        /// <param name="showUsedItems">Whether to accept completely used items.</param>
+        /// <returns>Whether this instance has any unused items, or has no used items.</returns>
+        [MemberNotNullWhen(true, nameof(Name))]
+        public bool IsMatch(Preferences.Connection connection, bool showUsedItems) =>
+            Name is not null &&
+            (showUsedItems ||
+                connection.GetItemsOrEmpty().GetValueOrDefault(Name) is var used &&
+                used is 0 ||
+                used != Count);
+
         /// <summary>Displays this instance as text with a tooltip.</summary>
         /// <param name="preferences">The user preferences.</param>
-        public void Show(Preferences preferences)
+        /// <param name="info">The connection info to display and update the counter.</param>
+        /// <returns>Whether the parameter <paramref name="info"/> was updated.</returns>
+        public bool Show(Preferences preferences, ref Preferences.Connection info)
         {
             if (Name is null)
-                return;
+                return false;
 
-            var text = $"{Name}{(Count is 1 ? "" : $" ({Count})")}";
-            ImGui.PushStyleColor(ImGuiCol.Text, ColorOf(Flags, preferences));
-            ImGui.BulletText(text);
+            var used = info.GetItemsOrEmpty().GetValueOrDefault(Name);
+            var unused = Count - used;
+            var text = $"{Name}{(used is 0 ? Count is 1 ? "" : $" ({Count})" : $" ({unused}/{Count})")}";
+            var v = unused;
+            ImGui.SetNextItemWidth(0);
+            ImGui.InputInt($"###{Name}", ref v);
+            v = v.Clamp(0, Count);
+            ImGui.SameLine();
+
+            if (unused != v)
+                info = info with { Items = info.GetItemsOrEmpty().SetItem(Name, Count - v) };
+
+            if (unused is 0)
+                Preferences.ShowText(text, disabled: true);
+            else
+                preferences.ShowText(text, Flags);
+
             CopyIfClicked(preferences, Name);
 
             if (Locations is not null and not [] && ImGui.IsItemHovered())
                 Tooltip(preferences, Locations.Select(ToString).Conjoin('\n'));
 
-            ImGui.PopStyleColor();
+            return unused != v;
         }
-
-        /// <summary>Determines whether this instance matches the search result.</summary>
-        /// <param name="search">The filter.</param>
-        /// <returns>Whether this instance contains the parameter <paramref name="search"/> as a substring.</returns>
-        public bool IsMatch(string search) => Name?.Contains(search, StringComparison.OrdinalIgnoreCase) is true;
 
         /// <inheritdoc />
         public int CompareTo(ReceivedItem other) => FrozenSortedDictionary.Comparer.Compare(Name, other.Name);
@@ -417,20 +446,6 @@ public sealed partial class Client(Yaml? yaml = null)
            .SelectMany(x => (IEnumerable<Exception>)[x, ..(x as AggregateException)?.InnerExceptions ?? []])
            .Select(x => x.Message),
     ];
-
-    /// <summary>Gets the color of the flag.</summary>
-    /// <param name="flags">The flag to get the color of.</param>
-    /// <param name="preferences">The user preferences.</param>
-    /// <returns>The color for the parameter <paramref name="flags"/>.</returns>
-    static AppColor ColorOf(ItemFlags? flags, Preferences preferences) =>
-        flags switch
-        {
-            ItemFlags.None => preferences[AppPalette.Neutral],
-            { } f when f.Has(ItemFlags.Advancement) => preferences[AppPalette.Progression],
-            { } f when f.Has(ItemFlags.NeverExclude) => preferences[AppPalette.Useful],
-            { } f when f.Has(ItemFlags.Trap) => preferences[AppPalette.Trap],
-            _ => preferences[AppPalette.PendingItem],
-        };
 
     /// <summary>Invoked when a new message is received, adds the message to the log.</summary>
     /// <param name="message">The new message.</param>

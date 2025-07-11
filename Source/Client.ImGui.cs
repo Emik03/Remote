@@ -19,6 +19,7 @@ public sealed partial class Client
         _showLocationFooter,
         _showObtainedHints,
         _showOutOfLogic,
+        _showUsedItems,
         _showYetToReceive;
 
     /// <summary>Whether the user is attempting to release.</summary>
@@ -459,6 +460,8 @@ public sealed partial class Client
             return;
         }
 
+        _ = ImGui.Checkbox("Show used items", ref _showUsedItems);
+
         if (_evaluator is null)
             ShowNonManualItems(preferences);
         else
@@ -501,7 +504,7 @@ public sealed partial class Client
                 if (!ShouldBeVisible(hint))
                     continue;
 
-                Preferences.ShowText(message, ColorOf(hint.ItemFlags, preferences));
+                preferences.ShowText(message, hint.ItemFlags);
                 CopyIfClicked(preferences, message);
             }
 
@@ -938,9 +941,7 @@ public sealed partial class Client
             if (this[key] is (_, var status, true))
             {
                 outOfLogic |= status is LocationStatus.OutOfLogic;
-                ImGui.PushStyleColor(ImGuiCol.Text, preferences[status]);
-                ImGui.BulletText(key);
-                ImGui.PopStyleColor();
+                preferences.ShowText(key, status);
                 CopyIfClicked(preferences, key);
             }
 
@@ -1055,7 +1056,11 @@ public sealed partial class Client
     {
         const string Default = ApWorldReader.Uncategorized;
         ShowItemSearch(preferences);
-        GroupItems(Default, default).Where(x => x.IsMatch(_itemSearch)).Lazily(x => x.Show(preferences)).Enumerate();
+
+        if (GroupItems(Default, default)
+           .Where(x => x.IsMatch(_itemSearch) && x.IsMatch(_info, _showUsedItems))
+           .Aggregate(false, (a, n) => n.Show(preferences, ref _info) || a))
+            preferences.Sync(ref _info);
     }
 
     /// <summary>Shows manual items.</summary>
@@ -1073,7 +1078,9 @@ public sealed partial class Client
             if (_evaluator.HiddenCategories.Contains(category))
                 continue;
 
-            var sum = GroupItems(category, items).Where(x => x.IsMatch(_itemSearch)).Sum(x => x.Count);
+            var sum = GroupItems(category, items)
+               .Where(x => x.IsMatch(_itemSearch) && x.IsMatch(_info, _showUsedItems))
+               .Sum(x => x.Count);
 
             if (sum is 0)
                 continue;
@@ -1083,7 +1090,10 @@ public sealed partial class Client
             if (!ImGui.CollapsingHeader($"{category} ({sum})###{category}:|ItemCategory"))
                 continue;
 
-            GroupItems(category, items).Where(x => x.IsMatch(_itemSearch)).Lazily(x => x.Show(preferences)).Enumerate();
+            if (GroupItems(category, items)
+               .Where(x => x.IsMatch(_itemSearch))
+               .Aggregate(false, (a, n) => n.Show(preferences, ref _info) || a))
+                preferences.Sync(ref _info);
         }
     }
 
