@@ -19,7 +19,8 @@ public sealed partial class Client
         _showLocationFooter,
         _showObtainedHints,
         _showOutOfLogic,
-        _showYetToReceive;
+        _showYetToReceive,
+        _sortById;
 
     /// <summary>Whether the user is attempting to release.</summary>
     /// <remarks><para>
@@ -668,6 +669,7 @@ public sealed partial class Client
     {
         Debug.Assert(_session is not null);
         _ = ImGui.Checkbox("Show Already Checked Locations", ref _showAlreadyChecked);
+        _ = ImGui.Checkbox(_sortById ? "Sort by ID" : "Sort by Name", ref _sortById);
         var stuck = _evaluator is null ? ShowNonManualLocations(preferences) : ShowManualLocations(preferences);
         ImGui.EndChild();
         ImGui.Separator();
@@ -835,11 +837,17 @@ public sealed partial class Client
 
         ImGui.SetWindowFontScale(preferences.UiScale);
         var locationHelper = _session.Locations;
+
+        string GetLocationNameFromId(long x) => locationHelper.GetLocationNameFromId(x, _yaml.Game);
+
         var locations = _showAlreadyChecked ? locationHelper.AllLocations : locationHelper.AllMissingLocations;
 
-        foreach (var location in locations)
-            if (locationHelper.GetLocationNameFromId(location, _yaml.Game) is { } name && ShouldBeVisible(name))
-                Checkbox(preferences, name, ApWorldReader.Uncategorized);
+        var orderedLocations = _sortById
+            ? locations.Order().Select(GetLocationNameFromId)
+            : locations.Select(GetLocationNameFromId).Order(FrozenSortedDictionary.Comparer);
+
+        foreach (var location in orderedLocations.Where(ShouldBeVisible))
+            Checkbox(preferences, location, ApWorldReader.Uncategorized);
 
         return locationHelper.AllMissingLocations.Count is 0;
     }
@@ -849,6 +857,7 @@ public sealed partial class Client
     /// <returns>Whether this slot is completed, or <see langword="null"/> if BK'ed.</returns>
     bool? ShowManualLocations(Preferences preferences)
     {
+        Debug.Assert(_session is not null);
         Debug.Assert(_evaluator is not null);
         _ = ImGui.Checkbox("Show Out of Logic Locations", ref _showOutOfLogic);
         var setter = GetNextItemOpenSetter();
@@ -893,10 +902,12 @@ public sealed partial class Client
             if (!ImGui.CollapsingHeader($"{category} ({count})###{category}:|LocationCategory"))
                 continue;
 
-            // ReSharper disable once ForeachCanBePartlyConvertedToQueryUsingAnotherGetEnumerator
-            foreach (var location in locations)
-                if (ShouldBeVisible(location))
-                    Checkbox(preferences, location, category, newValue);
+            var orderedLocations = _sortById
+                ? locations.OrderBy(x => _session.Locations.GetLocationIdFromName(_yaml.Game, x))
+                : locations.Array.AsEnumerable();
+
+            foreach (var location in orderedLocations.Where(ShouldBeVisible))
+                Checkbox(preferences, location, category, newValue);
         }
 
         return ret;
