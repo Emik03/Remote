@@ -19,8 +19,7 @@ public sealed partial class Client
         _showLocationFooter,
         _showObtainedHints,
         _showOutOfLogic,
-        _showYetToReceive,
-        _sortById;
+        _showYetToReceive;
 
     /// <summary>Whether the user is attempting to release.</summary>
     /// <remarks><para>
@@ -31,7 +30,7 @@ public sealed partial class Client
     bool? _isAttemptingToRelease;
 
     /// <summary>Contains the last amount of checks.</summary>
-    int _hintIndex, _lastItemCount = int.MinValue, _lastLocationCount = int.MaxValue, _sentMessagesIndex;
+    int _hintIndex, _lastItemCount = int.MinValue, _lastLocationCount = int.MaxValue, _locationSort, _sentMessagesIndex;
 
     /// <summary>The current state of the text field.</summary>
     string _itemSearch = "", _locationSearch = "";
@@ -668,8 +667,8 @@ public sealed partial class Client
     void ShowLocations(Preferences preferences)
     {
         Debug.Assert(_session is not null);
+        _ = ImGui.Combo("##Location Sort", ref _locationSort, "Sort by Name\0Sort by ID\0\0");
         _ = ImGui.Checkbox("Show Already Checked Locations", ref _showAlreadyChecked);
-        _ = ImGui.Checkbox(_sortById ? "Sort by ID" : "Sort by Name", ref _sortById);
         var stuck = _evaluator is null ? ShowNonManualLocations(preferences) : ShowManualLocations(preferences);
         ImGui.EndChild();
         ImGui.Separator();
@@ -842,9 +841,9 @@ public sealed partial class Client
 
         var locations = _showAlreadyChecked ? locationHelper.AllLocations : locationHelper.AllMissingLocations;
 
-        var orderedLocations = _sortById
-            ? locations.Order().Select(GetLocationNameFromId)
-            : locations.Select(GetLocationNameFromId).Order(FrozenSortedDictionary.Comparer);
+        var orderedLocations = _locationSort is 0
+            ? locations.Select(GetLocationNameFromId).Order(FrozenSortedDictionary.Comparer)
+            : locations.Order().Select(GetLocationNameFromId);
 
         foreach (var location in orderedLocations.Where(ShouldBeVisible))
             Checkbox(preferences, location, ApWorldReader.Uncategorized);
@@ -902,9 +901,9 @@ public sealed partial class Client
             if (!ImGui.CollapsingHeader($"{category} ({count})###{category}:|LocationCategory"))
                 continue;
 
-            var orderedLocations = _sortById
-                ? locations.OrderBy(x => _session.Locations.GetLocationIdFromName(_yaml.Game, x))
-                : locations.Array.AsEnumerable();
+            var orderedLocations = _locationSort is 0
+                ? locations.Array.AsEnumerable()
+                : locations.OrderBy(x => _session.Locations.GetLocationIdFromName(_yaml.Game, x));
 
             foreach (var location in orderedLocations.Where(ShouldBeVisible))
                 Checkbox(preferences, location, category, newValue);
