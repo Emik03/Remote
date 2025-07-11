@@ -44,9 +44,11 @@ public sealed partial class Preferences
     /// <param name="Host">The host.</param>
     /// <param name="Port">The port of the host.</param>
     /// <param name="Game">The game.</param>
+    /// <param name="Items">The used items.</param>
     /// <param name="Locations">The checked locations.</param>
+    /// <param name="Alias">The alias when displaying in history.</param>
     /// <param name="Color">The color for the tab or window.</param>
-    [CLSCompliant(false), StructLayout(LayoutKind.Auto)]
+    [StructLayout(LayoutKind.Auto)]
     public readonly record struct Connection(
         string? Name,
         string? Password,
@@ -258,6 +260,7 @@ public sealed partial class Preferences
 
     /// <summary>Gets the color of the <see cref="ItemFlags"/>.</summary>
     /// <param name="flags">The flags to get the color of.</param>
+    [CLSCompliant(false)]
     public AppColor this[ItemFlags? flags] =>
         flags switch
         {
@@ -619,6 +622,7 @@ public sealed partial class Preferences
     public void ShowText(string text, Client.LocationStatus color) => ShowText(text, this[color]);
 
     /// <inheritdoc cref="ShowText(string, AppPalette)"/>
+    [CLSCompliant(false)]
     public void ShowText(string text, ItemFlags? color) => ShowText(text, this[color]);
 
     /// <summary>Synchronizes the connection with the one found within the internal collection.</summary>
