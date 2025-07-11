@@ -133,7 +133,7 @@ public sealed partial class Preferences
                 connection.Items,
                 connection.GetLocationsOrEmpty().Union(locations ?? []),
                 connection.Tagged,
-                connection.Alias ?? alias,
+                string.IsNullOrWhiteSpace(connection.Alias) ? alias : connection.Alias,
                 color ?? connection.Color
             ) { }
 
@@ -142,9 +142,17 @@ public sealed partial class Preferences
         /// <param name="password">The password of the game.</param>
         /// <param name="host">The host.</param>
         /// <param name="port">The port of the host.</param>
+        /// <param name="alias">The alias for the history header.</param>
         /// <param name="color">The color for the tab or window.</param>
-        public Connection(Yaml yaml, string? password, string? host, ushort port, string? color = null)
-            : this(yaml.Name, password, host, port, yaml.Game, [], [], [], null, color) { }
+        public Connection(
+            Yaml yaml,
+            string? password,
+            string? host,
+            ushort port,
+            string? alias,
+            string? color
+        )
+            : this(yaml.Name, password, host, port, yaml.Game, [], [], [], alias, color) { }
 
         /// <summary>Determines whether this instance is invalid, usually from default construction.</summary>
         [JsonIgnore]
@@ -152,8 +160,13 @@ public sealed partial class Preferences
 
         /// <inheritdoc />
         public bool Equals(Connection other) =>
+            HostEquals(other) && FrozenSortedDictionary.Comparer.Equals(Name, other.Name);
+
+        /// <summary>Determines whether both hosts are equal.</summary>
+        /// <param name="other">The instance to compare.</param>
+        /// <returns>Whether both hosts are equal.</returns>
+        public bool HostEquals(Connection other) =>
             Port == other.Port &&
-            FrozenSortedDictionary.Comparer.Equals(Name, other.Name) &&
             FrozenSortedDictionary.Comparer.Equals(Host, other.Host);
 
         /// <inheritdoc />
@@ -751,10 +764,19 @@ public sealed partial class Preferences
             if (string.IsNullOrWhiteSpace(connection.Color) && string.IsNullOrWhiteSpace(next.Color))
                 next = next with { Color = FindNextAvailableColor() };
 
-            if (!connection.Equals(next))
+            if (!connection.HostEquals(next))
                 continue;
 
-            connection = new(connection, next.GetLocationsOrEmpty(), next.Alias, connection.Color ?? next.Color);
+            if (!FrozenSortedDictionary.Comparer.Equals(connection.Alias, next.Alias))
+                if (string.IsNullOrWhiteSpace(connection.Alias))
+                    connection = connection with { Alias = next.Alias };
+                else
+                    next = next with { Alias = connection.Alias };
+
+            if (!FrozenSortedDictionary.Comparer.Equals(connection.Name, next.Name))
+                continue;
+
+            connection = new(connection, next.GetLocationsOrEmpty(), next.Alias, next.Color);
             next = connection;
         }
     }

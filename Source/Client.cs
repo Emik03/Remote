@@ -382,7 +382,7 @@ public sealed partial class Client(Yaml? yaml = null)
             _connectionMessage = "Slot data has been read!\nReading APWorld... (4/5)";
             _evaluator = Evaluator.Read(session.DataStorage, session.Items, _yaml, preferences);
             _connectionMessage = "APWorld has been read!\nSaving history in memory... (5/5)";
-            _info = new(_yaml, password, address, port, _info.Color);
+            _info = new(_yaml, password, address, port, _info.Alias, _info.Color);
             preferences.Prepend(_info);
             preferences.Sync(ref _info);
             _sessionCreatedTimestamp = DateTime.Now;
