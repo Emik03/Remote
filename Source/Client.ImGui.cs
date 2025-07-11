@@ -588,7 +588,7 @@ public sealed partial class Client
             MoveSentMessageIndex(-1);
 
         ref var latestMessage = ref CollectionsMarshal.AsSpan(_sentMessages)[^1];
-        var enter = ImGui.InputText("##Message", ref latestMessage, ushort.MaxValue, Flags);
+        var enter = ImGuiRenderer.InputText("##Message", ref latestMessage, ushort.MaxValue, Flags);
         ImGui.SameLine();
 
         if (ImGui.Button("Send") || enter)
