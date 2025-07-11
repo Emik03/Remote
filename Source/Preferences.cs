@@ -1009,17 +1009,18 @@ public sealed partial class Preferences
     /// <returns>The clients created.</returns>
     IEnumerable<Client> ShowHistoryHeader(ConnectionGroup group)
     {
-        if (group.ToIList() is not [var first, ..] connection ||
-            $"{first.Host}:{first.Port}{(connection.Count is 1 ? "" : $" ({connection.Count})")}" is var id &&
-            !ImGui.CollapsingHeader($"{(string.IsNullOrWhiteSpace(first.Alias) ? id : first.Alias)}###{id}"))
+        if (group.ToIList() is not [var f, ..] connection ||
+            $"{(connection.Count is 1 ? "" : $" ({connection.Count})")}" is var count &&
+            $"{f.Host}:{f.Port}{count}" is var id &&
+            !ImGui.CollapsingHeader($"{(string.IsNullOrWhiteSpace(f.Alias) ? id : $"{f.Alias}{count}")}###{id}"))
             return [];
 
-        var oldAlias = first.GetAliasOrEmpty();
+        var oldAlias = f.GetAliasOrEmpty();
         var newAlias = oldAlias;
         ImGui.SetNextItemWidth(Width(100));
         _ = ImGuiRenderer.InputText($"Alias###Alias:|{id}", ref newAlias, ushort.MaxValue, TextFlags);
 
-        if (!FrozenSortedDictionary.Comparer.Equals(oldAlias, newAlias) && first with { Alias = newAlias } is var alias)
+        if (!FrozenSortedDictionary.Comparer.Equals(oldAlias, newAlias) && f with { Alias = newAlias } is var alias)
             Sync(ref alias);
 
         return Order(connection).Where(ShowHistoryButton).Select(ConnectAndReturn);
