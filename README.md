@@ -68,8 +68,7 @@ Thank you to the following projects that make this possible:
 
 - [Icon](https://github.com/Emik03/Remote/blob/main/Resources/Drawable/Icon.svg) by [Ghostlyfield](https://bsky.app/profile/ghostlyfield.bsky.social)
 - [Extractor.py](https://github.com/Emik03/Remote/blob/main/Resources/Values/Extractor.py) by [Darius](https://github.com/itsMapleLeaf)
-- [Main Color Scheme](https://draculatheme.com/contribute)
-- [Secondary Color Scheme](https://sronpersonalpages.nl/~pault/)
+- [Color Scheme](https://draculatheme.com/contribute)
 
 ---
 
