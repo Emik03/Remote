@@ -2,6 +2,7 @@
 namespace Remote;
 
 using CheckboxStatus = (Logic? Logic, Client.LocationStatus Status, bool Checked);
+using HintMessage = (Hint Hint, string Message);
 
 /// <summary>
 /// Responsible for rendering the <see cref="ImGui"/> window to display its state of <see cref="ArchipelagoSession"/>.
@@ -206,7 +207,7 @@ public sealed partial class Client(Yaml? yaml = null)
     Task _connectingTask = Task.CompletedTask;
 
     /// <summary>The attempt to get hints.</summary>
-    Task<Hint[]?> _hintTask = Task.FromResult<Hint[]?>(null);
+    Task<HintMessage[]?> _hintTask = Task.FromResult<HintMessage[]?>(null);
 
     /// <summary>Initializes a new instance of the <see cref="Client"/> class.</summary>
     /// <param name="errors">The errors to show immediately.</param>
@@ -250,7 +251,7 @@ public sealed partial class Client(Yaml? yaml = null)
     public AppColor? Color => AppColor.TryParse(_info.Color, out var color) ? color : null;
 
     /// <summary>Contains the last retrieved hints.</summary>
-    Hint[]? LastHints
+    HintMessage[]? LastHints
     {
         get
         {
@@ -260,7 +261,7 @@ public sealed partial class Client(Yaml? yaml = null)
                 return hints;
 
             if (_hintTask.IsCompleted)
-                _hintTask = Task.Run(() => _session.DataStorage.GetHintsAsync());
+                _hintTask = Task.Run(GetHintsAsync);
 
             return null;
         }
@@ -575,7 +576,7 @@ public sealed partial class Client(Yaml? yaml = null)
     /// <summary>Gets the message for the hint.</summary>
     /// <param name="hint">The hint to get the message of.</param>
     /// <returns>The message representing the parameter <paramref name="hint"/>.</returns>
-    string Message(Hint hint)
+    HintMessage Message(Hint hint)
     {
         Debug.Assert(_session is not null);
         var findingPlayer = GetPlayerName(hint.FindingPlayer);
@@ -584,8 +585,8 @@ public sealed partial class Client(Yaml? yaml = null)
         var receivingPlayer = GetPlayerName(hint.ReceivingPlayer);
         var receivingGame = _session.Players.GetPlayerInfo(hint.ReceivingPlayer)?.Game;
         var item = _session.Items.GetItemName(hint.ItemId, receivingGame);
-        var entrance = string.IsNullOrWhiteSpace(hint.Entrance) ? "" : $"\n({hint.Entrance})";
-        return $"{receivingPlayer}'s {item}\nis at {findingPlayer}'s {location}{entrance}";
+        var entrance = string.IsNullOrWhiteSpace(hint.Entrance) ? "" : $" ({hint.Entrance})";
+        return (hint, $"{receivingPlayer}'s {item} is at {findingPlayer}'s {location}{entrance}");
     }
 
     /// <summary>Groups all items into sorted items with count.</summary>
@@ -637,4 +638,11 @@ public sealed partial class Client(Yaml? yaml = null)
         list.Sort();
         return list;
     }
+
+    /// <summary>Gets the hints asynchronously.</summary>
+    /// <returns>The task to get the hints.</returns>
+    async Task<HintMessage[]?> GetHintsAsync() =>
+        _session?.DataStorage?.GetHintsAsync() is { } task && await task is { } hints
+            ? [..hints.Select(Message).OrderBy(x => x.Message, FrozenSortedDictionary.Comparer)]
+            : null;
 }

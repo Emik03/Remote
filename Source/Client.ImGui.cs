@@ -1,10 +1,13 @@
 // SPDX-License-Identifier: MPL-2.0
 namespace Remote;
 
+using HintMessage = (Hint Hint, string Message);
+
 /// <inheritdoc cref="Client"/>
 public sealed partial class Client
 {
     /// <summary>The window flags.</summary>
+    [CLSCompliant(false)]
     public const ImGuiWindowFlags WindowFlags = ImGuiWindowFlags.HorizontalScrollbar | ImGuiWindowFlags.NoScrollbar;
 
     /// <summary>Contains the list of sent messages, with the drafting message at the end.</summary>
@@ -445,7 +448,7 @@ public sealed partial class Client
 
         if (!ImGui.BeginTabItem("Hints"))
         {
-            _hintTask = Task.FromResult<Hint[]?>(null);
+            _hintTask = Task.FromResult<HintMessage[]?>(null);
             return;
         }
 
@@ -464,14 +467,13 @@ public sealed partial class Client
         _ = ImGui.Combo("Filter", ref _hintIndex, "Show sent hints\0Show received hints\0\0");
 
         if (LastHints is { } hints)
-            foreach (var (itemFlags, message) in hints.Where(ShouldBeVisible)
-               .Select(x => (x.ItemFlags, Message: Message(x)))
-               .OrderBy(x => x.Message, FrozenSortedDictionary.Comparer))
+            foreach (var (hint, message) in hints)
             {
-                ImGui.PushStyleColor(ImGuiCol.Text, ColorOf(itemFlags, preferences));
-                ImGui.BulletText(message);
+                if (!ShouldBeVisible(hint))
+                    continue;
+
+                Preferences.ShowText(message, ColorOf(hint.ItemFlags, preferences));
                 CopyIfClicked(preferences, message);
-                ImGui.PopStyleColor();
             }
 
         ImGui.EndChild();
