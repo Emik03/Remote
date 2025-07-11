@@ -605,13 +605,13 @@ public sealed partial class Client
         }
 
         ImGui.SameLine();
-        Preferences.ShowText("(?)", disabled: true);
+        ImGui.TextDisabled("(?)");
 
         if (ImGui.IsItemHovered())
             Tooltip(preferences, HelpMessage1);
 
         ImGui.SameLine();
-        Preferences.ShowText("(?)", disabled: true);
+        ImGui.TextDisabled("(?)");
 
         if (ImGui.IsItemHovered())
             Tooltip(preferences, HelpMessage2);
