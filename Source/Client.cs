@@ -412,6 +412,12 @@ public sealed partial class Client(Yaml? yaml = null)
     /// <summary>Releases the locations whose checkboxes are ticked.</summary>
     void Release(Preferences preferences)
     {
+        void CompleteLocationChecks()
+        {
+            Debug.Assert(_session is not null);
+            _session.Locations.CompleteLocationChecks([.._locations.Where(x => x.Value.Checked).Select(ToId).Filter()]);
+        }
+
         bool NeedsToBeTrackedLocally(string location)
         {
             Debug.Assert(_session is not null);
@@ -420,35 +426,24 @@ public sealed partial class Client(Yaml? yaml = null)
                 !_session.Locations.AllLocations.Contains(id);
         }
 
-        long? ToId(KeyValuePair<string, CheckboxStatus> kvp)
-        {
-            async Task DisplayErrorAsync()
-            {
-                const string Title = "Archipelago Error";
-                IEnumerable<string> buttons = ["Dismiss all", "Step to next error"];
-                var description = $"Name of this location cannot be converted into an id by the session: {kvp.Key}";
-
-                if (await MessageBox.Show(Title, description, buttons) is not 1)
-                    s_displayErrors = false;
-            }
-
-            if (_session.Locations.GetLocationIdFromName(_yaml.Game, kvp.Key) is not -1 and var ret)
-                return ret;
-
-            if (!s_displayErrors)
-                return null;
-#pragma warning disable MA0134
-            _ = Task.Run(DisplayErrorAsync).ConfigureAwait(false);
-#pragma warning restore MA0134
-            return null;
-        }
-
         if (!IsReleasing || _isAttemptingToRelease is false or null)
             return;
 
         Debug.Assert(_session is not null);
         _releaseIndex = _messages.Count;
-        _session.Locations.CompleteLocationChecks([.._locations.Where(x => x.Value.Checked).Select(ToId).Filter()]);
+
+        if (Go(CompleteLocationChecks, out _))
+        {
+            Close(preferences, false);
+            Connect(preferences);
+
+            if (Go(CompleteLocationChecks, out _))
+            {
+                Close(preferences, false);
+                return;
+            }
+        }
+
         IList<string> keys = [.._locations.Where(x => x.Value.Checked).Select(x => x.Key)];
         _isAttemptingToRelease = null;
 
@@ -560,6 +555,31 @@ public sealed partial class Client(Yaml? yaml = null)
 
         return (!hint.Found || _showObtainedHints) &&
             (_hintIndex is 0 ? hint.FindingPlayer : hint.ReceivingPlayer) != _session.Players.ActivePlayer.Slot;
+    }
+
+    long? ToId(KeyValuePair<string, CheckboxStatus> kvp)
+    {
+        async Task DisplayErrorAsync()
+        {
+            const string Title = "Archipelago Error";
+            IEnumerable<string> buttons = ["Dismiss all", "Step to next error"];
+            var description = $"Name of this location cannot be converted into an id by the session: {kvp.Key}";
+
+            if (await MessageBox.Show(Title, description, buttons) is not 1)
+                s_displayErrors = false;
+        }
+
+        Debug.Assert(_session is not null);
+
+        if (_session.Locations.GetLocationIdFromName(_yaml.Game, kvp.Key) is not -1 and var ret)
+            return ret;
+
+        if (!s_displayErrors)
+            return null;
+#pragma warning disable MA0134
+        _ = Task.Run(DisplayErrorAsync).ConfigureAwait(false);
+#pragma warning restore MA0134
+        return null;
     }
 
     /// <summary>Gets the player name.</summary>

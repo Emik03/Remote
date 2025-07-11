@@ -330,6 +330,10 @@ public sealed partial class Client
             return;
 
         ShowChatTab(preferences);
+
+        if (_session is null)
+            return;
+
         ShowPlayerTab(preferences);
         ShowLocationTab(gameTime, preferences);
         ShowItemTab(preferences);
@@ -350,6 +354,10 @@ public sealed partial class Client
         if (isForced)
         {
             Release(preferences);
+
+            if (_session is null)
+                return;
+
             ClearChecked();
         }
 
@@ -778,12 +786,15 @@ public sealed partial class Client
     /// <returns>Not the parameter <paramref name="open"/>.</returns>
     bool Close(Preferences preferences, bool open)
     {
-        if (open || _session is null)
+        var session = _session;
+
+        if (open || session is null)
             return !open;
 #pragma warning disable IDISP013
-        _ = Task.Run(_session.Socket.DisconnectAsync).ConfigureAwait(false);
+        _ = Task.Run(session.Socket.DisconnectAsync).ConfigureAwait(false);
 #pragma warning restore IDISP013
         preferences.Sync(ref _info);
+        _session = null;
         return !open;
     }
 
@@ -923,6 +934,10 @@ public sealed partial class Client
             if (preferences.AlwaysShowChat)
             {
                 Release(preferences);
+
+                if (_session is null)
+                    return;
+
                 ClearChecked();
                 _showConfirmationDialog = false;
                 return;
@@ -931,6 +946,9 @@ public sealed partial class Client
             preferences.ShowText(ReleaseMessage(), AppPalette.Released);
             Preferences.ShowText("Press left click to return to the previous screen", disabled: true);
             Release(preferences);
+
+            if (_session is null)
+                return;
 
             if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
                 ClearChecked();
