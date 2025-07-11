@@ -4,6 +4,8 @@
 
 Fully-functional standalone Windows/Mac/Linux/[Android*](#android) client for [Archipelago](https://archipelago.gg/), specializing in [Manual for Archipelago](https://github.com/ManualForArchipelago). **Ensure that [.NET 10](https://dotnet.microsoft.com/en-us/download/dotnet/10.0) is installed** prior to opening the application.
 
+Consider also using [Emik.Manual](https://github.com/Emik03/Emik.Manual) to create your manual games programmatically!
+
 This project has a dependency to [Emik.Morsels](https://github.com/Emik03/Emik.Morsels), if you are building this project, refer to its [README](https://github.com/Emik03/Emik.Morsels/blob/main/README.md) first.
 
 ### [Latest Release (click me!)](https://github.com/Emik03/Remote/releases/latest)
