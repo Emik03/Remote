@@ -437,8 +437,9 @@ public sealed partial class Client(Yaml? yaml = null)
             Close(preferences, false);
             Connect(preferences);
 
-            if (Go(CompleteLocationChecks, out _))
+            if (Go(CompleteLocationChecks, out var ex))
             {
+                _errors = ["Unable to reestablish a connection to the server.", ..ToMessages(ex)];
                 Close(preferences, false);
                 return;
             }
