@@ -295,12 +295,13 @@ public sealed partial class Client(Yaml? yaml = null)
     /// </param>
     /// <returns>Whether the connection succeeded.</returns>
     [CLSCompliant(false)]
+#pragma warning disable MA0051
     public void Connect(Preferences preferences, string address, ushort port, string? password)
+#pragma warning restore MA0051
     {
-        async Task AttemptAsync()
+        async Task AttemptAsync(string address, ushort port, string? password)
         {
             const ItemsHandlingFlags Flags = ItemsHandlingFlags.AllItems;
-
             await Task.Yield();
             var session = ArchipelagoSessionFactory.CreateSession(address, port);
             session.MessageLog.OnMessageReceived += OnMessageReceived;
@@ -343,11 +344,21 @@ public sealed partial class Client(Yaml? yaml = null)
         {
             try
             {
-                await AttemptAsync();
+                await AttemptAsync(address, port, password);
             }
-            catch (Exception ex)
+            catch (Exception e)
             {
-                _errors = ["Failed to connect. Is the server down, is the host and port correct?", ..ToMessages(ex)];
+                try
+                {
+                    if (port != preferences.Port ||
+                        !FrozenSortedDictionary.Comparer.Equals(address, preferences.Address) ||
+                        !FrozenSortedDictionary.Comparer.Equals(password, preferences.Password))
+                        await AttemptAsync(preferences.Address, preferences.Port, preferences.Password);
+                }
+                catch (Exception)
+                {
+                    _errors = ToMessages(e, "Failed to connect. Is the server down, is the host and port correct?");
+                }
             }
         }
 
@@ -439,7 +450,7 @@ public sealed partial class Client(Yaml? yaml = null)
 
             if (Go(CompleteLocationChecks, out var ex))
             {
-                _errors = ["Unable to reestablish a connection to the server.", ..ToMessages(ex)];
+                _errors = ToMessages(ex, "Unable to reestablish a connection to the server.");
                 Close(preferences, false);
                 return;
             }
