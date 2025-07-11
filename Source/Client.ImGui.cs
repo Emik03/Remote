@@ -725,7 +725,7 @@ public sealed partial class Client
         _ = ImGui.Checkbox("Show Out of Logic Locations", ref _showOutOfLogic);
         var setter = GetNextItemOpenSetter();
         ImGui.SameLine();
-        var newValue = InlineButtons("Tick all expanded", "Untick all expanded");
+        var newValue = InlineButtons("Tick all", "Untick all");
         ShowLocationSearch(preferences);
 
         if (!ImGui.BeginChild("Locations", preferences.ChildSize(_showLocationFooter ? 100 : 10)))
