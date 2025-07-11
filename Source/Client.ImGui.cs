@@ -10,6 +10,9 @@ public sealed partial class Client
     [CLSCompliant(false)]
     public const ImGuiWindowFlags WindowFlags = ImGuiWindowFlags.HorizontalScrollbar | ImGuiWindowFlags.NoScrollbar;
 
+    /// <summary>The user-defined category name.</summary>
+    const string UserCategorized = "(User Categorized)";
+
     /// <summary>Contains the list of sent messages, with the drafting message at the end.</summary>
     readonly List<string> _sentMessages = [""];
 
@@ -679,8 +682,23 @@ public sealed partial class Client
         var showStatus = stuck is null or true;
         _showLocationFooter = isAnyReleasable || showStatus;
 
-        if (isAnyReleasable && (ImGui.Button("Check") || ImGui.IsKeyDown(ImGuiKey.Enter)))
-            _showConfirmationDialog = true;
+        if (isAnyReleasable)
+        {
+            if (ImGui.Button("Check (Enter)") || ImGui.IsKeyDown(ImGuiKey.Enter))
+                _showConfirmationDialog = true;
+
+            ImGui.SameLine();
+
+            if (ImGui.Button("Toggle user-defined category"))
+            {
+                _info = _info with
+                {
+                    Tagged = _info.Tagged?.SymmetricExcept(_locations.Where(IsReleasable).Select(x => x.Key)),
+                };
+
+                preferences.Sync(ref _info);
+            }
+        }
 
         if (isAnyReleasable && showStatus)
             ImGui.SameLine(0, 20);
@@ -838,6 +856,7 @@ public sealed partial class Client
         }
 
         ImGui.SetWindowFontScale(preferences.UiScale);
+        ShowUserCategorizedLocations(preferences, Noop, null);
         var locationHelper = _session.Locations;
 
         string GetLocationNameFromId(long x) => locationHelper.GetLocationNameFromId(x, _yaml.Game);
@@ -874,6 +893,7 @@ public sealed partial class Client
         }
 
         ImGui.SetWindowFontScale(preferences.UiScale);
+        ShowUserCategorizedLocations(preferences, setter, newValue);
         bool? ret = true;
 
         foreach (var (category, locations) in _evaluator.CategoryToLocations)
@@ -1034,6 +1054,14 @@ public sealed partial class Client
         }
     }
 
+    /// <summary>Shows the location search text field.</summary>
+    /// <param name="preferences">The user preferences.</param>
+    void ShowLocationSearch(Preferences preferences)
+    {
+        ImGui.SetNextItemWidth(preferences.Width(0));
+        _ = ImGuiRenderer.InputTextWithHint("##LocationSearch", "Search...", ref _locationSearch, ushort.MaxValue);
+    }
+
     /// <summary>Shows the item search text field.</summary>
     /// <param name="preferences">The user preferences.</param>
     void ShowItemSearch(Preferences preferences)
@@ -1042,12 +1070,28 @@ public sealed partial class Client
         _ = ImGuiRenderer.InputTextWithHint("##ItemSearch", "Search...", ref _itemSearch, ushort.MaxValue);
     }
 
-    /// <summary>Shows the location search text field.</summary>
+    /// <summary>Shows user-defined locations.</summary>
     /// <param name="preferences">The user preferences.</param>
-    void ShowLocationSearch(Preferences preferences)
+    /// <param name="setter">The setter.</param>
+    /// <param name="overrideAll">The value to override the checkbox with.</param>
+    void ShowUserCategorizedLocations(Preferences preferences, Action setter, bool? overrideAll)
     {
-        ImGui.SetNextItemWidth(preferences.Width(0));
-        _ = ImGuiRenderer.InputTextWithHint("##LocationSearch", "Search...", ref _locationSearch, ushort.MaxValue);
+        Debug.Assert(_session is not null);
+
+        if (_info.Tagged is not { Count: not 0 and var c } tagged)
+            return;
+
+        setter();
+
+        if (!ImGui.CollapsingHeader($"{UserCategorized} ({c})###{UserCategorized}:|LocationCategory"))
+            return;
+
+        var orderedLocations = _locationSort is 0
+            ? tagged.AsEnumerable()
+            : tagged.OrderBy(x => _session.Locations.GetLocationIdFromName(_yaml.Game, x));
+
+        foreach (var location in orderedLocations.Where(ShouldBeVisible))
+            Checkbox(preferences, location, UserCategorized, overrideAll);
     }
 
     /// <summary>Shows non-manual items</summary>

@@ -46,6 +46,7 @@ public sealed partial class Preferences
     /// <param name="Game">The game.</param>
     /// <param name="Items">The used items.</param>
     /// <param name="Locations">The checked locations.</param>
+    /// <param name="Tagged">The tagged locations.</param>
     /// <param name="Alias">The alias when displaying in history.</param>
     /// <param name="Color">The color for the tab or window.</param>
     [StructLayout(LayoutKind.Auto)]
@@ -57,6 +58,7 @@ public sealed partial class Preferences
         string? Game,
         ImmutableDictionary<string, int>? Items,
         ImmutableHashSet<string>? Locations,
+        ImmutableHashSet<string>? Tagged,
         string? Alias,
         string? Color
     )
@@ -130,6 +132,7 @@ public sealed partial class Preferences
                 connection.Game,
                 connection.Items,
                 connection.GetLocationsOrEmpty().Union(locations ?? []),
+                connection.Tagged,
                 connection.Alias ?? alias,
                 color ?? connection.Color
             ) { }
@@ -141,7 +144,7 @@ public sealed partial class Preferences
         /// <param name="port">The port of the host.</param>
         /// <param name="color">The color for the tab or window.</param>
         public Connection(Yaml yaml, string? password, string? host, ushort port, string? color = null)
-            : this(yaml.Name, password, host, port, yaml.Game, [], [], null, color) { }
+            : this(yaml.Name, password, host, port, yaml.Game, [], [], [], null, color) { }
 
         /// <summary>Determines whether this instance is invalid, usually from default construction.</summary>
         [JsonIgnore]
@@ -167,6 +170,10 @@ public sealed partial class Preferences
         /// <summary>Gets the locations.</summary>
         /// <returns>The locations.</returns>
         public ImmutableHashSet<string> GetLocationsOrEmpty() => Locations ?? ImmutableHashSet<string>.Empty;
+
+        /// <summary>Gets the tagged locations.</summary>
+        /// <returns>The tagged locations.</returns>
+        public ImmutableHashSet<string> GetTaggedOrEmpty() => Tagged ?? ImmutableHashSet<string>.Empty;
 
         /// <summary>Converts this instance to the equivalent <see cref="Yaml"/> instance.</summary>
         /// <returns>The <see cref="Yaml"/> instance, or <see langword="null"/> if none found on disk.</returns>
