@@ -344,8 +344,10 @@ public sealed partial class Client
         var roomState = _session.RoomState;
         var hintCost = roomState.HintCost.Max(1);
         var hintCount = roomState.HintPoints / hintCost;
-        preferences.ShowText($"Hint cost percentage: {roomState.HintCostPercentage}% ({hintCost.Conjugate("point")})");
-        preferences.ShowText($"You can do {hintCount.Conjugate("hint")} ({roomState.HintPoints.Conjugate("point")})");
+        var percentageText = $"Hint cost percentage: {roomState.HintCostPercentage}% ({hintCost.Conjugate("point")})";
+        var hintText = $"You can do {hintCount.Conjugate("hint")} ({roomState.HintPoints.Conjugate("point")})";
+        preferences.ShowText(percentageText, disabled: true);
+        preferences.ShowText(hintText, disabled: true);
         _ = ImGui.Checkbox("Show obtained hints", ref _showObtainedHints);
         ImGui.SetNextItemWidth(preferences.Width(150));
         _ = Preferences.Combo("Filter", ref _hintIndex, "Show sent hints\0Show received hints\0\0");
