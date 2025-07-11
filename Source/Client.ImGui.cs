@@ -1078,11 +1078,10 @@ public sealed partial class Client
             if (_evaluator.HiddenCategories.Contains(category))
                 continue;
 
-            var sum = GroupItems(category, items)
-               .Where(x => x.IsMatch(_itemSearch) && x.IsMatch(_info, _showUsedItems))
-               .Sum(x => x.Count);
+            IList<ReceivedItem> filtered =
+                [..GroupItems(category, items).Where(x => x.IsMatch(_itemSearch) && x.IsMatch(_info, _showUsedItems))];
 
-            if (sum is 0)
+            if (filtered.Sum(x => x.Count) is var sum && sum is 0)
                 continue;
 
             setter();
@@ -1090,9 +1089,7 @@ public sealed partial class Client
             if (!ImGui.CollapsingHeader($"{category} ({sum})###{category}:|ItemCategory"))
                 continue;
 
-            if (GroupItems(category, items)
-               .Where(x => x.IsMatch(_itemSearch))
-               .Aggregate(false, (a, n) => n.Show(preferences, ref _info) || a))
+            if (filtered.Aggregate(false, (a, n) => n.Show(preferences, ref _info) || a))
                 preferences.Sync(ref _info);
         }
     }
