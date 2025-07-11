@@ -57,7 +57,7 @@ public sealed partial class Client
         var pushedColor = AppColor.TryParse(_info.Color, out var color);
 
         if (pushedColor)
-            PushStyleColor(preferences, color);
+            preferences.PushStyling(color);
 
         var open = true;
 
@@ -102,155 +102,6 @@ public sealed partial class Client
 
         selected = true;
         return false;
-    }
-
-    /// <summary>Copies the text if the mouse has been clicked.</summary>
-    /// <param name="preferences">The user preferences.</param>
-    /// <param name="text">The text to copy.</param>
-    /// <param name="button">The button to check for.</param>
-    static void CopyIfClicked(Preferences preferences, string text, ImGuiMouseButton button = ImGuiMouseButton.Right)
-    {
-        if (!ImGui.IsItemHovered())
-            return;
-
-        if (ImGui.IsMouseDown(button))
-        {
-            ImGui.PushStyleColor(ImGuiCol.Text, preferences[AppPalette.Reachable]);
-            Tooltip(preferences, "Copied!");
-            ImGui.PopStyleColor();
-        }
-
-        if (ImGui.IsMouseClicked(button))
-#if ANDROID
-            ImGui.SetClipboardText(text);
-#else
-            ClipboardService.SetText(text);
-#endif
-    }
-
-    /// <summary>Pushes the text.</summary>
-    /// <param name="span">The span.</param>
-    /// <param name="makeColorful">Whether or not to make it colorful.</param>
-    /// <param name="braces">The number of braces.</param>
-    /// <param name="isIdentifier">Whether or not it is processing an identifier.</param>
-    static void PushRange(ReadOnlySpan<char> span, bool makeColorful, ref int braces, ref bool isIdentifier)
-    {
-        static void Push(char c, bool makeColorful, in int braces)
-        {
-            const int L = 3;
-
-            if (makeColorful)
-            {
-                var index = (braces * L + braces * L / Preferences.TabColors.Length) % Preferences.TabColors.Length;
-                ImGui.PushStyleColor(ImGuiCol.Text, Preferences.TabColors[index]);
-            }
-
-            ImGui.TextUnformatted([c]);
-            ImGui.SameLine(0, 0);
-
-            if (makeColorful)
-                ImGui.PopStyleColor();
-        }
-
-        foreach (var c in span)
-            switch (c)
-            {
-                case '(':
-                    Push(c, makeColorful, isIdentifier ? braces : ++braces);
-                    break;
-                case ')':
-                    Push(c, makeColorful, isIdentifier ? braces : braces--);
-                    break;
-                case '|':
-                    isIdentifier ^= isIdentifier;
-                    goto default;
-                default:
-                    Push(c, makeColorful, braces);
-                    break;
-            }
-    }
-
-    /// <summary>Pushes the specific color into most widgets.</summary>
-    /// <param name="preferences">The user preferences</param>
-    /// <param name="color">The color.</param>
-    static void PushStyleColor(Preferences preferences, AppColor color)
-    {
-        var active = color / preferences.ActiveTabDim;
-        var inactive = color / preferences.InactiveTabDim;
-        ImGui.PushStyleColor(ImGuiCol.TabSelected, active);
-        ImGui.PushStyleColor(ImGuiCol.TabHovered, active);
-        ImGui.PushStyleColor(ImGuiCol.Tab, inactive);
-        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, active);
-        ImGui.PushStyleColor(ImGuiCol.ButtonActive, active);
-        ImGui.PushStyleColor(ImGuiCol.Button, inactive);
-        ImGui.PushStyleColor(ImGuiCol.HeaderHovered, active);
-        ImGui.PushStyleColor(ImGuiCol.HeaderActive, active);
-        ImGui.PushStyleColor(ImGuiCol.Header, inactive);
-        ImGui.PushStyleColor(ImGuiCol.FrameBgHovered, active);
-        ImGui.PushStyleColor(ImGuiCol.FrameBgActive, active);
-        ImGui.PushStyleColor(ImGuiCol.FrameBg, inactive);
-    }
-
-    /// <summary>Convenience function for displaying a tooltip with text scaled by the user preferences.</summary>
-    /// <param name="preferences">The user preferences.</param>
-    /// <param name="text">The text to display.</param>
-    /// <param name="colored">Whether to make the text colorful.</param>
-    static void Tooltip(Preferences preferences, string text, bool colored = false)
-    {
-        ImGui.PushStyleColor(ImGuiCol.PopupBg, preferences[AppPalette.Count + (int)ImGuiCol.PopupBg]);
-
-        if (!ImGui.BeginTooltip())
-        {
-            ImGui.PopStyleColor();
-            return;
-        }
-
-        ImGui.SetWindowFontScale(preferences.UiScale);
-
-        if (Preferences.ShownTooltip)
-            ImGui.NewLine();
-
-        Preferences.ShownTooltip = true;
-        Wrapped(text, ImGui.GetMainViewport().Size.X, colored);
-        ImGui.EndTooltip();
-        ImGui.PopStyleColor();
-    }
-
-    /// <summary>Creates the wrapped string.</summary>
-    /// <param name="text">The text to wrap.</param>
-    /// <param name="maxWidth">The maximum width.</param>
-    /// <param name="colored">Whether to make the text colorful.</param>
-    /// <returns>The wrapped version of the parameter <paramref name="text"/>.</returns>
-    static void Wrapped(string text, float maxWidth, bool colored)
-    {
-        var sum = 0f;
-        var span = text.AsSpan();
-        var isIdentifier = false;
-        int braces = 0, last = 0, replace = 0;
-        SearchValues<char> br = Whitespaces.BreakingSearch.GetSpan()[0], ws = Whitespaces.UnicodeSearch.GetSpan()[0];
-
-        for (var i = 0; i < span.Length && span[i] is var c && (sum += ImGui.CalcTextSize([c]).X) is var _; i++)
-            switch (c)
-            {
-                case var _ when br.Contains(c):
-                    sum = 0;
-                    PushRange(span[last..i], colored, ref braces, ref isIdentifier);
-                    replace = last = i + 1;
-                    ImGui.NewLine();
-                    break;
-                case var _ when ws.Contains(c):
-                    replace = i;
-                    break;
-                case var _ when sum <= maxWidth: break;
-                default:
-                    PushRange(span[last..replace], colored, ref braces, ref isIdentifier);
-                    sum = ImGui.CalcTextSize(span[replace..i]).X;
-                    last = replace + 1;
-                    ImGui.NewLine();
-                    break;
-            }
-
-        PushRange(span[last..], colored, ref braces, ref isIdentifier);
     }
 
     /// <summary>Invokes <see cref="ImGui.BeginTabItem(string, ref bool, ImGuiTabItemFlags)"/>.</summary>
@@ -317,10 +168,7 @@ public sealed partial class Client
         if (_errors is not null)
             foreach (var error in _errors.AsSpan())
                 if (!string.IsNullOrEmpty(error))
-                {
                     preferences.ShowText(error, AppPalette.Trap);
-                    CopyIfClicked(preferences, error);
-                }
 
         ImGui.SeparatorText("Create");
 
@@ -496,21 +344,16 @@ public sealed partial class Client
         var roomState = _session.RoomState;
         var hintCost = roomState.HintCost.Max(1);
         var hintCount = roomState.HintPoints / hintCost;
-        Preferences.ShowText($"Hint cost percentage: {roomState.HintCostPercentage}% ({hintCost.Conjugate("point")})");
-        Preferences.ShowText($"You can do {hintCount.Conjugate("hint")} ({roomState.HintPoints.Conjugate("point")})");
+        preferences.ShowText($"Hint cost percentage: {roomState.HintCostPercentage}% ({hintCost.Conjugate("point")})");
+        preferences.ShowText($"You can do {hintCount.Conjugate("hint")} ({roomState.HintPoints.Conjugate("point")})");
         _ = ImGui.Checkbox("Show obtained hints", ref _showObtainedHints);
         ImGui.SetNextItemWidth(preferences.Width(150));
         _ = Preferences.Combo("Filter", ref _hintIndex, "Show sent hints\0Show received hints\0\0");
 
         if (LastHints is { } hints)
             foreach (var (hint, message) in hints)
-            {
-                if (!ShouldBeVisible(hint))
-                    continue;
-
-                preferences.ShowText(message, hint.ItemFlags);
-                CopyIfClicked(preferences, message);
-            }
+                if (ShouldBeVisible(hint))
+                    preferences.ShowText(message, hint.ItemFlags);
 
         ImGui.EndChild();
         ShowChat(preferences);
@@ -579,7 +422,7 @@ public sealed partial class Client
         }
 
         if (isChatTab)
-            Preferences.ShowText("TIP: Right click text or checkboxes to copy them!", disabled: true);
+            preferences.ShowText("TIP: Right click text or checkboxes to copy them!", disabled: true);
 
         ShowLog(preferences);
         ImGui.SeparatorText("Message");
@@ -609,13 +452,13 @@ public sealed partial class Client
         ImGui.TextDisabled("(?)");
 
         if (ImGui.IsItemHovered())
-            Tooltip(preferences, HelpMessage1);
+            preferences.Tooltip(HelpMessage1);
 
         ImGui.SameLine();
         ImGui.TextDisabled("(?)");
 
         if (ImGui.IsItemHovered())
-            Tooltip(preferences, HelpMessage2);
+            preferences.Tooltip(HelpMessage2);
 
         ImGui.EndChild();
     }
@@ -768,11 +611,10 @@ public sealed partial class Client
         var playerName = player.ToString();
         var isSelf = player.Slot == _session.Players.ActivePlayer.Slot;
         var selfColor = preferences[isSelf ? AppPalette.Useful : AppPalette.Neutral];
-        Preferences.ShowText(playerName, selfColor);
-        CopyIfClicked(preferences, playerName);
+        preferences.ShowText(playerName, selfColor);
 
         if (isSelf && ImGui.IsItemHovered())
-            Tooltip(preferences, FlavorText);
+            preferences.Tooltip(FlavorText);
 
         var (gameName, isManual) = player.Game is ['M', 'a', 'n', 'u', 'a', 'l', '_', .. var rest]
             ? (rest.SplitOn('_')[..^1].ToString(), true)
@@ -782,21 +624,19 @@ public sealed partial class Client
             return;
 
         preferences.ShowText(gameName, isManual ? AppPalette.Progression : AppPalette.Neutral);
-        CopyIfClicked(preferences, gameName);
 
         if (isManual && ImGui.IsItemHovered())
-            Tooltip(preferences, "Manual Game");
+            preferences.Tooltip("Manual Game");
 
         var slotName = player.Slot.ToString();
 
         if (!ImGui.TableNextColumn())
             return;
 
-        Preferences.ShowText(slotName, selfColor);
-        CopyIfClicked(preferences, slotName);
+        preferences.ShowText(slotName, selfColor);
 
         if (isSelf && ImGui.IsItemHovered())
-            Tooltip(preferences, FlavorText);
+            preferences.Tooltip(FlavorText);
 
         if (!ImGui.TableNextColumn())
             return;
@@ -804,7 +644,6 @@ public sealed partial class Client
         var teamName = player.Team.ToString();
         var isTeammate = player.Team == _session.Players.ActivePlayer.Team;
         preferences.ShowText(teamName, isTeammate ? AppPalette.Neutral : AppPalette.Checked);
-        CopyIfClicked(preferences, teamName);
     }
 
     /// <summary>Moves the index by an amount.</summary>
@@ -963,7 +802,6 @@ public sealed partial class Client
             {
                 outOfLogic |= status is LocationStatus.OutOfLogic;
                 preferences.ShowText(key, status);
-                CopyIfClicked(preferences, key);
             }
 
         ImGui.EndChild();
@@ -997,7 +835,7 @@ public sealed partial class Client
             }
 
             preferences.ShowText(ReleaseMessage(), AppPalette.Released);
-            Preferences.ShowText("Press left click to return to the previous screen", disabled: true);
+            preferences.ShowText("Press left click to return to the previous screen", disabled: true);
             Release(preferences);
 
             if (_session is null)
@@ -1045,12 +883,10 @@ public sealed partial class Client
                     _ => AppPalette.Neutral,
                 };
 
-                preferences.ShowText(part.Text, palette);
+                preferences.ShowText(part.Text, palette, message);
 
                 if (priority is not AppPalette.Neutral && ImGui.IsItemHovered())
-                    Tooltip(preferences, $"Item Class: {priority}");
-
-                CopyIfClicked(preferences, message);
+                    preferences.Tooltip($"Item Class: {priority}");
             }
         }
     }
@@ -1149,13 +985,13 @@ public sealed partial class Client
         ref var value = ref this[location];
         ImGui.PushStyleColor(ImGuiCol.Text, preferences[value.Status]);
         ImGui.Checkbox($"{location}###{location}:|{category}:|Location", ref value.Checked);
-        CopyIfClicked(preferences, location);
+        preferences.CopyIfClicked(location);
 
         if (overrideAll is { } all)
             value.Checked = all;
 
         if (value.Logic is { } logic && ImGui.IsItemHovered())
-            Tooltip(preferences, logic.ToMinimalString(), true);
+            preferences.Tooltip(logic.ToMinimalString(), true);
 
         ImGui.PopStyleColor();
         value.Checked &= value.Status is not LocationStatus.Checked;

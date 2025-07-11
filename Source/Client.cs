@@ -115,14 +115,12 @@ public sealed partial class Client(Yaml? yaml = null)
                 info = info with { Items = info.GetItemsOrEmpty().SetItem(Name, Count - v) };
 
             if (unused is 0)
-                Preferences.ShowText(text, disabled: true);
+                preferences.ShowText(text, null, Name, true);
             else
-                preferences.ShowText(text, Flags);
-
-            CopyIfClicked(preferences, Name);
+                preferences.ShowText(text, Flags, Name);
 
             if (Locations is not null and not [] && ImGui.IsItemHovered())
-                Tooltip(preferences, Locations.Select(ToString).Conjoin('\n'));
+                preferences.Tooltip(Locations.Select(ToString).Conjoin('\n'));
 
             return unused != v;
         }

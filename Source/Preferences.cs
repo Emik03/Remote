@@ -49,7 +49,7 @@ public sealed partial class Preferences
     /// <param name="Tagged">The tagged locations.</param>
     /// <param name="Alias">The alias when displaying in history.</param>
     /// <param name="Color">The color for the tab or window.</param>
-    [StructLayout(LayoutKind.Auto)]
+    [CLSCompliant(false), StructLayout(LayoutKind.Auto)]
     public readonly record struct Connection(
         string? Name,
         string? Password,
@@ -449,61 +449,6 @@ public sealed partial class Preferences
         [UsedImplicitly] private set => _language = (int)value;
     }
 
-    /// <summary>Shows the text.</summary>
-    /// <param name="text">The text to show.</param>
-    /// <param name="color">The color of the text.</param>
-    /// <param name="disabled">Whether the text is disabled.</param>
-    public static unsafe void ShowText(string text, AppColor? color = null, bool disabled = false)
-    {
-        var pushed = true;
-
-        if (disabled && ImGui.GetStyleColorVec4(ImGuiCol.TextDisabled) is not null and var ptr)
-            ImGui.PushStyleColor(ImGuiCol.Text, *ptr);
-        else if (color is { } v)
-            ImGui.PushStyleColor(ImGuiCol.Text, v);
-        else
-            pushed = false;
-
-        foreach (var word in text.SplitSpanWhitespace())
-        {
-            if (ImGui.GetContentRegionAvail().X is var avail &&
-                ImGui.CalcTextSize(word).X + ImGui.CalcTextSize([' ']).X is var width &&
-                avail <= width)
-            {
-                ImGui.NewLine();
-                avail = ImGui.GetContentRegionAvail().X;
-            }
-
-            if (avail > width)
-            {
-                ImGui.TextUnformatted(word);
-                ImGui.SameLine(0, 0);
-                ImGui.TextUnformatted([' ']);
-                ImGui.SameLine(0, 0);
-                continue;
-            }
-
-            var drain = word;
-
-            for (var i = 2; i <= drain.Length; i++)
-                if (ImGui.GetContentRegionAvail().X <= ImGui.CalcTextSize(drain[..i]).X)
-                {
-                    var letters = drain[..(i - 1)];
-                    ImGui.TextUnformatted(letters);
-                    drain = drain[letters.Length..];
-                    i = 2;
-                }
-
-            ImGui.TextUnformatted(drain);
-            ImGui.SameLine(0, 0);
-        }
-
-        ImGui.NewLine();
-
-        if (pushed)
-            ImGui.PopStyleColor();
-    }
-
     /// <summary>Mimics <see cref="ImGui.Combo(string, ref int, string)"/>.</summary>
     /// <param name="label">The label.</param>
     /// <param name="currentItem">The index of the current item.</param>
@@ -569,6 +514,26 @@ public sealed partial class Preferences
     [CLSCompliant(false)]
     public void Prepend(Connection connection) => _list.History.Insert(0, connection);
 
+    /// <summary>Pushes the specific color into most widgets.</summary>
+    /// <param name="color">The color.</param>
+    public void PushStyling(AppColor color)
+    {
+        var active = color / ActiveTabDim;
+        var inactive = color / InactiveTabDim;
+        ImGui.PushStyleColor(ImGuiCol.TabSelected, active);
+        ImGui.PushStyleColor(ImGuiCol.TabHovered, active);
+        ImGui.PushStyleColor(ImGuiCol.Tab, inactive);
+        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, active);
+        ImGui.PushStyleColor(ImGuiCol.ButtonActive, active);
+        ImGui.PushStyleColor(ImGuiCol.Button, inactive);
+        ImGui.PushStyleColor(ImGuiCol.HeaderHovered, active);
+        ImGui.PushStyleColor(ImGuiCol.HeaderActive, active);
+        ImGui.PushStyleColor(ImGuiCol.Header, inactive);
+        ImGui.PushStyleColor(ImGuiCol.FrameBgHovered, active);
+        ImGui.PushStyleColor(ImGuiCol.FrameBgActive, active);
+        ImGui.PushStyleColor(ImGuiCol.FrameBg, inactive);
+    }
+
     /// <summary>Pushes all colors and styling variables.</summary>
     /// <param name="active">The current tab.</param>
     public void PushStyling(Client? active)
@@ -623,14 +588,132 @@ public sealed partial class Preferences
     /// <summary>Shows the text.</summary>
     /// <param name="text">The text to show.</param>
     /// <param name="color">The color of the text.</param>
-    public void ShowText(string text, AppPalette color) => ShowText(text, this[color]);
+    /// <param name="clipboard">The text to copy when this is clicked.</param>
+    /// <param name="disabled">Whether the text is disabled.</param>
+    public unsafe void ShowText(string text, AppColor? color = null, string? clipboard = null, bool disabled = false)
+    {
+        var copy = clipboard ?? text;
+        var pushed = true;
+        var pad = false;
 
-    /// <inheritdoc cref="ShowText(string, AppPalette)"/>
-    public void ShowText(string text, Client.LocationStatus color) => ShowText(text, this[color]);
+        if (disabled && ImGui.GetStyleColorVec4(ImGuiCol.TextDisabled) is not null and var ptr)
+            ImGui.PushStyleColor(ImGuiCol.Text, *ptr);
+        else if (color is { } v)
+            ImGui.PushStyleColor(ImGuiCol.Text, v);
+        else
+            pushed = false;
 
-    /// <inheritdoc cref="ShowText(string, AppPalette)"/>
+        foreach (var w in text.SplitSpanWhitespace())
+        {
+            if ((pad ? ImGui.CalcTextSize(w).X + ImGui.CalcTextSize([' ']).X : ImGui.CalcTextSize(w).X) is var width &&
+                ImGui.GetContentRegionAvail().X is var available &&
+                available <= width)
+            {
+                ImGui.NewLine();
+                (pad, width, available) = (false, ImGui.CalcTextSize(w).X, ImGui.GetContentRegionAvail().X);
+            }
+
+            if (available > width)
+            {
+                if (pad)
+                {
+                    ImGui.TextUnformatted([' ']);
+                    CopyIfClicked(copy);
+                    ImGui.SameLine(0, 0);
+                }
+
+                ImGui.TextUnformatted(w);
+                CopyIfClicked(copy);
+                ImGui.SameLine(0, 0);
+                pad = true;
+                continue;
+            }
+
+            var drain = w;
+
+            for (var i = 2; i <= drain.Length; i++)
+                if (ImGui.GetContentRegionAvail().X <= ImGui.CalcTextSize(drain[..i]).X)
+                {
+                    var letters = drain[..(i - 1)];
+                    ImGui.TextUnformatted(letters);
+                    CopyIfClicked(copy);
+                    drain = drain[letters.Length..];
+                    i = 2;
+                }
+
+            ImGui.TextUnformatted(drain);
+            CopyIfClicked(copy);
+            ImGui.SameLine(0, 0);
+            pad = true;
+        }
+
+        ImGui.NewLine();
+
+        if (pushed)
+            ImGui.PopStyleColor();
+    }
+
+    /// <summary>Copies the text if the mouse has been clicked.</summary>
+    /// <param name="text">The text to copy.</param>
+    /// <param name="button">The button to check for.</param>
     [CLSCompliant(false)]
-    public void ShowText(string text, ItemFlags? color) => ShowText(text, this[color]);
+    public void CopyIfClicked(string text, ImGuiMouseButton button = ImGuiMouseButton.Right)
+    {
+        if (!ImGui.IsItemHovered())
+            return;
+
+        if (ImGui.IsMouseDown(button))
+        {
+            ImGui.PushStyleColor(ImGuiCol.Text, this[AppPalette.Reachable]);
+            Tooltip("Copied!");
+            ImGui.PopStyleColor();
+        }
+
+        if (ImGui.IsMouseClicked(button))
+#if ANDROID
+            ImGui.SetClipboardText(text);
+#else
+            ClipboardService.SetText(text);
+#endif
+    }
+
+    /// <summary>Convenience function for displaying a tooltip with text scaled by the user preferences.</summary>
+    /// <param name="text">The text to display.</param>
+    /// <param name="colored">Whether to make the text colorful.</param>
+    public void Tooltip(string text, bool colored = false)
+    {
+        ImGui.PushStyleColor(ImGuiCol.PopupBg, this[AppPalette.Count + (int)ImGuiCol.PopupBg]);
+
+        if (!ImGui.BeginTooltip())
+        {
+            ImGui.PopStyleColor();
+            return;
+        }
+
+        ImGui.SetWindowFontScale(UiScale);
+
+        if (ShownTooltip)
+            ImGui.NewLine();
+
+        ShownTooltip = true;
+        Wrapped(text, ImGui.GetMainViewport().Size.X, colored);
+        ImGui.EndTooltip();
+        ImGui.PopStyleColor();
+    }
+
+    /// <summary>Shows the text.</summary>
+    /// <param name="text">The text to show.</param>
+    /// <param name="color">The color of the text.</param>
+    /// <param name="clipboard">The text to copy when this is clicked.</param>
+    public void ShowText(string text, AppPalette color, string? clipboard = null) => ShowText(text, this[color]);
+
+    /// <inheritdoc cref="ShowText(string, AppPalette, string)"/>
+    public void ShowText(string text, Client.LocationStatus color, string? clipboard = null) =>
+        ShowText(text, this[color]);
+
+    /// <inheritdoc cref="ShowText(string, AppPalette, string)"/>
+    [CLSCompliant(false)]
+    public void ShowText(string text, ItemFlags? color, string? clipboard = null) => ShowText(text, this[color]);
 
     /// <summary>Synchronizes the connection with the one found within the internal collection.</summary>
     /// <param name="connection">The connection to synchronize.</param>
@@ -781,6 +864,85 @@ public sealed partial class Preferences
     /// <param name="margin">The margin.</param>
     /// <returns>The size to use.</returns>
     public Vector2 ChildSize(int margin = 150) => ImGui.GetContentRegionAvail() - new Vector2(0, UiScale * margin);
+
+    /// <summary>Pushes the text.</summary>
+    /// <param name="span">The span.</param>
+    /// <param name="makeColorful">Whether or not to make it colorful.</param>
+    /// <param name="braces">The number of braces.</param>
+    /// <param name="isIdentifier">Whether or not it is processing an identifier.</param>
+    static void PushRange(ReadOnlySpan<char> span, bool makeColorful, ref int braces, ref bool isIdentifier)
+    {
+        static void Push(char c, bool makeColorful, in int braces)
+        {
+            const int L = 3;
+
+            if (makeColorful)
+            {
+                var index = (braces * L + braces * L / TabColors.Length) % TabColors.Length;
+                ImGui.PushStyleColor(ImGuiCol.Text, TabColors[index]);
+            }
+
+            ImGui.TextUnformatted([c]);
+            ImGui.SameLine(0, 0);
+
+            if (makeColorful)
+                ImGui.PopStyleColor();
+        }
+
+        foreach (var c in span)
+            switch (c)
+            {
+                case '(':
+                    Push(c, makeColorful, isIdentifier ? braces : ++braces);
+                    break;
+                case ')':
+                    Push(c, makeColorful, isIdentifier ? braces : braces--);
+                    break;
+                case '|':
+                    isIdentifier ^= isIdentifier;
+                    goto default;
+                default:
+                    Push(c, makeColorful, braces);
+                    break;
+            }
+    }
+
+    /// <summary>Creates the wrapped string.</summary>
+    /// <param name="text">The text to wrap.</param>
+    /// <param name="maxWidth">The maximum width.</param>
+    /// <param name="colored">Whether to make the text colorful.</param>
+    /// <returns>The wrapped version of the parameter <paramref name="text"/>.</returns>
+    static void Wrapped(string text, float maxWidth, bool colored)
+    {
+        var sum = 0f;
+        var span = text.AsSpan();
+        var isIdentifier = false;
+        int braces = 0, last = 0, replace = 0;
+        SearchValues<char> br = Whitespaces.BreakingSearch.GetSpan()[0], ws = Whitespaces.UnicodeSearch.GetSpan()[0];
+
+        for (var i = 0; i < span.Length && span[i] is var c && (sum += ImGui.CalcTextSize([c]).X) is var _; i++)
+            switch (c)
+            {
+                case var _ when br.Contains(c):
+                    sum = 0;
+                    PushRange(span[last..i], colored, ref braces, ref isIdentifier);
+                    replace = last = i + 1;
+                    ImGui.NewLine();
+                    break;
+                case var _ when ws.Contains(c):
+                    replace = i;
+                    break;
+                case var _ when sum <= maxWidth: break;
+                default:
+                    PushRange(span[last..replace], colored, ref braces, ref isIdentifier);
+                    sum = ImGui.CalcTextSize(span[replace..i]).X;
+                    last = replace + 1;
+                    ImGui.NewLine();
+                    break;
+            }
+
+        PushRange(span[last..], colored, ref braces, ref isIdentifier);
+    }
 
     /// <summary>Reads the stream into a byte array.</summary>
     /// <param name="input">The stream to read.</param>
