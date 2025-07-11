@@ -459,6 +459,32 @@ public sealed partial class Preferences
             ImGui.PopStyleColor();
     }
 
+    /// <summary>Mimics <see cref="ImGui.Combo(string, ref int, string)"/>.</summary>
+    /// <param name="label">The label.</param>
+    /// <param name="currentItem">The index of the current item.</param>
+    /// <param name="itemsSeparatedByZeros">The items separated by the character <c>\0</c>.</param>
+    /// <returns></returns>
+    public static bool Combo(string label, ref int currentItem, string itemsSeparatedByZeros)
+    {
+        var split = itemsSeparatedByZeros.SplitSpanOn('\0');
+
+        if (!ImGui.BeginCombo(label, split[currentItem]))
+            return false;
+
+        var i = 0;
+
+        foreach (var span in split)
+        {
+            if (ImGui.MenuItem(span))
+                currentItem = i;
+
+            i++;
+        }
+
+        ImGui.EndCombo();
+        return true;
+    }
+
     /// <summary>Shows the color edit widget.</summary>
     /// <param name="name">The displayed text.</param>
     /// <param name="color">The color that will change.</param>
@@ -814,7 +840,7 @@ public sealed partial class Preferences
         ImGui.SeparatorText("Fonts (Requires Restart)");
         Slider("Font Size", ref _fontSize, 8, 72, "%.0f");
         ImGui.SetNextItemWidth(Width(250));
-        _ = ImGui.Combo("Font Language", ref _language, s_languages);
+        _ = Combo("Font Language", ref _language, s_languages);
         ImGui.SeparatorText("Theming");
         ShowText("Press on the color for more options!", disabled: true);
 
@@ -917,7 +943,7 @@ public sealed partial class Preferences
         var ret = ImGui.Button("Enter slot manually") || enter;
         ImGui.SeparatorText("History");
         ImGui.SetNextItemWidth(Width(100));
-        _ = ImGui.Combo("Sort", ref _sortHistoryBy, s_historyOrder);
+        _ = Combo("Sort", ref _sortHistoryBy, s_historyOrder);
 
         if (_list.History.Count is not 0)
             ShowText("Left click to join. Right click to delete.", disabled: true);

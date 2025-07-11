@@ -493,7 +493,7 @@ public sealed partial class Client
         Preferences.ShowText($"You can do {hintCount.Conjugate("hint")} ({rm.HintPoints.Conjugate("point")})");
         _ = ImGui.Checkbox("Show obtained hints", ref _showObtainedHints);
         ImGui.SetNextItemWidth(preferences.Width(150));
-        _ = ImGui.Combo("Filter", ref _hintIndex, "Show sent hints\0Show received hints\0\0");
+        _ = Preferences.Combo("Filter", ref _hintIndex, "Show sent hints\0Show received hints\0\0");
 
         if (LastHints is { } hints)
             foreach (var (hint, message) in hints)
@@ -667,7 +667,7 @@ public sealed partial class Client
     void ShowLocations(Preferences preferences)
     {
         Debug.Assert(_session is not null);
-        _ = ImGui.Combo("##Location Sort", ref _locationSort, "Sort by Name\0Sort by ID\0\0");
+        _ = Preferences.Combo("##Location Sort", ref _locationSort, "Sort by Name\0Sort by ID\0\0");
         _ = ImGui.Checkbox("Show Already Checked Locations", ref _showAlreadyChecked);
         var stuck = _evaluator is null ? ShowNonManualLocations(preferences) : ShowManualLocations(preferences);
         ImGui.EndChild();
