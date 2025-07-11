@@ -4,7 +4,7 @@ namespace Remote;
 using JsonIgnoreAttribute = System.Text.Json.Serialization.JsonIgnoreAttribute;
 using JsonSerializer = System.Text.Json.JsonSerializer;
 using Vector2 = System.Numerics.Vector2;
-using ConnectionGroup = IGrouping<(string? Host, ushort Port), Preferences.Connection>;
+using ConnectionGroup = IGrouping<(string? Alias, string? Host, ushort Port), Preferences.Connection>;
 
 /// <summary>Contains the preferences that are stored persistently.</summary>
 public sealed partial class Preferences
@@ -54,6 +54,7 @@ public sealed partial class Preferences
         ushort Port,
         string? Game,
         ImmutableHashSet<string>? Locations,
+        string? Alias,
         string? Color
     )
     {
@@ -119,6 +120,7 @@ public sealed partial class Preferences
                 connection.Port,
                 connection.Game,
                 connection.GetLocationsOrEmpty().Union(locations ?? []),
+                connection.Alias,
                 color ?? connection.Color
             ) { }
 
@@ -129,7 +131,7 @@ public sealed partial class Preferences
         /// <param name="port">The port of the host.</param>
         /// <param name="color">The color for the tab or window.</param>
         public Connection(Yaml yaml, string? password, string? host, ushort port, string? color = null)
-            : this(yaml.Name, password, host, port, yaml.Game, [], color) { }
+            : this(yaml.Name, password, host, port, yaml.Game, [], null, color) { }
 
         /// <summary>Determines whether this instance is invalid, usually from default construction.</summary>
         [JsonIgnore]
@@ -143,6 +145,10 @@ public sealed partial class Preferences
 
         /// <inheritdoc />
         public override int GetHashCode() => HashCode.Combine(Port, Name, Game, Host, Password ?? "");
+
+        /// <summary>Gets the alias.</summary>
+        /// <returns>The alias.</returns>
+        public string GetAliasOrEmpty() => Alias ?? "";
 
         /// <summary>Gets the locations.</summary>
         /// <returns>The locations.</returns>
@@ -180,6 +186,11 @@ public sealed partial class Preferences
     static readonly FrozenSet<ImGuiCol> s_backgrounds = Enum.GetValues<ImGuiCol>()
        .Where(x => x.ToString() is [.., 'B' or 'b', 'G' or 'g'])
        .ToFrozenSet();
+
+    static readonly IEqualityComparer<(string? Alias, string? Host, ushort Port)> s_equality =
+        Equating<(string? Alias, string? Host, ushort Port)>(
+            (x, y) => x.Port == y.Port && FrozenSortedDictionary.Comparer.Equals(x.Host, y.Host)
+        );
 
     /// <summary>Contains the history.</summary>
     readonly Connection.List _list = Connection.List.Load();
@@ -945,8 +956,12 @@ public sealed partial class Preferences
         ImGui.SetNextItemWidth(Width(100));
         _ = Combo("Sort", ref _sortHistoryBy, s_historyOrder);
 
-        if (_list.History.Count is not 0)
-            ShowText("Left click to join. Right click to delete.", disabled: true);
+        ShowText(
+            _list.History.Count is 0
+                ? "Join a game for buttons to appear here!"
+                : "Left click to join. Right click to delete.",
+            disabled: true
+        );
 
         for (var i = 0; i < _list.History.Count && CollectionsMarshal.AsSpan(_list.History) is var history; i++)
         {
@@ -956,15 +971,12 @@ public sealed partial class Preferences
                 _list.History.RemoveAt(i--);
         }
 
-        clients = Order(_list.History.GroupBy(x => (x.Host, x.Port)))
+        clients = Order(_list.History.GroupBy(x => (x.Alias, x.Host, x.Port), s_equality))
            .SelectMany(ShowHistoryHeader)
            .Filter()
 #pragma warning disable IDE0305
            .ToList();
 #pragma warning restore IDE0305
-        if (_list.History.Count is 0)
-            ShowText("Join a game for buttons to appear here!");
-
         ImGui.EndTabItem();
         return ret;
     }
@@ -995,11 +1007,23 @@ public sealed partial class Preferences
     /// <summary>Shows the group of history.</summary>
     /// <param name="group">The group of history.</param>
     /// <returns>The clients created.</returns>
-    IEnumerable<Client> ShowHistoryHeader(ConnectionGroup group) =>
-        group.ToIList() is [var first, ..] connections &&
-        ImGui.CollapsingHeader($"{first.Host}:{first.Port}{(connections.Count is 1 ? "" : $" ({connections.Count})")}")
-            ? Order(connections).Where(ShowHistoryButton).Select(ConnectAndReturn)
-            : [];
+    IEnumerable<Client> ShowHistoryHeader(ConnectionGroup group)
+    {
+        if (group.ToIList() is not [var first, ..] connection ||
+            $"{first.Host}:{first.Port}{(connection.Count is 1 ? "" : $" ({connection.Count})")}" is var id &&
+            !ImGui.CollapsingHeader($"{(string.IsNullOrWhiteSpace(first.Alias) ? id : first.Alias)}###{id}"))
+            return [];
+
+        var oldAlias = first.GetAliasOrEmpty();
+        var newAlias = oldAlias;
+        ImGui.SetNextItemWidth(Width(100));
+        _ = ImGuiRenderer.InputText($"Alias###Alias:|{id}", ref newAlias, ushort.MaxValue, TextFlags);
+
+        if (!FrozenSortedDictionary.Comparer.Equals(oldAlias, newAlias) && first with { Alias = newAlias } is var alias)
+            Sync(ref alias);
+
+        return Order(connection).Where(ShowHistoryButton).Select(ConnectAndReturn);
+    }
 
     /// <summary>Orders the connections.</summary>
     /// <param name="cs">The connections.</param>
@@ -1019,7 +1043,8 @@ public sealed partial class Preferences
         SortHistoryBy switch
         {
             HistoryOrder.Date => cs.OrderBy(_list.Find),
-            HistoryOrder.Name => cs.OrderBy(x => x.Key.Host, FrozenSortedDictionary.Comparer).ThenBy(x => x.Key.Port),
+            HistoryOrder.Name =>
+                cs.OrderBy(x => x.Key.Alias ?? x.Key.Host, FrozenSortedDictionary.Comparer).ThenBy(x => x.Key.Port),
             _ => [],
         };
 }
