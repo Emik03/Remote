@@ -948,7 +948,7 @@ public sealed partial class Preferences
     /// <returns>Whether the button was clicked.</returns>
     bool ShowHistoryButton(Connection connection)
     {
-        var ret = ImGui.Button(connection.Name);
+        var ret = ImGui.Button($"{connection.Name}###{connection.Host}:|{connection.Port}:|{connection.Name}");
 
         if (ImGui.IsItemClicked(ImGuiMouseButton.Middle) || ImGui.IsItemClicked(ImGuiMouseButton.Right))
             _list.History.Remove(connection);
@@ -976,25 +976,24 @@ public sealed partial class Preferences
             : [];
 
     /// <summary>Orders the connections.</summary>
-    /// <param name="connections">The connections.</param>
-    /// <returns>The ordered enumerable of the parameter <paramref name="connections"/>.</returns>
-    IOrderedEnumerable<Connection> Order(IEnumerable<Connection> connections) =>
+    /// <param name="cs">The connections.</param>
+    /// <returns>The ordered enumerable of the parameter <paramref name="cs"/>.</returns>
+    IOrderedEnumerable<Connection> Order(IEnumerable<Connection> cs) =>
         SortHistoryBy switch
         {
-            HistoryOrder.Date => connections.OrderBy(_list.History.IndexOf),
-            HistoryOrder.Name => connections.OrderBy(x => x.Name, FrozenSortedDictionary.Comparer),
-            var x => throw new ArgumentOutOfRangeException(nameof(connections), x, null),
+            HistoryOrder.Date => cs.OrderBy(_list.History.IndexOf),
+            HistoryOrder.Name => cs.OrderBy(x => x.Name, FrozenSortedDictionary.Comparer),
+            var x => throw new ArgumentOutOfRangeException(nameof(cs), x, null),
         };
 
     /// <summary>Orders the connection group.</summary>
-    /// <param name="connections">The connections.</param>
-    /// <returns>The ordered enumerable of the parameter <paramref name="connections"/>.</returns>
-    IEnumerable<ConnectionGroup> Order(IEnumerable<ConnectionGroup> connections) =>
+    /// <param name="cs">The connections.</param>
+    /// <returns>The ordered enumerable of the parameter <paramref name="cs"/>.</returns>
+    IEnumerable<ConnectionGroup> Order(IEnumerable<ConnectionGroup> cs) =>
         SortHistoryBy switch
         {
-            HistoryOrder.Date => connections.OrderBy(_list.Find),
-            HistoryOrder.Name =>
-                connections.OrderBy(x => x.Key.Host, FrozenSortedDictionary.Comparer).ThenBy(x => x.Key.Port),
+            HistoryOrder.Date => cs.OrderBy(_list.Find),
+            HistoryOrder.Name => cs.OrderBy(x => x.Key.Host, FrozenSortedDictionary.Comparer).ThenBy(x => x.Key.Port),
             _ => [],
         };
 }
