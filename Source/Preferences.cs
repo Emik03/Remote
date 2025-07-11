@@ -1054,7 +1054,14 @@ public sealed partial class Preferences
         var oldAlias = f.GetAliasOrEmpty();
         var newAlias = oldAlias;
         ImGui.SetNextItemWidth(Width(100));
-        _ = ImGuiRenderer.InputText($"Alias###Alias:|{id}", ref newAlias, ushort.MaxValue, TextFlags);
+
+        _ = ImGuiRenderer.InputTextWithHint(
+            $"Alias###Alias:|{id}",
+            "Change the displayed name...",
+            ref newAlias,
+            ushort.MaxValue,
+            TextFlags
+        );
 
         if (!FrozenSortedDictionary.Comparer.Equals(oldAlias, newAlias) && f with { Alias = newAlias } is var alias)
             Sync(ref alias);
