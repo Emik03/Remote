@@ -249,6 +249,24 @@ public sealed partial class Client
         PushRange(span[last..], colored, ref braces, ref isIdentifier);
     }
 
+    /// <summary>Invokes <see cref="ImGui.BeginTabItem(string, ref bool, ImGuiTabItemFlags)"/>.</summary>
+    /// <param name="name">The name of the tab item.</param>
+    /// <param name="tab">The tab to check focus for.</param>
+    /// <returns></returns>
+    static bool BeginTabItem(string name, Tab tab)
+    {
+        var ret = ImGuiRenderer.BeginTabItem(
+            name,
+            ref Unsafe.NullRef<bool>(),
+            s_tab == tab ? ImGuiTabItemFlags.SetSelected : ImGuiTabItemFlags.None
+        );
+
+        if (ImGui.IsItemClicked())
+            s_tab = tab;
+
+        return ret;
+    }
+
     /// <summary>Creates two inline buttons.</summary>
     /// <param name="first">The label of the first button.</param>
     /// <param name="second">The label of the second button.</param>
@@ -347,11 +365,14 @@ public sealed partial class Client
     void ShowChatTab(Preferences preferences)
     {
         Debug.Assert(_session is not null);
-        var isForced = preferences is { AlwaysShowChat: false, MoveToChatTab: true } && IsReleasing;
-        var flags = isForced ? ImGuiTabItemFlags.SetSelected : ImGuiTabItemFlags.None;
+        var forced = s_tab is Tab.Chat || preferences is { AlwaysShowChat: false, MoveToChatTab: true } && IsReleasing;
+        var flags = forced ? ImGuiTabItemFlags.SetSelected : ImGuiTabItemFlags.None;
         var ret = !ImGuiRenderer.BeginTabItem("Chat", ref Unsafe.NullRef<bool>(), flags);
 
-        if (isForced)
+        if (ImGui.IsItemClicked())
+            s_tab = Tab.Chat;
+
+        if (forced)
         {
             Release(preferences);
 
@@ -375,7 +396,7 @@ public sealed partial class Client
         const ImGuiTableFlags Flags = ImGuiTableFlags.Resizable | ImGuiTableFlags.SizingStretchSame;
         Debug.Assert(_session is not null);
 
-        if (!ImGui.BeginTabItem("Players"))
+        if (!BeginTabItem("Players", Tab.Player))
             return;
 
         if (!preferences.BeginChild("Players"))
@@ -404,7 +425,7 @@ public sealed partial class Client
     {
         Debug.Assert(_session is not null);
 
-        if (!ImGui.BeginTabItem("Locations"))
+        if (!BeginTabItem("Locations", Tab.Location))
             return;
 
         if (!preferences.BeginChild("Locations"))
@@ -429,7 +450,7 @@ public sealed partial class Client
     {
         Debug.Assert(_session is not null);
 
-        if (!ImGui.BeginTabItem("Items"))
+        if (!BeginTabItem("Items", Tab.Item))
             return;
 
         if (!preferences.BeginChild("Items"))
@@ -454,7 +475,7 @@ public sealed partial class Client
     {
         Debug.Assert(_session is not null);
 
-        if (!ImGui.BeginTabItem("Hints"))
+        if (!BeginTabItem("Hints", Tab.Hint))
         {
             _hintTask = Task.FromResult<HintMessage[]?>(null);
             return;
@@ -494,7 +515,7 @@ public sealed partial class Client
     {
         Debug.Assert(_session is not null);
 
-        if (!ImGui.BeginTabItem("Settings"))
+        if (!BeginTabItem("Settings", Tab.Settings))
             return;
 
         if (!preferences.BeginChild("Settings"))

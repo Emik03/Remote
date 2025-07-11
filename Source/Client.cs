@@ -29,6 +29,28 @@ public sealed partial class Client(Yaml? yaml = null)
         ProbablyReachable,
     }
 
+    /// <summary>Indicates which tab is selected.</summary>
+    enum Tab
+    {
+        /// <summary>The chat tab is selected.</summary>
+        Chat,
+
+        /// <summary>The player tab is selected.</summary>
+        Player,
+
+        /// <summary>The location tab is selected.</summary>
+        Location,
+
+        /// <summary>The item tab is selected.</summary>
+        Item,
+
+        /// <summary>The hint tab is selected.</summary>
+        Hint,
+
+        /// <summary>The settings tab is selected.</summary>
+        Settings,
+    }
+
     /// <summary>Wraps the importance of an item and where it was obtained.</summary>
     /// <param name="Flags">The priority of the obtained item.</param>
     /// <param name="Name">The item name.</param>
@@ -144,6 +166,9 @@ public sealed partial class Client(Yaml? yaml = null)
 
     /// <summary>Whether to show errors in <see cref="MessageBox.Show"/>.</summary>
     static bool s_displayErrors = true;
+
+    /// <summary>Gets the currently selected tab.</summary>
+    static Tab s_tab;
 
     /// <summary>Whether to send push notifications for receiving new items.</summary>
     bool _pushNotifs;
