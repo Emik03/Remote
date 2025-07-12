@@ -647,10 +647,9 @@ public sealed partial class Preferences
             for (var i = 2; i <= drain.Length; i++)
                 if (ImGui.GetContentRegionAvail().X <= ImGui.CalcTextSize(drain[..i]).X)
                 {
-                    var letters = drain[..(i - 1)];
-                    ImGui.TextUnformatted(letters);
+                    ImGui.TextUnformatted(drain[..(i - 1)]);
                     CopyIfClicked(copy);
-                    drain = drain[letters.Length..];
+                    drain = drain[(i - 1)..];
                     i = 2;
                 }
 
@@ -660,6 +659,7 @@ public sealed partial class Preferences
             pad = true;
         }
 
+        ImGui.TextUnformatted([' ']);
         ImGui.NewLine();
 
         if (pushed)

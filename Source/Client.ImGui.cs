@@ -866,11 +866,7 @@ public sealed partial class Client
             foreach (var part in parts)
             {
                 if (!first || (first = false))
-                {
                     ImGui.SameLine(0, 0);
-                    preferences.ShowText(" ", AppPalette.Neutral, message);
-                    ImGui.SameLine(0, 0);
-                }
 
                 var priority = part.PaletteColor switch
                 {
