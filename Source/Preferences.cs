@@ -718,15 +718,17 @@ public sealed partial class Preferences
     /// <param name="text">The text to show.</param>
     /// <param name="color">The color of the text.</param>
     /// <param name="clipboard">The text to copy when this is clicked.</param>
-    public void ShowText(string text, AppPalette color, string? clipboard = null) => ShowText(text, this[color]);
+    public void ShowText(string text, AppPalette color, string? clipboard = null) =>
+        ShowText(text, this[color], clipboard);
 
     /// <inheritdoc cref="ShowText(string, AppPalette, string)"/>
     public void ShowText(string text, Client.LocationStatus color, string? clipboard = null) =>
-        ShowText(text, this[color]);
+        ShowText(text, this[color], clipboard);
 
     /// <inheritdoc cref="ShowText(string, AppPalette, string)"/>
     [CLSCompliant(false)]
-    public void ShowText(string text, ItemFlags? color, string? clipboard = null) => ShowText(text, this[color]);
+    public void ShowText(string text, ItemFlags? color, string? clipboard = null) =>
+        ShowText(text, this[color], clipboard);
 
     /// <summary>Synchronizes the connection with the one found within the internal collection.</summary>
     /// <param name="connection">The connection to synchronize.</param>
