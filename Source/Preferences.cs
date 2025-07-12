@@ -226,6 +226,9 @@ public sealed partial class Preferences
             (x, y) => x.Port == y.Port && FrozenSortedDictionary.Comparer.Equals(x.Host, y.Host)
         );
 
+    /// <summary>Determines whether a restart needs to be performed to apply changes.</summary>
+    static bool s_requiresRestart;
+
     /// <summary>Contains the history.</summary>
     readonly Connection.List _list = Connection.List.Load();
 
@@ -243,7 +246,6 @@ public sealed partial class Preferences
     /// <summary>Contains the current UI settings.</summary>
     float _activeTabDim = 2.5f,
         _windowDim = 10,
-        _fontSize = 36,
         _inactiveTabDim = 5,
         _uiScale = 0.75f,
         _uiPadding = 6,
@@ -371,11 +373,7 @@ public sealed partial class Preferences
     }
 
     /// <summary>Gets or sets the UI scaling.</summary>
-    public float FontSize
-    {
-        get => _fontSize;
-        [UsedImplicitly] private set => _fontSize = value;
-    }
+    public float FontSize { get; [UsedImplicitly] private set; } = 36;
 
     /// <summary>Gets or sets the UI scaling.</summary>
     public float UiScale
@@ -462,6 +460,10 @@ public sealed partial class Preferences
         [UsedImplicitly] private set => _language = (int)value;
     }
 
+    /// <summary>Gets the child process to wait for before disposing.</summary>
+#pragma warning disable IDISP006
+    public Process? ChildProcess { get; private set; }
+#pragma warning restore IDISP006
     /// <summary>Mimics <see cref="ImGui.Combo(string, ref int, string)"/>.</summary>
     /// <param name="label">The label.</param>
     /// <param name="currentItem">The index of the current item.</param>
@@ -880,7 +882,7 @@ public sealed partial class Preferences
         };
 
         fixed (byte* ptr = font)
-            return io.Fonts.AddFontFromMemoryTTF((nint)ptr, font.Length, _fontSize.Clamp(8, 72), 0, ranges);
+            return io.Fonts.AddFontFromMemoryTTF((nint)ptr, font.Length, FontSize.Clamp(8, 72), 0, ranges);
     }
 
     /// <summary>Gets the size of a child window.</summary>
@@ -1028,12 +1030,92 @@ public sealed partial class Preferences
     /// <summary>Displays the preferences tab.</summary>
     void ShowPreferences()
     {
-        const string Hint = "Only required for manual worlds that use hooks";
-
         if (!ImGui.BeginTabItem("Preferences"))
             return;
 
-        ImGui.SeparatorText("Paths");
+        ShowLayout();
+        ShowBehavior();
+        ShowStyle();
+        ShowPath();
+        ImGui.EndTabItem();
+    }
+
+    /// <summary>Shows the layout header and options.</summary>
+    void ShowLayout()
+    {
+        ImGui.SeparatorText("Layout");
+        _ = ImGui.Checkbox("Tabs instead of separate windows", ref _useTabs);
+        _ = ImGui.Checkbox("Always show chat", ref _alwaysShowChat);
+
+        if (_alwaysShowChat)
+            ImGui.Checkbox("Chat window on side", ref _sideBySide);
+    }
+
+    /// <summary>Shows the behavior header and options.</summary>
+    void ShowBehavior()
+    {
+        ImGui.SeparatorText("Behavior");
+        _ = ImGui.Checkbox("Hold to confirm location release", ref _holdToConfirm);
+
+        if (!_alwaysShowChat)
+            ImGui.Checkbox("Move to chat tab when releasing", ref _moveToChatTab);
+
+        if (OperatingSystem.IsFreeBSD() || OperatingSystem.IsLinux())
+            _ = ImGui.Checkbox("Push notifications for new items", ref _desktopNotifications);
+    }
+
+    /// <summary>Shows the style header and options.</summary>
+    void ShowStyle()
+    {
+        ImGui.SeparatorText("Style");
+        Slider("UI Scale", ref _uiScale, 0.4f, 2, "%.2f");
+        Slider("UI Padding", ref _uiPadding, 0, 20);
+        Slider("UI Rounding", ref _uiRounding, 0, 30);
+        Slider("UI Spacing", ref _uiSpacing, 0, 20);
+
+        Slider("Window Dim", ref _windowDim, 1, 20, "%.2f");
+        Slider("Inactive Dim", ref _inactiveTabDim, 1, 20, "%.2f");
+        Slider("Active Dim", ref _activeTabDim, 1, 20, "%.2f");
+
+        var (fontSize, language) = (FontSize, _language);
+        Slider("Font Size", ref fontSize, 8, 72, "%.0f");
+        ImGui.SetNextItemWidth(Width(250));
+        _ = Combo("Font Language", ref language, s_languages);
+        // ReSharper disable once CompareOfFloatsByEqualityOperator
+        s_requiresRestart |= FontSize != fontSize || _language != language;
+        (FontSize, _language) = (fontSize, language);
+
+        if (s_requiresRestart && ImGui.Button("Restart"))
+        {
+#if !ANDROID
+            if (Environment.ProcessPath is { } path)
+            {
+                ChildProcess?.Dispose();
+                ChildProcess = Process.Start(path);
+            }
+            else
+#endif // ReSharper disable once BadPreprocessorIndent
+                Environment.Exit(0);
+        }
+
+        ShowText("Press on the color for more options!", disabled: true);
+
+        if (ImGui.CollapsingHeader("Theme"))
+            for (var i = 0; i < Colors.Count.Min((int)AppPalette.Count); i++)
+                ShowColor(i);
+
+        if (!ImGui.CollapsingHeader("Theme (Advanced)"))
+            return;
+
+        for (var i = (int)AppPalette.Count; i < Colors.Count; i++)
+            ShowColor(i);
+    }
+
+    /// <summary>Shows the path header and options.</summary>
+    void ShowPath()
+    {
+        const string Hint = "Only required for manual worlds that use hooks";
+        ImGui.SeparatorText("Path");
         ImGui.SetNextItemWidth(Width(250));
 
         _ = ImGuiRenderer.InputTextWithHint(
@@ -1047,44 +1129,6 @@ public sealed partial class Preferences
         _ = ImGuiRenderer.InputTextWithHint("AP Git Repo", Hint, ref _repo, ushort.MaxValue);
         ImGui.SetNextItemWidth(Width(250));
         _ = ImGuiRenderer.InputTextWithHint("Python", "python", ref _python, ushort.MaxValue);
-        ImGui.SeparatorText("Navigation");
-        _ = ImGui.Checkbox("Tabs instead of separate windows", ref _useTabs);
-        _ = ImGui.Checkbox("Always show chat", ref _alwaysShowChat);
-
-        _ = _alwaysShowChat
-            ? ImGui.Checkbox("Chat window on side", ref _sideBySide)
-            : ImGui.Checkbox("Move to chat tab when releasing", ref _moveToChatTab);
-
-        _ = ImGui.Checkbox("Hold to confirm location release", ref _holdToConfirm);
-
-        if (OperatingSystem.IsFreeBSD() || OperatingSystem.IsLinux())
-            _ = ImGui.Checkbox("Push notifications for new items", ref _desktopNotifications);
-
-        ImGui.SeparatorText("UI Settings");
-        Slider("UI Scale", ref _uiScale, 0.4f, 2, "%.2f");
-        Slider("UI Padding", ref _uiPadding, 0, 20);
-        Slider("UI Rounding", ref _uiRounding, 0, 30);
-        Slider("UI Spacing", ref _uiSpacing, 0, 20);
-        ImGui.SeparatorText("Color Dimming (Only when connected)");
-        Slider("Window Dim", ref _windowDim, 1, 20, "%.2f");
-        Slider("Inactive Dim", ref _inactiveTabDim, 1, 20, "%.2f");
-        Slider("Active Dim", ref _activeTabDim, 1, 20, "%.2f");
-        ImGui.SeparatorText("Fonts (Requires Restart)");
-        Slider("Font Size", ref _fontSize, 8, 72, "%.0f");
-        ImGui.SetNextItemWidth(Width(250));
-        _ = Combo("Font Language", ref _language, s_languages);
-        ImGui.SeparatorText("Theming");
-        ShowText("Press on the color for more options!", disabled: true);
-
-        if (ImGui.CollapsingHeader("Theme"))
-            for (var i = 0; i < Colors.Count.Min((int)AppPalette.Count); i++)
-                ShowColor(i);
-
-        if (ImGui.CollapsingHeader("Theme (Advanced)"))
-            for (var i = (int)AppPalette.Count; i < Colors.Count; i++)
-                ShowColor(i);
-
-        ImGui.EndTabItem();
     }
 
     /// <summary>Helper method for displaying a slider.</summary>

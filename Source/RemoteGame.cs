@@ -53,6 +53,9 @@ public sealed class RemoteGame : Game
 #endif
     }
 
+    /// <inheritdoc cref="Preferences.ChildProcess"/>
+    public Process? ChildProcess => _preferences.ChildProcess;
+
     /// <inheritdoc />
     protected override unsafe void Dispose(bool disposing)
     {
@@ -76,6 +79,12 @@ public sealed class RemoteGame : Game
     /// <inheritdoc />
     protected override void Draw(GameTime gameTime)
     {
+        if (_preferences.ChildProcess is not null)
+        {
+            Exit();
+            return;
+        }
+
         if (_renderer.IsDisposed)
             return;
 

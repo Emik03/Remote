@@ -15,6 +15,17 @@ AppDomain.CurrentDomain.UnhandledException += (_, e) => File.WriteAllText(
     e.ExceptionObject.ToString()
 );
 
-using RemoteGame game = new();
-game.Run();
+Process? process;
+
+{
+    using RemoteGame game = new();
+    game.Run();
+    process = game.ChildProcess;
+}
+
+if (process is not null)
+{
+    await process.WaitForExitAsync();
+    process.Dispose();
+}
 #endif
