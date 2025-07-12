@@ -105,18 +105,16 @@ public sealed partial class Client(Yaml? yaml = null)
                 return false;
 
             var used = info.GetItemsOrEmpty().GetValueOrDefault(Name);
-            var unused = Count - used;
-            var text = $"{Name}{(used is 0 ? Count is 1 ? "" : $" ({Count})" : $" ({unused}/{Count})")}";
-            var v = unused;
+            var text = $"{Name}{(used is 0 ? Count is 1 ? "" : $" ({Count})" : $" ({Count - used}/{Count})")}";
+            var v = used;
             ImGui.SetNextItemWidth(0);
             ImGui.InputInt($"###{Name}", ref v);
-            v = v.Clamp(0, Count);
             ImGui.SameLine();
 
-            if (unused != v)
-                info = info with { Items = info.GetItemsOrEmpty().SetItem(Name, Count - v) };
+            if ((v = v.Clamp(0, Count)) != used)
+                info = info with { Items = info.GetItemsOrEmpty().SetItem(Name, v) };
 
-            if (unused is 0)
+            if (used == Count)
                 preferences.ShowText(text, null, Name, true);
             else
                 preferences.ShowText(text, Flags, Name);
@@ -124,7 +122,7 @@ public sealed partial class Client(Yaml? yaml = null)
             if (Locations is not null and not [] && ImGui.IsItemHovered())
                 preferences.Tooltip(Locations.Select(ToString).Conjoin('\n'));
 
-            return unused != v;
+            return v != used;
         }
 
         /// <inheritdoc />
