@@ -659,7 +659,7 @@ public sealed partial class Preferences
         }
 
         ImGui.TextUnformatted([' ']);
-        ImGui.NewLine();
+        CopyIfClicked(copy);
 
         if (pushed)
             ImGui.PopStyleColor();

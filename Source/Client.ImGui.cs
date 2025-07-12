@@ -184,14 +184,12 @@ public sealed partial class Client
         Debug.Assert(_session is not null);
         _pushNotifs = preferences.DesktopNotifications;
 
-        if (_session.Items.AllItemsReceived.Count is var itemCount && _lastItemCount < itemCount)
+        if (_session.Items.AllItemsReceived.Count is var itemCount &&
+            _session.Locations.AllMissingLocations.Count is var locationCount &&
+            _lastItemCount < itemCount ||
+            _lastLocationCount > locationCount)
         {
             _lastItemCount = _lastLocationCount;
-            UpdateStatus();
-        }
-
-        if (_session.Locations.AllMissingLocations.Count is var locationCount && _lastLocationCount > locationCount)
-        {
             _lastLocationCount = locationCount;
             UpdateStatus();
         }
@@ -890,6 +888,9 @@ public sealed partial class Client
                 if (priority is not AppPalette.Neutral && ImGui.IsItemHovered())
                     preferences.Tooltip($"Item Class: {priority}");
             }
+
+            for (var i = 0; i < 5; i++)
+                ImGui.Spacing();
         }
     }
 
