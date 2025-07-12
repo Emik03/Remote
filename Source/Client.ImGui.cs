@@ -869,6 +869,7 @@ public sealed partial class Client
                 {
                     ImGui.SameLine(0, 0);
                     preferences.ShowText(" ", AppPalette.Neutral, message);
+                    ImGui.SameLine(0, 0);
                 }
 
                 var priority = part.PaletteColor switch
