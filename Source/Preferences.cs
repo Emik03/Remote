@@ -1052,7 +1052,7 @@ public sealed partial class Preferences
         _ = ImGui.Checkbox("Always show chat", ref _alwaysShowChat);
 
         _ = _alwaysShowChat
-            ? ImGui.Checkbox("Side by side", ref _sideBySide)
+            ? ImGui.Checkbox("Chat window on side", ref _sideBySide)
             : ImGui.Checkbox("Move to chat tab when releasing", ref _moveToChatTab);
 
         _ = ImGui.Checkbox("Hold to confirm location release", ref _holdToConfirm);
