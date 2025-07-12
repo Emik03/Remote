@@ -746,7 +746,13 @@ public sealed partial class Client
         ShowUserCategorizedLocations(preferences, setter, newValue);
         bool? ret = true;
 
-        foreach (var (category, locations) in _evaluator.CategoryToLocations)
+        var orderedCategories = _locationSort is 0
+            ? _evaluator.CategoryToLocations.Array.Select(x => (x.Key, x.Value as IReadOnlyCollection<string>))
+            : _evaluator.CategoryToLocations.Array.Select(OrderById)
+               .OrderBy(x => x.Location.Max(static x => x.Id))
+               .Select(x => (x.Category, (IReadOnlyCollection<string>)[..x.Location.Select(x => x.Name)]));
+
+        foreach (var (category, locations) in orderedCategories)
         {
             if (_evaluator.HiddenCategories.Contains(category))
                 continue;
@@ -774,11 +780,7 @@ public sealed partial class Client
             if (!ImGui.CollapsingHeader($"{category} ({count})###{category}:|LocationCategory"))
                 continue;
 
-            var orderedLocations = _locationSort is 0
-                ? locations.Array.AsEnumerable()
-                : locations.OrderBy(x => _session.Locations.GetLocationIdFromName(_yaml.Game, x));
-
-            foreach (var location in orderedLocations.Where(ShouldBeVisible))
+            foreach (var location in locations.Where(ShouldBeVisible))
                 Checkbox(preferences, location, category, newValue);
         }
 
@@ -1036,4 +1038,21 @@ public sealed partial class Client
     /// <summary>Gets the message for releasing locations, showing how much time is left.</summary>
     /// <returns>The message.</returns>
     string ReleasingMessage() => $"{_confirmationTimer.TotalSeconds.Max(0):N2}s before release";
+
+    /// <summary>Converts the key-value pair into the tuple containing the name and id.</summary>
+    /// <param name="kvp">The key-value pair to deconstruct.</param>
+    /// <returns>The names and ids.</returns>
+    (string Category, (string Name, long Id)[] Location) OrderById(
+        KeyValuePair<string, FrozenSortedDictionary.Element> kvp
+    )
+    {
+        Debug.Assert(_session is not null);
+
+        return (kvp.Key, Location:
+        [
+            ..kvp.Value
+               .Select(x => (Key: x, Value: _session.Locations.GetLocationIdFromName(_yaml.Game, x)))
+               .OrderBy(x => x.Value),
+        ]);
+    }
 }

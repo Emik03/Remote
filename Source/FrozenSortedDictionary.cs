@@ -15,8 +15,11 @@ public readonly record struct FrozenSortedDictionary(
     /// </summary>
     /// <param name="Set">The set.</param>
     /// <param name="Array">The array.</param>
-    public readonly record struct Element(FrozenSet<string> Set, ImmutableArray<string> Array) : IEnumerable<string>
+    public readonly record struct Element(FrozenSet<string> Set, ImmutableArray<string> Array) : IReadOnlySet<string>
     {
+        /// <inheritdoc />
+        int IReadOnlyCollection<string>.Count => Array.Length;
+
         /// <summary>Constructs the <see cref="Element"/> from the key-value-pair.</summary>
         /// <typeparam name="T">The type of enumerable.</typeparam>
         /// <param name="kvp">The pair.</param>
@@ -35,6 +38,24 @@ public readonly record struct FrozenSortedDictionary(
 
         /// <inheritdoc cref="FrozenSet{T}.Contains"/>
         public bool Contains(string item) => Array.IsDefaultOrEmpty || Set.Contains(item);
+
+        /// <inheritdoc />
+        public bool IsProperSubsetOf(IEnumerable<string> other) => Set.IsProperSubsetOf(other);
+
+        /// <inheritdoc />
+        public bool IsProperSupersetOf(IEnumerable<string> other) => Set.IsProperSupersetOf(other);
+
+        /// <inheritdoc />
+        public bool IsSubsetOf(IEnumerable<string> other) => Set.IsSubsetOf(other);
+
+        /// <inheritdoc />
+        public bool IsSupersetOf(IEnumerable<string> other) => Set.IsSupersetOf(other);
+
+        /// <inheritdoc />
+        public bool Overlaps(IEnumerable<string> other) => Set.Overlaps(other);
+
+        /// <inheritdoc />
+        public bool SetEquals(IEnumerable<string> other) => Set.SetEquals(other);
 
         /// <inheritdoc cref="Enumerable.Count{T}(IEnumerable{T}, Func{T, bool})"/>
         public int Count(Func<string, bool> func)
