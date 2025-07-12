@@ -530,7 +530,7 @@ public sealed partial class Client
 
         if (isAnyReleasable)
         {
-            if (ImGui.Button("Check (Enter)") || ImGui.IsKeyDown(ImGuiKey.Enter))
+            if (ImGui.Button("Check (Enter)") || ImGui.IsKeyPressed(ImGuiKey.Enter))
                 _showConfirmationDialog = true;
 
             ImGui.SameLine();
@@ -866,7 +866,10 @@ public sealed partial class Client
             foreach (var part in parts)
             {
                 if (!first || (first = false))
+                {
                     ImGui.SameLine(0, 0);
+                    preferences.ShowText(" ", AppPalette.Neutral, message);
+                }
 
                 var priority = part.PaletteColor switch
                 {
