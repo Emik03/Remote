@@ -606,8 +606,7 @@ public sealed partial class Preferences
     public unsafe void ShowText(string text, AppColor? color = null, string? clipboard = null, bool disabled = false)
     {
         var copy = clipboard ?? text;
-        var pushed = true;
-        var pad = false;
+        bool pad = false, pushed = true;
 
         if (disabled && ImGui.GetStyleColorVec4(ImGuiCol.TextDisabled) is not null and var ptr)
             ImGui.PushStyleColor(ImGuiCol.Text, *ptr);
