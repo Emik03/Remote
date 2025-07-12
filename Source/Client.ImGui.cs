@@ -512,9 +512,11 @@ public sealed partial class Client
         ImGui.SameLine();
 
         if (!IsReleasing)
-            _ = ImGui.Button("Confirm");
+            _ = ImGui.Button("Confirm (Enter)");
 
-        if (ImGui.IsItemActive() || IsReleasing)
+        if (ImGui.IsItemActive() ||
+            (preferences.HoldToConfirm ? ImGui.IsKeyDown(ImGuiKey.Enter) : ImGui.IsKeyPressed(ImGuiKey.Enter)) ||
+            IsReleasing)
             ShowCountdownToRelease(gameTime, preferences, outOfLogic);
         else
             ClearChecked();
