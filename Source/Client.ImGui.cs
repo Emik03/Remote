@@ -309,6 +309,14 @@ public sealed partial class Client
             return;
         }
 
+        ImGui.SetNextItemWidth(preferences.Width(0));
+
+        Preferences.Combo(
+            "###Item Sort",
+            ref _itemSort,
+            "Sort by Name\0Sort by Name (Reversed)\0Sort by First Acquired\0Sort by Last Acquired\0\0"
+        );
+
         _ = ImGui.Checkbox("Show used items", ref _showUsedItems);
 
         if (_evaluator is null)

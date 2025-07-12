@@ -62,18 +62,20 @@ public sealed partial class Client(Yaml? yaml = null)
         ItemFlags? Flags,
         string? Name,
         int Count,
+        int LastOrderReceived,
         IReadOnlyList<(string LocationDisplayName, string LocationGame)>? Locations
     ) : IComparable<ReceivedItem>
     {
         /// <summary>Initializes a new instance of the <see cref="ReceivedItem"/> struct.</summary>
         /// <param name="info">The <see cref="ItemInfo"/> to deconstruct.</param>
-        public ReceivedItem(ICollection<ItemInfo?> info)
+        public ReceivedItem(ICollection<(int Index, ItemInfo? Item)> info)
             : this(
-                info.Nth(0)?.Flags,
-                info.Nth(0)?.ItemName,
+                info.Nth(0).Item?.Flags,
+                info.Nth(0).Item?.ItemName,
                 info.Count,
-                [..info.Filter().Select(x => (x.LocationDisplayName, x.LocationGame))]
-            ) { }
+                info.Max(x => x.Index), // ReSharper disable NullableWarningSuppressionIsUsed
+                [..info.Where(x => x.Item is not null).Select(x => (x.Item!.LocationDisplayName, x.Item!.LocationGame))]
+            ) { } // ReSharper restore NullableWarningSuppressionIsUsed
 
         /// <summary>Determines whether this instance matches the search result.</summary>
         /// <param name="search">The filter.</param>
@@ -197,9 +199,6 @@ public sealed partial class Client(Yaml? yaml = null)
     /// <summary>Gets the currently selected tab.</summary>
     static Tab s_tab;
 
-    /// <summary>Whether to send push notifications for receiving new items.</summary>
-    bool _pushNotifs;
-
     /// <summary>Contains the number of instances that have been created. Used to make each instance unique.</summary>
     static int s_instances;
 
@@ -223,6 +222,9 @@ public sealed partial class Client(Yaml? yaml = null)
     /// <summary>Contains this player's <c>.yaml</c> file.</summary>
     readonly Yaml _yaml = yaml ?? new();
 
+    /// <summary>Whether to send push notifications for receiving new items.</summary>
+    bool _pushNotifs;
+
     /// <summary>Whether this client can be or has reached its goal.</summary>
     /// <remarks><para>
     /// <see langword="false"/> means this slot does not meet its goal.
@@ -232,7 +234,7 @@ public sealed partial class Client(Yaml? yaml = null)
     bool? _canGoal = false;
 
     /// <summary>Contains the last index in <see cref="_messages"/> right before a release occurs.</summary>
-    int _releaseIndex;
+    int _itemSort, _releaseIndex;
 
     /// <summary>Contains the window name.</summary>
     string _connectionMessage = "", _windowName = $"Client###{s_instances}";
@@ -665,7 +667,7 @@ public sealed partial class Client(Yaml? yaml = null)
     /// <returns>The sorted items with count.</returns>
     IEnumerable<ReceivedItem> GroupItems(string category, FrozenSortedDictionary.Element lookup)
     {
-        static ReceivedItem ConsCount<T>(IGrouping<T, ItemInfo> x)
+        static ReceivedItem ConsCount<T>(IGrouping<T, (int Index, ItemInfo Item)> x)
         {
             // ReSharper disable once NotDisposedResource
             var items = x.ToIList();
@@ -680,15 +682,23 @@ public sealed partial class Client(Yaml? yaml = null)
         Debug.Assert(_itemSearch is not null);
 
         var query = _session.Items.AllItemsReceived
-           .Where(x => Contains(lookup, x))
-           .GroupBy(x => x.ItemId)
-           .Select(ConsCount)
-           .OrderBy(x => x.Name, FrozenSortedDictionary.Comparer);
+           .Index()
+           .Where(x => Contains(lookup, x.Item))
+           .GroupBy(x => x.Item.ItemId)
+           .Select(ConsCount);
+
+        var sorted = _itemSort switch
+        {
+            0 => query.OrderBy(x => x.Name, FrozenSortedDictionary.Comparer),
+            1 => query.OrderByDescending(x => x.Name, FrozenSortedDictionary.Comparer),
+            2 => query.OrderBy(x => x.LastOrderReceived),
+            _ => query.OrderByDescending(x => x.LastOrderReceived),
+        };
 
         if (!_showYetToReceive || _evaluator is null)
-            return query;
+            return sorted;
 
-        var list = query.ToList();
+        var list = sorted.ToList();
 
         foreach (var next in _evaluator.CategoryToItems[category])
         {
@@ -701,7 +711,7 @@ public sealed partial class Client(Yaml? yaml = null)
                     else
                         list.RemoveAt(i);
 
-            list.Add(new(null, next, max, null));
+            list.Add(new(null, next, max, int.MaxValue, null));
         NoAdding: ;
         }
 
