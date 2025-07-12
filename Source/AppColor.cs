@@ -81,7 +81,15 @@ public record struct AppColor(Vector4 Vector) : ISpanParsable<AppColor>
     /// <param name="color">The color.</param>
     /// <param name="divisor">The number to divide with.</param>
     /// <returns>The divided color.</returns>
-    public static AppColor operator /(AppColor color, float divisor) => new(color.Vector / divisor);
+    public static AppColor operator /(AppColor color, float divisor) =>
+        new(
+            new Vector4(
+                color.Vector.X / divisor,
+                color.Vector.Y / divisor,
+                color.Vector.Z / divisor,
+                color.Vector.W
+            )
+        );
 
     /// <inheritdoc cref="TryParse(string, IFormatProvider, out AppColor)"/>
     public static bool TryParse([NotNullWhen(true)] string? s, out AppColor result) =>

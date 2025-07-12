@@ -241,10 +241,10 @@ public sealed partial class Preferences
     int _language, _port, _sortHistoryBy;
 
     /// <summary>Contains the current UI settings.</summary>
-    float _activeTabDim = 1.25f,
-        _windowDim = 3.75f,
+    float _activeTabDim = 2.5f,
+        _windowDim = 10,
         _fontSize = 36,
-        _inactiveTabDim = 2.5f,
+        _inactiveTabDim = 5,
         _uiScale = 0.75f,
         _uiPadding = 6,
         _uiRounding = 4,
@@ -1066,9 +1066,9 @@ public sealed partial class Preferences
         Slider("UI Rounding", ref _uiRounding, 0, 30);
         Slider("UI Spacing", ref _uiSpacing, 0, 20);
         ImGui.SeparatorText("Color Dimming (Only when connected)");
-        Slider("Window Dim", ref _windowDim, 1, 10, "%.2f");
-        Slider("Active Dim", ref _activeTabDim, 1, 10, "%.2f");
-        Slider("Inactive Dim", ref _inactiveTabDim, 1, 10, "%.2f");
+        Slider("Window Dim", ref _windowDim, 1, 20, "%.2f");
+        Slider("Inactive Dim", ref _inactiveTabDim, 1, 20, "%.2f");
+        Slider("Active Dim", ref _activeTabDim, 1, 20, "%.2f");
         ImGui.SeparatorText("Fonts (Requires Restart)");
         Slider("Font Size", ref _fontSize, 8, 72, "%.0f");
         ImGui.SetNextItemWidth(Width(250));
