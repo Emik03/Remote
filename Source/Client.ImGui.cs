@@ -13,6 +13,9 @@ public sealed partial class Client
     /// <summary>The user-defined category name.</summary>
     const string UserCategorized = "(User Categorized)";
 
+    /// <summary>The index in the combo box for which type of hints to display.</summary>
+    static int s_hintIndex;
+
     /// <summary>Contains the list of sent messages, with the drafting message at the end.</summary>
     readonly List<string> _sentMessages = [""];
 
@@ -34,7 +37,7 @@ public sealed partial class Client
     bool? _isAttemptingToRelease;
 
     /// <summary>Contains the last amount of checks.</summary>
-    int _hintIndex, _lastItemCount = int.MinValue, _lastLocationCount = int.MaxValue, _locationSort, _sentMessagesIndex;
+    int _lastItemCount = int.MinValue, _lastLocationCount = int.MaxValue, _locationSort, _sentMessagesIndex;
 
     /// <summary>The current state of the text field.</summary>
     string _itemSearch = "", _locationSearch = "";
@@ -356,7 +359,12 @@ public sealed partial class Client
         preferences.ShowText(hintText, disabled: true);
         _ = ImGui.Checkbox("Show obtained hints", ref _showObtainedHints);
         ImGui.SetNextItemWidth(preferences.Width(150));
-        _ = Preferences.Combo("Filter", ref _hintIndex, "Show sent hints\0Show received hints\0\0");
+
+        _ = Preferences.Combo(
+            "Filter",
+            ref s_hintIndex,
+            "Show sent hints\0Show received hints\0Show either hint type\0\0"
+        );
 
         if (LastHints is { } hints)
             foreach (var (hint, message) in hints)

@@ -604,7 +604,8 @@ public sealed partial class Client(Yaml? yaml = null)
         Debug.Assert(_session is not null);
 
         return (!hint.Found || _showObtainedHints) &&
-            (_hintIndex is 0 ? hint.FindingPlayer : hint.ReceivingPlayer) != _session.Players.ActivePlayer.Slot;
+            (s_hintIndex == 2 ||
+                (s_hintIndex is 0 ? hint.FindingPlayer : hint.ReceivingPlayer) != _session.Players.ActivePlayer.Slot);
     }
 
     long? ToId(KeyValuePair<string, CheckboxStatus> kvp)
