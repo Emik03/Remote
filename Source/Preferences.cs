@@ -242,6 +242,7 @@ public sealed partial class Preferences
     /// <summary>Contains boolean settings.</summary>
     bool _alwaysShowChat,
         _desktopNotifications,
+        _hasDrawEverBeenSuccessful,
         _holdToConfirm = true,
         _moveToChatTab = true,
         _sideBySide,
@@ -610,17 +611,24 @@ public sealed partial class Preferences
     {
         ImGui.SameLine();
         ImGui.TextDisabled("(?)");
-
-        if (ImGui.IsItemHovered())
-            Tooltip(message);
+        Tooltip(message);
     }
 
     /// <summary>Shows the text.</summary>
     /// <param name="text">The text to show.</param>
     /// <param name="color">The color of the text.</param>
     /// <param name="clipboard">The text to copy when this is clicked.</param>
+    /// <param name="tooltip">The tooltip to display when hovered over.</param>
     /// <param name="disabled">Whether the text is disabled.</param>
-    public unsafe void ShowText(string text, AppColor? color = null, string? clipboard = null, bool disabled = false)
+#pragma warning disable MA0051
+    public unsafe void ShowText(
+#pragma warning restore MA0051
+        string text,
+        AppColor? color = null,
+        string? clipboard = null,
+        string? tooltip = null,
+        bool disabled = false
+    )
     {
         var (copy, pad, pushed) = (clipboard ?? text, false, true);
         Pad();
@@ -649,11 +657,13 @@ public sealed partial class Preferences
                 {
                     ImGui.TextUnformatted([' ']);
                     CopyIfClicked(copy);
+                    Tooltip(tooltip);
                     ImGui.SameLine(0, 0);
                 }
 
                 ImGui.TextUnformatted(w);
                 CopyIfClicked(copy);
+                Tooltip(tooltip);
                 ImGui.SameLine(0, 0);
                 pad = true;
                 continue;
@@ -665,18 +675,21 @@ public sealed partial class Preferences
                     ImGui.TextUnformatted(drain[..(i - 1)]);
                     Pad();
                     CopyIfClicked(copy);
+                    Tooltip(tooltip);
                     drain = drain[(i - 1)..];
                     i = 2;
                 }
 
             ImGui.TextUnformatted(drain);
             CopyIfClicked(copy);
+            Tooltip(tooltip);
             ImGui.SameLine(0, 0);
             pad = true;
         }
 
         ImGui.TextUnformatted([' ']);
         CopyIfClicked(copy);
+        Tooltip(tooltip);
 
         if (pushed)
             ImGui.PopStyleColor();
@@ -709,8 +722,11 @@ public sealed partial class Preferences
     /// <summary>Convenience function for displaying a tooltip with text scaled by the user preferences.</summary>
     /// <param name="text">The text to display.</param>
     /// <param name="colored">Whether to make the text colorful.</param>
-    public void Tooltip(string text, bool colored = false)
+    public void Tooltip(string? text, bool colored = false)
     {
+        if (text is null || !ImGui.IsItemHovered())
+            return;
+
         ImGui.PushStyleColor(ImGuiCol.PopupBg, this[AppPalette.Count + (int)ImGuiCol.PopupBg]);
 
         if (!ImGui.BeginTooltip())
@@ -734,17 +750,18 @@ public sealed partial class Preferences
     /// <param name="text">The text to show.</param>
     /// <param name="color">The color of the text.</param>
     /// <param name="clipboard">The text to copy when this is clicked.</param>
-    public void ShowText(string text, AppPalette color, string? clipboard = null) =>
-        ShowText(text, this[color], clipboard);
+    /// <param name="tooltip">The tooltip to display when hovered over.</param>
+    public void ShowText(string text, AppPalette color, string? clipboard = null, string? tooltip = null) =>
+        ShowText(text, this[color], clipboard, tooltip);
 
-    /// <inheritdoc cref="ShowText(string, AppPalette, string)"/>
-    public void ShowText(string text, Client.LocationStatus color, string? clipboard = null) =>
-        ShowText(text, this[color], clipboard);
+    /// <inheritdoc cref="ShowText(string, AppPalette, string, string)"/>
+    public void ShowText(string text, Client.LocationStatus color, string? clipboard = null, string? tooltip = null) =>
+        ShowText(text, this[color], clipboard, tooltip);
 
-    /// <inheritdoc cref="ShowText(string, AppPalette, string)"/>
+    /// <inheritdoc cref="ShowText(string, AppPalette, string, string)"/>
     [CLSCompliant(false)]
-    public void ShowText(string text, ItemFlags? color, string? clipboard = null) =>
-        ShowText(text, this[color], clipboard);
+    public void ShowText(string text, ItemFlags? color, string? clipboard = null, string? tooltip = null) =>
+        ShowText(text, this[color], clipboard, tooltip);
 
     /// <summary>Synchronizes the connection with the one found within the internal collection.</summary>
     /// <param name="connection">The connection to synchronize.</param>
@@ -786,10 +803,7 @@ public sealed partial class Preferences
                 continue;
 
             if (!FrozenSortedDictionary.Comparer.Equals(connection.Alias, next.Alias))
-                if (string.IsNullOrWhiteSpace(connection.Alias))
-                    connection = connection with { Alias = next.Alias };
-                else
-                    next = next with { Alias = connection.Alias };
+                next = next with { Alias = connection.Alias };
 
             if (!FrozenSortedDictionary.Comparer.Equals(connection.Name, next.Name))
                 continue;
@@ -828,7 +842,9 @@ public sealed partial class Preferences
     /// <param name="clientsToRegister">The clients created from history, or <see langword="null"/>.</param>
     /// <returns>Whether to create a new instance of <see cref="Client"/>.</returns>
     [CLSCompliant(false)]
+#pragma warning disable MA0016
     public bool Show(GameTime gameTime, List<Client> clients, out int? tab, out IEnumerable<Client>? clientsToRegister)
+#pragma warning restore MA0016
     {
         clientsToRegister = null;
 
@@ -853,6 +869,7 @@ public sealed partial class Preferences
             tab = Show(gameTime, clients);
         }
 
+        _hasDrawEverBeenSuccessful = true;
         return ret;
     }
 
@@ -1297,7 +1314,8 @@ public sealed partial class Preferences
     /// <summary>Shows the clients.</summary>
     /// <param name="gameTime">The time elapsed.</param>
     /// <param name="clients">The clients to show.</param>
-    int? Show(GameTime gameTime, IList<Client> clients)
+    // ReSharper disable once SuggestBaseTypeForParameter
+    int? Show(GameTime gameTime, List<Client> clients)
     {
         int? ret = null;
         ShownTooltip = false;
@@ -1347,7 +1365,9 @@ public sealed partial class Preferences
             TextFlags
         );
 
-        if (!FrozenSortedDictionary.Comparer.Equals(oldAlias, newAlias) && f with { Alias = newAlias } is var alias)
+        if (_hasDrawEverBeenSuccessful &&
+            !FrozenSortedDictionary.Comparer.Equals(oldAlias, newAlias) &&
+            f with { Alias = newAlias } is var alias)
             Sync(ref alias);
 
         return Order(connection).Where(ShowHistoryButton).Select(ConnectAndReturn);

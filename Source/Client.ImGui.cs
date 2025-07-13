@@ -621,7 +621,7 @@ public sealed partial class Client
         var selfColor = preferences[isSelf ? AppPalette.Useful : AppPalette.Neutral];
         preferences.ShowText(playerName, selfColor);
 
-        if (isSelf && ImGui.IsItemHovered())
+        if (isSelf)
             preferences.Tooltip(FlavorText);
 
         var (gameName, isManual) = player.Game is ['M', 'a', 'n', 'u', 'a', 'l', '_', .. var rest]
@@ -633,7 +633,7 @@ public sealed partial class Client
 
         preferences.ShowText(gameName, isManual ? AppPalette.Progression : AppPalette.Neutral);
 
-        if (isManual && ImGui.IsItemHovered())
+        if (isManual)
             preferences.Tooltip("Manual Game");
 
         var slotName = player.Slot.ToString();
@@ -643,7 +643,7 @@ public sealed partial class Client
 
         preferences.ShowText(slotName, selfColor);
 
-        if (isSelf && ImGui.IsItemHovered())
+        if (isSelf)
             preferences.Tooltip(FlavorText);
 
         if (!ImGui.TableNextColumn())
@@ -895,7 +895,7 @@ public sealed partial class Client
 
                 preferences.ShowText(part.Text, palette, message);
 
-                if (priority is not AppPalette.Neutral && ImGui.IsItemHovered())
+                if (priority is not AppPalette.Neutral)
                     preferences.Tooltip($"Item Class: {priority}");
             }
 
@@ -1003,7 +1003,7 @@ public sealed partial class Client
         if (overrideAll is { } all)
             value.Checked = all;
 
-        if (value.Logic is { } logic && ImGui.IsItemHovered())
+        if (value.Logic is { } logic)
             preferences.Tooltip(logic.ToMinimalString(), true);
 
         ImGui.PopStyleColor();
