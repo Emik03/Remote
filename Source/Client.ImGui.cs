@@ -1040,6 +1040,9 @@ public sealed partial class Client
             ReceivedItem received =
                 new(ItemFlags.None, phantomItem, sum, last, [..found.SelectMany(x => x.Item.Locations ?? [])]);
 
+            if (!received.IsMatch(_info, _showUsedItems))
+                continue;
+
             setter();
 
             switch (received.Show(preferences, ref _info, true))
