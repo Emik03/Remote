@@ -380,7 +380,7 @@ public sealed partial class Client(Yaml? yaml = null)
                 ((IDictionary<string, object?>)_yaml)[key] = value;
 
             _connectionMessage = "Slot data has been read!\nReading APWorld... (4/5)";
-            _evaluator = Evaluator.Read(session.DataStorage, session.Items, _yaml, preferences);
+            _evaluator = Evaluator.Read(session.DataStorage, session.Items, _yaml, preferences, Set);
             _connectionMessage = "APWorld has been read!\nSaving history in memory... (5/5)";
             _info = new(_yaml, password, address, port, _info.Alias, _info.Color);
             preferences.Prepend(_info);
@@ -517,6 +517,10 @@ public sealed partial class Client(Yaml? yaml = null)
                 location.Status = LocationStatus.Checked;
         }
     }
+
+    /// <summary>Sets the connection message.</summary>
+    /// <param name="message">The message to set.</param>
+    void Set(string message) => _connectionMessage = message;
 
     /// <summary>Resets the timer.</summary>
     /// <param name="outOfLogic">Whether to use the time span for in- or out-of-logic.</param>

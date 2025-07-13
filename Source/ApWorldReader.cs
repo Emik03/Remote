@@ -34,24 +34,33 @@ public sealed record ApWorldReader(
     /// <param name="path">The path to read.</param>
     /// <param name="python">The path to the python binary to execute python.</param>
     /// <param name="ap">The path to the archipelago repository.</param>
-    public ApWorldReader(string path, string? python = "python", string? ap = null)
-        : this(Read(path, python, ap, out var c, out var i, out var l, out var o, out var r), c, i, l, o, r) { }
+    /// <param name="g">The logger.</param>
+    public ApWorldReader(string path, string? python = "python", string? ap = null, Action<string>? g = null)
+        : this(Read(path, python, ap, g, out var c, out var i, out var l, out var o, out var r), c, i, l, o, r) { }
 
     /// <summary>Extracts all categories.</summary>
+    /// <param name="logger">The logger.</param>
     /// <returns>The categories.</returns>
-    public (FrozenSet<string>, FrozenSortedDictionary) ExtractCategories() =>
-        Categories is not null
+    public (FrozenSet<string>, FrozenSortedDictionary) ExtractCategories(Action<string>? logger)
+    {
+        logger?.Invoke("Creating fast lookup tables for categories...");
+
+        return Categories is not null
             ? (Categories.Where(IsHiddenTrue).Select(x => x.Key).ToFrozenSet(FrozenSortedDictionary.Comparer),
-                FrozenSortedDictionary.From(Categories.Select(GetOptions).ToDictionary(FrozenSortedDictionary.Comparer)))
+                FrozenSortedDictionary.From(
+                    Categories.Select(GetOptions).ToDictionary(FrozenSortedDictionary.Comparer)
+                ))
             : (FrozenSet<string>.Empty, FrozenSortedDictionary.Empty);
+    }
 
     /// <summary>Extracts all locations.</summary>
     /// <param name="wrapper">The wrapper to get the goal data.</param>
     /// <param name="yaml">The yaml options.</param>
+    /// <param name="logger">The logger.</param>
     /// <returns>The locations.</returns>
     [CLSCompliant(false)]
     public (FrozenDictionary<string, Logic>, FrozenSortedDictionary)
-        ExtractLocations(IDataStorageWrapper wrapper, Yaml yaml)
+        ExtractLocations(IDataStorageWrapper wrapper, Yaml yaml, Action<string>? logger)
     {
         if (Locations is null)
             return default;
@@ -67,6 +76,8 @@ public sealed record ApWorldReader(
             if (location is not JsonObject o || o["name"]?.ToString() is not { } name)
                 continue;
 
+            logger?.Invoke($"Processing location logic: {name}");
+
             if (o.TryGetPropertyValue("requires", out var requires) &&
                 requires?.GetValueKind() is JsonValueKind.String &&
                 Logic.TokenizeAndParse(requires.ToString()) is { } logic)
@@ -76,7 +87,7 @@ public sealed record ApWorldReader(
                 o.TryGetPropertyValue("region", out var region) &&
                 region?.GetValueKind() is JsonValueKind.String)
                 CollectionsMarshal.GetValueRefOrAddDefault(locationsToLogic, name, out _) &=
-                    Find(region.ToString(), Regions, new(FrozenSortedDictionary.Comparer));
+                    Find(region.ToString(), Regions, new(FrozenSortedDictionary.Comparer), logger);
 
             if (o.TryGetPropertyValue("hidden", out var hidden) && hidden?.GetValueKind() is JsonValueKind.True)
                 continue;
@@ -98,11 +109,15 @@ public sealed record ApWorldReader(
     /// <summary>Extracts all items.</summary>
     /// <returns>The items.</returns>
     public (FrozenSortedDictionary, FrozenDictionary<string, int>,
-        FrozenDictionary<string, ImmutableArray<(string PhantomItem, int Count)>>) ExtractItems()
+        FrozenDictionary<string, ImmutableArray<(string PhantomItem, int Count)>>) ExtractItems(Action<string>? logger)
     {
         if (Items is null)
+        {
+            logger?.Invoke("Unable to create fast lookups for items! Exiting...");
             return default;
+        }
 
+        logger?.Invoke("Allocating temporary dictionaries for items...");
         Dictionary<string, HashSet<string>> itemToCategories = new(FrozenSortedDictionary.Comparer);
         Dictionary<string, int> itemCount = new(FrozenSortedDictionary.Comparer);
 
@@ -116,6 +131,7 @@ public sealed record ApWorldReader(
                 name?.GetValueKind() is not JsonValueKind.String)
                 continue;
 
+            logger?.Invoke($"Processing item: {name}");
             var nameString = name.ToString();
 
             itemCount[nameString] = obj.TryGetPropertyValue("count", out var count) &&
@@ -223,7 +239,7 @@ public sealed record ApWorldReader(
     /// Maps the region name to the already parsed <see cref="Logic"/> for caching purposes.
     /// </param>
     /// <returns>The resulting <see cref="Logic"/> to get to the parameter <paramref name="target"/>.</returns>
-    static Logic? Find(string target, JsonObject regions, Dictionary<string, Logic> regionToLogic)
+    static Logic? Find(string target, JsonObject regions, Dictionary<string, Logic> regionToLogic, Action<string>? g)
     {
         Logic? path = null;
 
@@ -231,6 +247,8 @@ public sealed record ApWorldReader(
         {
             if (!IsStarting(value))
                 continue;
+
+            g?.Invoke($"Constructing region logic! Processing if {target} is accessible from {name}...");
 
             var visited = regions
                .Where(x => !FrozenSortedDictionary.Equals(x.Key, name) && IsStarting(x.Value))
@@ -354,11 +372,17 @@ public sealed record ApWorldReader(
     /// <param name="path">The path to the <c>.apworld</c>.</param>
     /// <param name="python">The path to the python binary to execute python.</param>
     /// <param name="ap">The path to the archipelago repository.</param>
+    /// <param name="logger">The logger.</param>
     /// <returns>The world data, or <see langword="null"/> if it was unable to execute the script.</returns>
-    static JsonObject? GetWorldDataFromPython(string path, string? python = "python", string? ap = null)
+    static JsonObject? GetWorldDataFromPython(string path, string? python, string? ap, Action<string>? logger)
     {
         if (string.IsNullOrWhiteSpace(python) || string.IsNullOrWhiteSpace(ap))
+        {
+            logger?.Invoke("The .apworld uses Manual Hooks but the Archipelago repository does not exist! Exiting...");
             return null;
+        }
+
+        logger?.Invoke("Starting python...");
 
         using var process = Process.Start(
             new ProcessStartInfo(python)
@@ -374,11 +398,18 @@ public sealed record ApWorldReader(
         );
 
         if (process is null)
+        {
+            logger?.Invoke("Unable to start process! Exiting...");
             return null;
+        }
 
+        logger?.Invoke("Writing to standard input...");
         process.StandardInput.Write(s_script);
+        logger?.Invoke("Closing the standard input...");
         process.StandardInput.Close();
+        logger?.Invoke("Waiting for python...");
         _ = process.WaitForExit(30000);
+        logger?.Invoke("Deserializing the output from python...");
 
         return JsonSerializer.Deserialize<JsonNode>(
             process.StandardOutput.ReadToEnd(),
@@ -390,6 +421,7 @@ public sealed record ApWorldReader(
     /// <param name="path"></param>
     /// <param name="python">The path to the python binary to execute python.</param>
     /// <param name="ap">The path to the archipelago repository.</param>
+    /// <param name="logger">The logger.</param>
     /// <param name="categories">The categories.</param>
     /// <param name="items">The items.</param>
     /// <param name="locations">The locations.</param>
@@ -400,6 +432,7 @@ public sealed record ApWorldReader(
         string path,
         string? python,
         string? ap,
+        Action<string>? logger,
         out JsonObject? categories,
         out JsonArray? items,
         out JsonArray? locations,
@@ -407,21 +440,23 @@ public sealed record ApWorldReader(
         out JsonObject? regions
     )
     {
+        logger?.Invoke("Opening the zip file...");
         using ZipArchive zip = new(File.OpenRead(path));
-        items = Extract<JsonArray>(zip, "/data/items.json");
-        locations = Extract<JsonArray>(zip, "/data/locations.json");
+        items = Extract<JsonArray>(zip, "/data/items.json", logger);
+        locations = Extract<JsonArray>(zip, "/data/locations.json", logger);
 
         if (items?.Count > 0 || locations?.Count > 0)
         {
-            categories = Extract<JsonObject>(zip, "/data/categories.json");
-            options = Extract<JsonObject>(zip, "/data/options.json");
-            regions = Extract<JsonObject>(zip, "/data/regions.json");
-            return Extract<JsonObject>(zip, "/data/game.json");
+            categories = Extract<JsonObject>(zip, "/data/categories.json", logger);
+            options = Extract<JsonObject>(zip, "/data/options.json", logger);
+            regions = Extract<JsonObject>(zip, "/data/regions.json", logger);
+            return Extract<JsonObject>(zip, "/data/game.json", logger);
         }
 
-        if (GetWorldDataFromPython(path, python, ap) is not { } obj)
+        if (GetWorldDataFromPython(path, python, ap, logger) is not { } obj)
             return Fail(out categories, out options, out regions);
 
+        logger?.Invoke("Extracting values from the json object...");
         items = Index<JsonArray>(obj, "items.json");
         locations = Index<JsonArray>(obj, "locations.json");
         categories = Index<JsonObject>(obj, "categories.json");
@@ -434,14 +469,19 @@ public sealed record ApWorldReader(
     /// <typeparam name="T">The type to deserialize to.</typeparam>
     /// <param name="zip">The zip archive.</param>
     /// <param name="file">The file to find.</param>
+    /// <param name="logger">The logger.</param>
     /// <returns>The <typeparamref name="T"/>, or <see langword="null"/> if the entry could not be found.</returns>
-    static T? Extract<T>(ZipArchive zip, string file)
+    static T? Extract<T>(ZipArchive zip, string file, Action<string>? logger)
         where T : JsonNode
     {
+        logger?.Invoke($"Locating {file}...");
+
         if (zip.Entries.FirstOrDefault(x => x.FullName.EndsWith(file)) is not { } entry)
             return null;
 
+        logger?.Invoke($"Opening {file}...");
         using var stream = entry.Open();
+        logger?.Invoke($"Deserializing {file}...");
         return JsonSerializer.Deserialize<JsonNode>(stream, RemoteJsonSerializerContext.Default.JsonNode) as T;
     }
 

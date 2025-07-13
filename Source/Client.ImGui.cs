@@ -392,7 +392,7 @@ public sealed partial class Client
 
         ImGui.SeparatorText("Diagnostics");
 
-        if (ImGui.Button("Open APWorld Directory") && Evaluator.FindApWorld(_yaml, preferences) is { } apWorld)
+        if (ImGui.Button("Open APWorld Directory") && Evaluator.FindApWorld(_yaml, preferences, Set) is { } apWorld)
         {
             ProcessStartInfo startInfo = new()
                 { FileName = Path.GetDirectoryName(apWorld), CreateNoWindow = true, UseShellExecute = true };

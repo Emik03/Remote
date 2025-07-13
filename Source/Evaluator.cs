@@ -69,73 +69,106 @@ public sealed partial record Evaluator(
     /// <summary>Attempts to find the <c>.apworld</c>.</summary>
     /// <param name="yaml">The yaml options.</param>
     /// <param name="preferences">The user preferences.</param>
+    /// <param name="logger">The logger.</param>
     /// <returns>The path to the <c>.apworld</c>, or <see langword="null"/> if none found.</returns>
-    public static string? FindApWorld(Yaml yaml, Preferences preferences)
+    public static string? FindApWorld(Yaml yaml, Preferences preferences, Action<string>? logger = null)
     {
         var world = $"{yaml.Game}.apworld";
 
-        string? Enumerate(string directory) =>
-            Directory.Exists(directory)
-                ? Directory.EnumerateFiles(directory)
-                   .FirstOrDefault(x => world.Equals(Path.GetFileName(x.AsSpan()), StringComparison.OrdinalIgnoreCase))
-                : null;
+        string? Enumerate(string root, string? relative)
+        {
+            logger?.Invoke($"Locating {world} within {relative ?? "root"}...");
 
-        return Enumerate(Path.Join(preferences.Directory, "worlds")) ??
-            Enumerate(Path.Join(preferences.Directory, "custom_worlds")) ??
-            Enumerate(preferences.Directory);
+            return Path.Join(root, relative) is var directory &&
+                Directory.Exists(directory)
+                    ? Directory.EnumerateFiles(directory)
+                       .FirstOrDefault(
+                            x => world.Equals(Path.GetFileName(x.AsSpan()), StringComparison.OrdinalIgnoreCase)
+                        )
+                    : null;
+        }
+
+        return Enumerate(preferences.Directory, "worlds") ??
+            Enumerate(preferences.Directory, "custom_worlds") ??
+            Enumerate(preferences.Directory, null);
     }
 
     /// <summary>Attempts to process the manual <c>.apworld</c>.</summary>
-    /// <param name="w">The wrapper to get the goal data.</param>
-    /// <param name="h">The list of items.</param>
-    /// <param name="y">The yaml options.</param>
+    /// <param name="wrapper">The wrapper to get the goal data.</param>
+    /// <param name="helper">The list of items.</param>
+    /// <param name="yaml">The yaml options.</param>
     /// <param name="preferences">
     /// The user preferences, containing the directory of the Archipelago installation.
     /// </param>
+    /// <param name="logger">The current status.</param>
     /// <returns>
     /// The <see cref="Evaluator"/> to evaluate <see cref="OnAnd"/>, or <see langword="null"/> if not a manual world,
     /// parsing failed, or the <c>.apworld</c> doesn't exist.
     /// </returns>
-    public static Evaluator? Read(IDataStorageWrapper w, IReceivedItemsHelper h, Yaml y, Preferences preferences) =>
-        FindApWorld(y, preferences) is not { } path || Go(ReadZip, (w, h), y, preferences, path, out _, out var ok)
-            ? null
-            : ok;
+    public static Evaluator? Read(
+        IDataStorageWrapper wrapper,
+        IReceivedItemsHelper helper,
+        Yaml yaml,
+        Preferences preferences,
+        Action<string>? logger = null
+    )
+    {
+        if (FindApWorld(yaml, preferences, logger) is not { } path)
+            return null;
+
+        try
+        {
+            return ReadZip(wrapper, helper, yaml, preferences, path, logger);
+        }
+        catch (Exception e)
+        {
+            logger?.Invoke(e.Message);
+            return null;
+        }
+    }
 
     /// <summary>Reads the path as a zip file. Can throw.</summary>
-    /// <param name="interfaces">The interfaces.</param>
+    /// <param name="wrapper">The wrapper to get the goal data.</param>
+    /// <param name="helper">The list of items.</param>
     /// <param name="yaml">The yaml options.</param>
     /// <param name="preferences">The user preferences.</param>
     /// <param name="path">The path to the zip file.</param>
+    /// <param name="logger">The current status.</param>
     /// <returns>
     /// The <see cref="Evaluator"/> to evaluate <see cref="OnAnd"/>, or <see langword="null"/> if not a manual world,
     /// parsing failed, or the <c>.apworld</c> doesn't exist.
     /// </returns>
     static Evaluator? ReadZip(
-        (IDataStorageWrapper Wrapper, IReceivedItemsHelper Helper) interfaces,
+        IDataStorageWrapper wrapper,
+        IReceivedItemsHelper helper,
         Yaml yaml,
         Preferences preferences,
-        string path
+        string path,
+        Action<string>? logger
     )
     {
-        var (wrapper, helper) = interfaces;
-        ApWorldReader reader = new(path, preferences.GetPythonPath(), preferences.Repo);
+        ApWorldReader reader = new(path, preferences.GetPythonPath(), preferences.Repo, logger);
+        logger?.Invoke("Copying yaml options found .apworld...");
         yaml.CopyFrom(reader.Options);
 
-        return reader.ExtractCategories() is ({ } hiddenCategories, var categoryToYaml) &&
-            reader.ExtractItems() is (var itemToCategories, { } itemCount, { } itemValues) &&
-            reader.ExtractLocations(wrapper, yaml) is ({ } locationsToLogic, var categoryToLocations)
-                ? new Evaluator(
-                    helper,
-                    hiddenCategories,
-                    locationsToLogic,
-                    categoryToLocations,
-                    categoryToYaml,
-                    itemToCategories,
-                    itemCount,
-                    itemValues,
-                    yaml.Options.ToFrozenDictionary()
-                )
-                : null;
+        if (reader.ExtractCategories(logger) is not ({ } hiddenCategories, var categoryToYaml) ||
+            reader.ExtractItems(logger) is not (var itemToCategories, { } itemCount, { } itemValues) ||
+            reader.ExtractLocations(wrapper, yaml, logger) is not ({ } locationsToLogic, var categoryToLocations))
+            return null;
+
+        logger?.Invoke("Finalizing...");
+
+        return new(
+            helper,
+            hiddenCategories,
+            locationsToLogic,
+            categoryToLocations,
+            categoryToYaml,
+            itemToCategories,
+            itemCount,
+            itemValues,
+            yaml.Options.ToFrozenDictionary()
+        );
     }
 
     /// <summary>Infers the category count.</summary>
