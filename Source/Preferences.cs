@@ -248,7 +248,6 @@ public sealed partial class Preferences
         _windowDim = 10,
         _inactiveTabDim = 5,
         _uiScale = 0.75f,
-        _uiPadding = 6,
         _uiRounding = 4,
         _uiSpacing = 6;
 
@@ -382,13 +381,6 @@ public sealed partial class Preferences
         [UsedImplicitly] private set => _uiScale = value;
     }
 
-    /// <summary>Gets or sets the UI padding.</summary>
-    public float UiPadding
-    {
-        get => _uiPadding;
-        [UsedImplicitly] private set => _uiPadding = value;
-    }
-
     /// <summary>Gets or sets the UI rounding.</summary>
     public float UiRounding
     {
@@ -460,6 +452,10 @@ public sealed partial class Preferences
         [UsedImplicitly] private set => _language = (int)value;
     }
 
+    /// <summary>Gets or sets the UI padding.</summary>
+#pragma warning disable MA0016
+    public List<float> UiPadding { get; [UsedImplicitly] private set; } = [6, 6];
+#pragma warning restore MA0016
     /// <summary>Gets the child process to wait for before disposing.</summary>
 #pragma warning disable IDISP006
     public Process? ChildProcess { get; private set; }
@@ -570,7 +566,7 @@ public sealed partial class Preferences
         ImGui.PushStyleVar(ImGuiStyleVar.GrabRounding, _uiRounding);
         ImGui.PushStyleVar(ImGuiStyleVar.TabRounding, _uiRounding);
 
-        Vector2 padding = new(_uiPadding);
+        Vector2 padding = new(UiPadding[0], UiPadding[1]);
 
         ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, padding);
         ImGui.PushStyleVar(ImGuiStyleVar.FramePadding, padding);
@@ -619,7 +615,7 @@ public sealed partial class Preferences
     public unsafe void ShowText(string text, AppColor? color = null, string? clipboard = null, bool disabled = false)
     {
         var (copy, pad, pushed) = (clipboard ?? text, false, true);
-        Pad(_uiPadding);
+        Pad();
 
         if (disabled && ImGui.GetStyleColorVec4(ImGuiCol.TextDisabled) is not null and var ptr)
             ImGui.PushStyleColor(ImGuiCol.Text, *ptr);
@@ -635,7 +631,7 @@ public sealed partial class Preferences
                 available <= width)
             {
                 ImGui.NewLine();
-                Pad(_uiPadding);
+                Pad();
                 (pad, width, available) = (false, ImGui.CalcTextSize(w).X, ImGui.GetContentRegionAvail().X);
             }
 
@@ -659,7 +655,7 @@ public sealed partial class Preferences
                 if (ImGui.GetContentRegionAvail().X <= ImGui.CalcTextSize(drain[..i]).X)
                 {
                     ImGui.TextUnformatted(drain[..(i - 1)]);
-                    Pad(_uiPadding);
+                    Pad();
                     CopyIfClicked(copy);
                     drain = drain[(i - 1)..];
                     i = 2;
@@ -901,10 +897,6 @@ public sealed partial class Preferences
     /// <returns>The size to use.</returns>
     public Vector2 ChildSize(int margin = 150) => ImGui.GetContentRegionAvail() - new Vector2(0, UiScale * margin);
 
-    /// <summary>Pads horizontally.</summary>
-    /// <param name="width">The width to pad.</param>
-    static void Pad(float width) => ImGui.Dummy(new(width, 0));
-
     /// <summary>Pushes the text.</summary>
     /// <param name="span">The span.</param>
     /// <param name="makeColorful">Whether or not to make it colorful.</param>
@@ -1022,24 +1014,11 @@ public sealed partial class Preferences
                 file
             );
 
-    /// <summary>Shows the clients.</summary>
-    /// <param name="gameTime">The time elapsed.</param>
-    /// <param name="clients">The clients to show.</param>
-    int? Show(GameTime gameTime, IList<Client> clients)
+    /// <summary>Adds padding.</summary>
+    void Pad()
     {
-        int? ret = null;
-        ShownTooltip = false;
-
-        for (var i = clients.Count - 1; i >= 0 && clients[i] is var c; i--)
-        {
-            if (c.Draw(gameTime, this, out var v))
-                clients.RemoveAt(i);
-
-            if (v)
-                ret = i;
-        }
-
-        return ret;
+        if (UiPadding is [var first, var second])
+            ImGui.Dummy(new(first, second));
     }
 
     /// <summary>Displays the preferences tab.</summary>
@@ -1084,7 +1063,12 @@ public sealed partial class Preferences
     {
         ImGui.SeparatorText("Style");
         Slider("UI Scale", ref _uiScale, 0.4f, 2, "%.2f");
-        Slider("UI Padding", ref _uiPadding, 0, 20);
+
+        Vector2 v = new(UiPadding[0], UiPadding[1]);
+        ImGui.SetNextItemWidth(Width(250));
+        ImGui.SliderFloat2("UI Padding", ref v, 0, 20);
+        (UiPadding[0], UiPadding[1]) = (v.X, v.Y);
+
         Slider("UI Rounding", ref _uiRounding, 0, 30);
         Slider("UI Spacing", ref _uiSpacing, 0, 20);
 
@@ -1184,6 +1168,9 @@ public sealed partial class Preferences
 
         if (Colors.Count < s_defaultColors.Length)
             Colors = [..Colors, ..s_defaultColors.AsSpan()[Colors.Count..]];
+
+        if (UiPadding is not [_, _])
+            UiPadding = [6, 6];
     }
 
     /// <summary>Shows the paste field.</summary>
@@ -1292,6 +1279,26 @@ public sealed partial class Preferences
         return ret;
     }
 
+    /// <summary>Shows the clients.</summary>
+    /// <param name="gameTime">The time elapsed.</param>
+    /// <param name="clients">The clients to show.</param>
+    int? Show(GameTime gameTime, IList<Client> clients)
+    {
+        int? ret = null;
+        ShownTooltip = false;
+
+        for (var i = clients.Count - 1; i >= 0 && clients[i] is var c; i--)
+        {
+            if (c.Draw(gameTime, this, out var v))
+                clients.RemoveAt(i);
+
+            if (v)
+                ret = i;
+        }
+
+        return ret;
+    }
+
     /// <summary>Connects to the server using the <see cref="Connection"/> instance.</summary>
     /// <param name="connection">The connection to use.</param>
     /// <returns>The <see cref="Client"/> created based on the parameter <paramref name="connection"/>.</returns>
@@ -1309,8 +1316,8 @@ public sealed partial class Preferences
     {
         if (group.ToIList() is not [var f, ..] connection ||
             $"{(connection.Count is 1 ? "" : $" ({connection.Count})")}" is var count &&
-            $"{f.Host}:{f.Port}{count}" is var id &&
-            !ImGui.CollapsingHeader($"{(string.IsNullOrWhiteSpace(f.Alias) ? id : $"{f.Alias}{count}")}###{id}"))
+            $"{f.Host}:{f.Port}" is var id &&
+            !ImGui.CollapsingHeader($"{(string.IsNullOrWhiteSpace(f.Alias) ? id : f.Alias)}{count}###{id}"))
             return [];
 
         var oldAlias = f.GetAliasOrEmpty();
