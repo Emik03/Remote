@@ -1066,7 +1066,7 @@ public sealed partial class Preferences
 
         Vector2 v = new(UiPadding[0], UiPadding[1]);
         ImGui.SetNextItemWidth(Width(250));
-        ImGui.SliderFloat2("UI Padding", ref v, 0, 20);
+        ImGui.SliderFloat2("UI Padding", ref v, 0, 20, "%.1f");
         (UiPadding[0], UiPadding[1]) = (v.X, v.Y);
 
         Slider("UI Rounding", ref _uiRounding, 0, 30);
