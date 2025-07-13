@@ -421,6 +421,9 @@ public sealed partial class Client(Yaml? yaml = null)
     /// <inheritdoc />
     public override bool Equals(object? obj) => obj is Client { _instance: var i } && i == _instance;
 
+    /// <inheritdoc cref="Preferences.Connection.HostEquals"/>
+    public bool HostEquals(Preferences.Connection connection) => _info.HostEquals(connection);
+
     /// <inheritdoc />
     public override int GetHashCode() => _instance;
 

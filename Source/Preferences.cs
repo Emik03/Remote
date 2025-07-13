@@ -210,7 +210,14 @@ public sealed partial class Preferences
     public const float MinUiScale = 0.5f, MaxUiScale = 2.5f;
 
     /// <summary>The default host address that hosts Archipelago games.</summary>
-    const string DefaultAddress = "archipelago.gg", PreferencesFile = "preferences.cfg";
+    const string DefaultAddress = "archipelago.gg",
+        PreferencesFile = "preferences.cfg",
+        UpdateHostOrPortMessage =
+            """
+            If the host or port changes, you can enter them
+            in the above fields, and then click to join.
+            The history will update accordingly.
+            """;
 
     /// <summary>Gets the languages.</summary>
     static readonly string s_historyOrder = NamesSeparatedByZeros<HistoryOrder>(),
@@ -832,7 +839,7 @@ public sealed partial class Preferences
         }
 
         ImGui.SetWindowFontScale(UiScale);
-        var ret = ShowConnectionTab(out clientsToRegister);
+        var ret = ShowConnectionTab(clients, out clientsToRegister);
         ShowPreferences();
 
         if (_useTabs)
@@ -1209,11 +1216,12 @@ public sealed partial class Preferences
     }
 
     /// <summary>Shows the connection tab.</summary>
-    /// <param name="clients">The clients created from history, or <see langword="null"/>.</param>
+    /// <param name="clients">The list of clients to show.</param>
+    /// <param name="clientsToRegister">The clients created from history, or <see langword="null"/>.</param>
     /// <returns>Whether to create a new <see cref="Client"/>.</returns>
-    bool ShowConnectionTab(out IEnumerable<Client>? clients)
+    bool ShowConnectionTab(IEnumerable<Client> clients, out IEnumerable<Client>? clientsToRegister)
     {
-        clients = null;
+        clientsToRegister = null;
 
         if (!ImGui.BeginTabItem("Connection"))
             return false;
@@ -1235,27 +1243,19 @@ public sealed partial class Preferences
 
         ImGui.SeparatorText("Join");
         ShowText("Drop a YAML file to start playing, or...", disabled: true);
-        ShowPasteTextField(ref clients);
+        ShowPasteTextField(ref clientsToRegister);
         Sanitize();
         var ret = ImGui.Button("Enter slot manually") || enter;
         ImGui.SeparatorText("History");
         ImGui.SetNextItemWidth(Width(100));
         _ = Combo("Sort", ref _sortHistoryBy, s_historyOrder);
 
-        ShowText(
-            _list.History.Count is 0
-                ? "Join a game for buttons to appear here!"
-                : "Left click to join. Right click to delete.",
-            disabled: true
-        );
+        var message = _list.History.Count is 0
+            ? "Join a game for buttons to appear here!"
+            : "Left click to join. Right click to delete.";
 
-        ShowHelp(
-            """
-            If the host or port changes, you can enter them
-            in the above fields, and then click to join.
-            The history will update accordingly.
-            """
-        );
+        ShowText(message, disabled: true);
+        ShowHelp(UpdateHostOrPortMessage);
 
         for (var i = 0; i < _list.History.Count && CollectionsMarshal.AsSpan(_list.History) is var history; i++)
         {
@@ -1265,7 +1265,11 @@ public sealed partial class Preferences
                 _list.History.RemoveAt(i--);
         }
 
-        clients = Order(_list.History.GroupBy(x => (x.Alias, x.Host, x.Port), s_equality))
+        var query = _list.History
+           .Where(x => clients.All(y => !y.HostEquals(x)))
+           .GroupBy(x => (x.Alias, x.Host, x.Port), s_equality);
+
+        clientsToRegister = Order(query)
            .SelectMany(ShowHistoryHeader)
            .Filter()
 #pragma warning disable IDE0305
