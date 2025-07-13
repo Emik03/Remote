@@ -1361,7 +1361,7 @@ public sealed partial class Preferences
             return [];
 
         ImGui.SameLine(0, 20);
-        _ = ImGui.Checkbox("Edit", ref state);
+        _ = ImGui.Checkbox($"Edit###Edit:|{id}", ref state);
         var oldAlias = f.GetAliasOrEmpty();
         var newAlias = oldAlias;
         ImGui.SetNextItemWidth(Width(100));
