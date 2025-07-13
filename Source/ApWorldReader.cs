@@ -238,6 +238,7 @@ public sealed record ApWorldReader(
     /// <param name="regionToLogic">
     /// Maps the region name to the already parsed <see cref="Logic"/> for caching purposes.
     /// </param>
+    /// <param name="g">The logger.</param>
     /// <returns>The resulting <see cref="Logic"/> to get to the parameter <paramref name="target"/>.</returns>
     static Logic? Find(string target, JsonObject regions, Dictionary<string, Logic> regionToLogic, Action<string>? g)
     {

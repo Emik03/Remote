@@ -828,7 +828,7 @@ public sealed partial class Preferences
     /// <param name="clientsToRegister">The clients created from history, or <see langword="null"/>.</param>
     /// <returns>Whether to create a new instance of <see cref="Client"/>.</returns>
     [CLSCompliant(false)]
-    public bool Show(GameTime gameTime, IList<Client> clients, out int? tab, out IEnumerable<Client>? clientsToRegister)
+    public bool Show(GameTime gameTime, List<Client> clients, out int? tab, out IEnumerable<Client>? clientsToRegister)
     {
         clientsToRegister = null;
 
@@ -1025,8 +1025,11 @@ public sealed partial class Preferences
     /// <summary>Adds padding.</summary>
     void Pad()
     {
-        if (UiPadding is [var first, var second])
-            ImGui.Dummy(new(first, second));
+        if (UiPadding is not [var first, var second])
+            return;
+
+        ImGui.Dummy(new(first, second));
+        ImGui.SameLine();
     }
 
     /// <summary>Displays the preferences tab.</summary>
@@ -1219,7 +1222,7 @@ public sealed partial class Preferences
     /// <param name="clients">The list of clients to show.</param>
     /// <param name="clientsToRegister">The clients created from history, or <see langword="null"/>.</param>
     /// <returns>Whether to create a new <see cref="Client"/>.</returns>
-    bool ShowConnectionTab(IEnumerable<Client> clients, out IEnumerable<Client>? clientsToRegister)
+    bool ShowConnectionTab(List<Client> clients, out IEnumerable<Client>? clientsToRegister)
     {
         clientsToRegister = null;
 
@@ -1265,7 +1268,7 @@ public sealed partial class Preferences
                 _list.History.RemoveAt(i--);
         }
 
-        var query = _list.History.Where(x => clients.All(y => !y.Has(x)))
+        var query = _list.History.Where(x => clients.TrueForAll(y => !y.Has(x)))
            .GroupBy(x => (x.Alias, x.Host, x.Port), s_equality);
 
         clientsToRegister = Order(query)
