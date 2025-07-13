@@ -1360,7 +1360,7 @@ public sealed partial class Preferences
         if (!ImGui.CollapsingHeader(label, ImGuiTreeNodeFlags.SpanTextWidth))
             return [];
 
-        ImGui.SameLine(0, 20);
+        ImGui.SameLine(0, 15);
         _ = ImGui.Checkbox($"Edit###Edit:|{id}", ref state);
         var oldAlias = f.GetAliasOrEmpty();
         var newAlias = oldAlias;

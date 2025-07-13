@@ -73,7 +73,8 @@ public sealed partial class Client(Yaml? yaml = null)
                 info.Nth(0).Item?.Flags,
                 info.Nth(0).Item?.ItemName,
                 info.Count,
-                info.Max(x => x.Index), // ReSharper disable NullableWarningSuppressionIsUsed
+                info.Count is 0 ? int.MaxValue : info.Max(x => x.Index),
+                // ReSharper disable NullableWarningSuppressionIsUsed
                 [..info.Where(x => x.Item is not null).Select(x => (x.Item!.LocationDisplayName, x.Item!.LocationGame))]
             ) { } // ReSharper restore NullableWarningSuppressionIsUsed
 
@@ -98,30 +99,46 @@ public sealed partial class Client(Yaml? yaml = null)
         /// <summary>Displays this instance as text with a tooltip.</summary>
         /// <param name="preferences">The user preferences.</param>
         /// <param name="info">The connection info to display and update the counter.</param>
+        /// <param name="header">Whether to display this with <see cref="ImGui.CollapsingHeader(string)"/>.</param>
         /// <returns>Whether the parameter <paramref name="info"/> was updated.</returns>
-        public bool Show(Preferences preferences, ref Preferences.Connection info)
+        public bool? Show(Preferences preferences, ref Preferences.Connection info, bool header = false)
         {
             if (Name is null)
                 return false;
 
-            var used = info.GetItemsOrEmpty().GetValueOrDefault(Name);
+            var internalName = header ? $":|{Name}" : Name;
+            var used = info.GetItemsOrEmpty().GetValueOrDefault(internalName);
             var text = $"{Name}{(used is 0 ? Count is 1 ? "" : $" ({Count})" : $" ({Count - used}/{Count})")}";
             var v = used;
             ImGui.SetNextItemWidth(0);
-            ImGui.InputInt($"###{Name}", ref v);
+            ImGui.InputInt($"###{internalName}:|Input", ref v);
             ImGui.SameLine();
 
             if ((v = v.Clamp(0, Count)) != used)
-                info = info with { Items = info.GetItemsOrEmpty().SetItem(Name, v) };
+                info = info with { Items = info.GetItemsOrEmpty().SetItem(internalName, v) };
 
             var tooltip = Locations?.Select(ToString).Conjoin('\n');
 
-            if (used == Count)
-                preferences.ShowText(text, null, Name, tooltip, true);
-            else
-                preferences.ShowText(text, Flags, Name, tooltip);
+            if (!header)
+            {
+                if (used == Count)
+                    preferences.ShowText(text, null, Name, tooltip, true);
+                else
+                    preferences.ShowText(text, Flags, Name, tooltip);
 
-            return v != used;
+                return v != used;
+            }
+
+            if (used == Count)
+                ImGui.PushStyleColor(ImGuiCol.Text, ImGui.GetColorU32(ImGuiCol.TextDisabled));
+
+            var expanded = ImGui.CollapsingHeader($"{text}###{internalName}", ImGuiTreeNodeFlags.SpanTextWidth);
+
+            if (used == Count)
+                ImGui.PopStyleColor();
+
+            return v != used ? true :
+                expanded ? null : false;
         }
 
         /// <inheritdoc />

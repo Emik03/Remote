@@ -37,7 +37,7 @@ public sealed partial class Client
     bool? _isAttemptingToRelease;
 
     /// <summary>Contains the last amount of checks.</summary>
-    int _lastItemCount = int.MinValue, _lastLocationCount = int.MaxValue, _locationSort, _sentMessagesIndex;
+    int _itemType, _lastItemCount = int.MinValue, _lastLocationCount = int.MaxValue, _locationSort, _sentMessagesIndex;
 
     /// <summary>The current state of the text field.</summary>
     string _itemSearch = "", _locationSearch = "";
@@ -953,7 +953,7 @@ public sealed partial class Client
 
         if (GroupItems(Default, default)
            .Where(x => x.IsMatch(_itemSearch) && x.IsMatch(_info, _showUsedItems))
-           .Aggregate(false, (a, n) => n.Show(preferences, ref _info) || a))
+           .Aggregate(false, (a, n) => n.Show(preferences, ref _info) is true || a))
             preferences.Sync(ref _info);
     }
 
@@ -963,9 +963,26 @@ public sealed partial class Client
     {
         Debug.Assert(_evaluator is not null);
         _ = ImGui.Checkbox("Show pending items", ref _showYetToReceive);
+
+        if (_evaluator.ItemToPhantoms.Count is not 0)
+            Preferences.Combo("Item type", ref _itemType, "Real items\0Phantom items\0\0");
+
         ShowItemSearch(preferences);
         ImGui.SameLine();
         var setter = GetNextItemOpenSetter();
+
+        if (_itemType is 0)
+            ShowRealManualItems(preferences, setter);
+        else
+            ShowPhantomManualItems(preferences, setter);
+    }
+
+    /// <summary>Shows real items from the manual client.</summary>
+    /// <param name="preferences">The user preferences.</param>
+    /// <param name="setter">The setter.</param>
+    void ShowRealManualItems(Preferences preferences, Action setter)
+    {
+        Debug.Assert(_evaluator is not null);
 
         foreach (var (category, items) in _evaluator.CategoryToItems)
         {
@@ -983,9 +1000,75 @@ public sealed partial class Client
             if (!ImGui.CollapsingHeader($"{category} ({sum})###{category}:|ItemCategory"))
                 continue;
 
-            if (filtered.Aggregate(false, (a, n) => n.Show(preferences, ref _info) || a))
+            if (filtered.Aggregate(false, (a, n) => n.Show(preferences, ref _info) is true || a))
                 preferences.Sync(ref _info);
         }
+    }
+
+    /// <summary>Shows phantom items from the manual client.</summary>
+    /// <param name="preferences">The user preferences.</param>
+    /// <param name="setter">The setter.</param>
+    void ShowPhantomManualItems(Preferences preferences, Action setter)
+    {
+        (ReceivedItem Item, int Count) GetItemInfo((string Item, int Count) tuple)
+        {
+            bool Eq((int Index, ItemInfo Item) innerTuple) =>
+                FrozenSortedDictionary.Comparer.Equals(innerTuple.Item.ItemName, tuple.Item);
+
+            return (_showYetToReceive
+                ? new(ItemFlags.None, tuple.Item, 1, int.MaxValue, [])
+                : new([.._session.Items.AllItemsReceived.Index().Where(Eq)]), tuple.Count);
+        }
+
+        Debug.Assert(_session is not null);
+        Debug.Assert(_evaluator is not null);
+        var requiresSync = false;
+
+        foreach (var (phantomItem, values) in _evaluator.PhantomToItems)
+        {
+            if (values.IsEmpty)
+                continue;
+
+            IList<(ReceivedItem Item, int Count)> found = [..values.Select(GetItemInfo)];
+            var sum = found.Sum(x => x.Item.Count * x.Count);
+
+            if (sum is 0)
+                continue;
+
+            var last = found is [] ? int.MaxValue : found.Max(x => x.Item.LastOrderReceived);
+
+            ReceivedItem received =
+                new(ItemFlags.None, phantomItem, sum, last, [..found.SelectMany(x => x.Item.Locations ?? [])]);
+
+            setter();
+
+            switch (received.Show(preferences, ref _info, true))
+            {
+                case true:
+                    requiresSync = true;
+                    break;
+                case null: goto Next;
+            }
+
+            foreach (var (item, count) in found.Where(x => x.Item.Count is not 0))
+            {
+                switch (item.Show(preferences, ref _info))
+                {
+                    case true:
+                        requiresSync = true;
+                        break;
+                    case null: goto Next;
+                }
+
+                ImGui.SameLine();
+                preferences.ShowText($"= {item.Count * count}");
+            }
+
+        Next: ;
+        }
+
+        if (requiresSync)
+            preferences.Sync(ref _info);
     }
 
     /// <summary>Convenience function for displaying a checkbox with a specific color.</summary>

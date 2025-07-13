@@ -11,7 +11,7 @@ namespace Remote;
 /// <param name="ItemToCategories">The conversion from items to the set of categories it falls under.</param>
 /// <param name="ItemCount">The conversion from items to the amount of that item.</param>
 /// <param name="CategoryCount">The conversion from categories to the amount of that category.</param>
-/// <param name="ItemValues">The conversion from items to its phantom items.</param>
+/// <param name="ItemToPhantoms">The conversion from items to its phantom items.</param>
 /// <param name="Yaml">The yaml options.</param>
 /// <param name="IsOptAll">Whether to clamp requirements based on <see cref="Yaml"/>.</param>
 [CLSCompliant(false)]
@@ -25,7 +25,8 @@ public sealed partial record Evaluator(
     FrozenSortedDictionary ItemToCategories,
     FrozenDictionary<string, int> ItemCount,
     FrozenDictionary<string, int> CategoryCount,
-    FrozenDictionary<string, ImmutableArray<(string PhantomItem, int Count)>> ItemValues,
+    FrozenDictionary<string, ImmutableArray<(string PhantomItem, int Count)>> ItemToPhantoms,
+    FrozenDictionary<string, ImmutableArray<(string Item, int Count)>> PhantomToItems,
     FrozenDictionary<string, int> Yaml,
     bool IsOptAll
 )
@@ -38,7 +39,7 @@ public sealed partial record Evaluator(
     /// <param name="categoryToYaml">The conversion for categories to the yaml options that it falls under.</param>
     /// <param name="itemToCategories">The conversion from items to the set of categories it falls under.</param>
     /// <param name="itemCount">The conversion from items to the amount of that item.</param>
-    /// <param name="itemValues">The conversion from items to its phantom items.</param>
+    /// <param name="itemToPhantoms">The conversion from items to its phantom items.</param>
     /// <param name="yaml">The yaml options.</param>
     public Evaluator(
         IReceivedItemsHelper helper,
@@ -48,7 +49,7 @@ public sealed partial record Evaluator(
         FrozenSortedDictionary categoryToYaml,
         FrozenSortedDictionary itemToCategories,
         FrozenDictionary<string, int> itemCount,
-        FrozenDictionary<string, ImmutableArray<(string PhantomItem, int Count)>> itemValues,
+        FrozenDictionary<string, ImmutableArray<(string PhantomItem, int Count)>> itemToPhantoms,
         FrozenDictionary<string, int> yaml
     )
         : this(
@@ -61,7 +62,8 @@ public sealed partial record Evaluator(
             itemToCategories,
             itemCount,
             Infer(itemToCategories, itemCount),
-            itemValues,
+            itemToPhantoms,
+            Infer(itemToPhantoms),
             yaml,
             false
         ) { }
@@ -169,6 +171,24 @@ public sealed partial record Evaluator(
             itemValues,
             yaml.Options.ToFrozenDictionary()
         );
+    }
+
+    /// <summary>Infers the category count.</summary>
+    /// <param name="itemToPhantoms">The conversion from items to the set of categories it falls under.</param>
+    /// <returns>The category count.</returns>
+    static FrozenDictionary<string, ImmutableArray<(string Item, int Count)>> Infer(
+        // ReSharper disable once SuggestBaseTypeForParameter
+        FrozenDictionary<string, ImmutableArray<(string PhantomItem, int Count)>> itemToPhantoms
+    )
+    {
+        Dictionary<string, ImmutableArray<(string Item, int Count)>.Builder> ret = new(FrozenSortedDictionary.Comparer);
+
+        foreach (var (item, values) in itemToPhantoms)
+            foreach (var (phantomItem, count) in values)
+                (CollectionsMarshal.GetValueRefOrAddDefault(ret, phantomItem, out _) ??=
+                    ImmutableArray.CreateBuilder<(string, int)>()).Add((item, count));
+
+        return ret.ToFrozenDictionary(x => x.Key, x => x.Value.DrainToImmutable(), FrozenSortedDictionary.Comparer);
     }
 
     /// <summary>Infers the category count.</summary>

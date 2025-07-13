@@ -408,8 +408,8 @@ public sealed record ApWorldReader(
         process.StandardInput.Write(s_script);
         logger?.Invoke("Closing the standard input...");
         process.StandardInput.Close();
-        logger?.Invoke("Waiting for python...");
-        _ = process.WaitForExit(30000);
+        // logger?.Invoke("Waiting for python...");
+        // _ = process.WaitForExit(30000);
         logger?.Invoke("Deserializing the output from python...");
 
         return JsonSerializer.Deserialize<JsonNode>(

@@ -177,7 +177,7 @@ public sealed partial record Evaluator
         int.TryParse(count.Span, out var c) &&
         Helper.AllItemsReceived
            .Any(
-                x => ItemValues.TryGetValue(x.ItemName, out var value) &&
+                x => ItemToPhantoms.TryGetValue(x.ItemName, out var value) &&
                     value.Any(x => Eq(x.PhantomItem, item) && (c -= x.Count) <= 0)
             );
 
