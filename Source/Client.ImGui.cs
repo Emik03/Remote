@@ -197,7 +197,7 @@ public sealed partial class Client
             UpdateStatus();
         }
 
-        if (!ImGui.BeginTabBar("Tabs"))
+        if (!ImGui.BeginTabBar("Tabs", ImGuiTabBarFlags.Reorderable))
             return;
 
         ShowChatTab(preferences);
@@ -464,18 +464,8 @@ public sealed partial class Client
             _sentMessagesIndex = _sentMessages.Count - 1;
         }
 
-        ImGui.SameLine();
-        ImGui.TextDisabled("(?)");
-
-        if (ImGui.IsItemHovered())
-            preferences.Tooltip(HelpMessage1);
-
-        ImGui.SameLine();
-        ImGui.TextDisabled("(?)");
-
-        if (ImGui.IsItemHovered())
-            preferences.Tooltip(HelpMessage2);
-
+        preferences.ShowHelp(HelpMessage1);
+        preferences.ShowHelp(HelpMessage2);
         ImGui.EndChild();
     }
 

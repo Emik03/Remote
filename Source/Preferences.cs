@@ -618,8 +618,8 @@ public sealed partial class Preferences
     /// <param name="disabled">Whether the text is disabled.</param>
     public unsafe void ShowText(string text, AppColor? color = null, string? clipboard = null, bool disabled = false)
     {
-        var copy = clipboard ?? text;
-        bool pad = false, pushed = true;
+        var (copy, pad, pushed) = (clipboard ?? text, false, true);
+        Pad(_uiPadding);
 
         if (disabled && ImGui.GetStyleColorVec4(ImGuiCol.TextDisabled) is not null and var ptr)
             ImGui.PushStyleColor(ImGuiCol.Text, *ptr);
@@ -635,10 +635,11 @@ public sealed partial class Preferences
                 available <= width)
             {
                 ImGui.NewLine();
+                Pad(_uiPadding);
                 (pad, width, available) = (false, ImGui.CalcTextSize(w).X, ImGui.GetContentRegionAvail().X);
             }
 
-            if (available > width)
+            if (w is var drain && available > width)
             {
                 if (pad)
                 {
@@ -654,12 +655,11 @@ public sealed partial class Preferences
                 continue;
             }
 
-            var drain = w;
-
             for (var i = 2; i <= drain.Length; i++)
                 if (ImGui.GetContentRegionAvail().X <= ImGui.CalcTextSize(drain[..i]).X)
                 {
                     ImGui.TextUnformatted(drain[..(i - 1)]);
+                    Pad(_uiPadding);
                     CopyIfClicked(copy);
                     drain = drain[(i - 1)..];
                     i = 2;
@@ -900,6 +900,10 @@ public sealed partial class Preferences
     /// <param name="margin">The margin.</param>
     /// <returns>The size to use.</returns>
     public Vector2 ChildSize(int margin = 150) => ImGui.GetContentRegionAvail() - new Vector2(0, UiScale * margin);
+
+    /// <summary>Pads horizontally.</summary>
+    /// <param name="width">The width to pad.</param>
+    static void Pad(float width) => ImGui.Dummy(new(width, 0));
 
     /// <summary>Pushes the text.</summary>
     /// <param name="span">The span.</param>
