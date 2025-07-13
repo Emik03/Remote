@@ -1265,8 +1265,7 @@ public sealed partial class Preferences
                 _list.History.RemoveAt(i--);
         }
 
-        var query = _list.History
-           .Where(x => clients.All(y => !y.HostEquals(x)))
+        var query = _list.History.Where(x => clients.All(y => !y.Has(x)))
            .GroupBy(x => (x.Alias, x.Host, x.Port), s_equality);
 
         clientsToRegister = Order(query)
