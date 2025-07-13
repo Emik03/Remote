@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MPL-2.0
+# Thanks to Darius for writing this for me: https://github.com/itsMapleLeaf/
 import importlib
 import json
 import os
