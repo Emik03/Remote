@@ -470,6 +470,32 @@ public sealed partial class Preferences
 #pragma warning disable IDISP006
     public Process? ChildProcess { get; private set; }
 #pragma warning restore IDISP006
+    /// <summary>Mimics <see cref="ImGui.Combo(string, ref int, string)"/>.</summary>
+    /// <param name="label">The label.</param>
+    /// <param name="currentItem">The index of the current item.</param>
+    /// <param name="itemsSeparatedByZeros">The items separated by the character <c>\0</c>.</param>
+    /// <returns></returns>
+    public static bool Combo(string label, ref int currentItem, string itemsSeparatedByZeros)
+    {
+        var split = itemsSeparatedByZeros.SplitSpanOn('\0');
+
+        if (!ImGui.BeginCombo(label, split[currentItem]))
+            return false;
+
+        var i = 0;
+
+        foreach (var span in split)
+        {
+            if (ImGui.MenuItem(span))
+                currentItem = i;
+
+            i++;
+        }
+
+        ImGui.EndCombo();
+        return true;
+    }
+
     /// <summary>Shows the color edit widget.</summary>
     /// <param name="name">The displayed text.</param>
     /// <param name="color">The color that will change.</param>
@@ -809,32 +835,6 @@ public sealed partial class Preferences
             ImGui.SameLine();
 
         return ImGui.BeginChild(id, available);
-    }
-
-    /// <summary>Mimics <see cref="ImGui.Combo(string, ref int, string)"/>.</summary>
-    /// <param name="label">The label.</param>
-    /// <param name="currentItem">The index of the current item.</param>
-    /// <param name="itemsSeparatedByZeros">The items separated by the character <c>\0</c>.</param>
-    /// <returns></returns>
-    public bool Combo(string label, ref int currentItem, string itemsSeparatedByZeros)
-    {
-        var split = itemsSeparatedByZeros.SplitSpanOn('\0');
-
-        if (!ImGui.BeginCombo(label, split[currentItem]))
-            return false;
-
-        var i = 0;
-
-        foreach (var span in split)
-        {
-            if (ImGui.MenuItem(span))
-                currentItem = i;
-
-            i++;
-        }
-
-        ImGui.EndCombo();
-        return true;
     }
 
     /// <summary>Shows the preferences window.</summary>
