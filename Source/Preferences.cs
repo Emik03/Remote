@@ -600,6 +600,17 @@ public sealed partial class Preferences
         _list.Save();
     }
 
+    /// <summary>Shows a help widget.</summary>
+    /// <param name="message">The message to display when the question is hovered on.</param>
+    public void ShowHelp(string message)
+    {
+        ImGui.SameLine();
+        ImGui.TextDisabled("(?)");
+
+        if (ImGui.IsItemHovered())
+            Tooltip(message);
+    }
+
     /// <summary>Shows the text.</summary>
     /// <param name="text">The text to show.</param>
     /// <param name="color">The color of the text.</param>
@@ -817,7 +828,7 @@ public sealed partial class Preferences
     {
         clientsToRegister = null;
 
-        if (!ImGui.BeginTabBar("Tabs"))
+        if (!ImGui.BeginTabBar("Tabs", ImGuiTabBarFlags.Reorderable))
         {
             tab = _useTabs ? null : Show(gameTime, clients);
             return false;
@@ -1114,21 +1125,39 @@ public sealed partial class Preferences
     /// <summary>Shows the path header and options.</summary>
     void ShowPath()
     {
-        const string Hint = "Only required for manual worlds that use hooks";
+        const string
+            DirectoryMessage =
+                """
+                This is where manual worlds are read from.
+                If left empty, the default installation
+                path of Archipelago is used.
+                """,
+            GitRepoMessage =
+                """
+                This is used for manual worlds that use the Hooks feature
+                that depend on the Archipelago source code. Ensure that
+                setup.py has been executed on the repository. If left empty,
+                manual worlds using Hooks are treated as non-manual worlds,
+                meaning all manual-specific features will be disabled.
+                """,
+            PythonMessage =
+                """
+                This is used for manual worlds that use the Hooks feature
+                that depend on the Archipelago source code. If left empty,
+                python is assumed to be installed in PATH. This setting
+                does nothing if the above setting isn't specified.
+                """;
+
         ImGui.SeparatorText("Path");
-        ImGui.SetNextItemWidth(Width(250));
-
-        _ = ImGuiRenderer.InputTextWithHint(
-            "AP Directory",
-            DefaultDirectory,
-            ref _directory,
-            ushort.MaxValue
-        );
-
-        ImGui.SetNextItemWidth(Width(250));
-        _ = ImGuiRenderer.InputTextWithHint("AP Git Repo", Hint, ref _repo, ushort.MaxValue);
-        ImGui.SetNextItemWidth(Width(250));
+        ImGui.SetNextItemWidth(Width(300));
+        _ = ImGuiRenderer.InputTextWithHint("AP Directory", DefaultDirectory, ref _directory, ushort.MaxValue);
+        ShowHelp(DirectoryMessage);
+        ImGui.SetNextItemWidth(Width(300));
+        _ = ImGuiRenderer.InputText("AP Git Repo", ref _repo, ushort.MaxValue);
+        ShowHelp(GitRepoMessage);
+        ImGui.SetNextItemWidth(Width(300));
         _ = ImGuiRenderer.InputTextWithHint("Python", "python", ref _python, ushort.MaxValue);
+        ShowHelp(PythonMessage);
     }
 
     /// <summary>Helper method for displaying a slider.</summary>
