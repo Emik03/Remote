@@ -531,6 +531,7 @@ public sealed partial class Preferences
     {
         var active = color / ActiveTabDim;
         var inactive = color / InactiveTabDim;
+        ImGui.PushStyleColor(ImGuiCol.TextSelectedBg, color);
         ImGui.PushStyleColor(ImGuiCol.TabSelected, active);
         ImGui.PushStyleColor(ImGuiCol.TabHovered, active);
         ImGui.PushStyleColor(ImGuiCol.Tab, inactive);
@@ -1246,6 +1247,14 @@ public sealed partial class Preferences
                 ? "Join a game for buttons to appear here!"
                 : "Left click to join. Right click to delete.",
             disabled: true
+        );
+
+        ShowHelp(
+            """
+            If the host or port changes, you can enter them
+            in the above fields, and then click to join.
+            The history will update accordingly.
+            """
         );
 
         for (var i = 0; i < _list.History.Count && CollectionsMarshal.AsSpan(_list.History) is var history; i++)

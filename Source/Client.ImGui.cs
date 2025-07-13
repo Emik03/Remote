@@ -56,7 +56,7 @@ public sealed partial class Client
     [CLSCompliant(false)]
     public bool Draw(GameTime gameTime, Preferences preferences, out bool selected)
     {
-        const int Styles = 12;
+        const int Styles = 13;
         var pushedColor = AppColor.TryParse(_info.Color, out var color);
 
         if (pushedColor)
