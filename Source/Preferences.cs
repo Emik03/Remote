@@ -236,13 +236,15 @@ public sealed partial class Preferences
     /// <summary>Determines whether a restart needs to be performed to apply changes.</summary>
     static bool s_requiresRestart;
 
+    /// <summary>Contains the state for whether to display the editing text for connection headers.</summary>
+    readonly Dictionary<string, bool> _editStates = new(FrozenSortedDictionary.Comparer);
+
     /// <summary>Contains the history.</summary>
     readonly Connection.List _list = Connection.List.Load();
 
     /// <summary>Contains boolean settings.</summary>
     bool _alwaysShowChat,
         _desktopNotifications,
-        _hasDrawEverBeenSuccessful,
         _holdToConfirm = true,
         _moveToChatTab = true,
         _sideBySide,
@@ -462,38 +464,12 @@ public sealed partial class Preferences
 
     /// <summary>Gets or sets the UI padding.</summary>
 #pragma warning disable MA0016
-    public List<float> UiPadding { get; [UsedImplicitly] private set; } = [6, 6];
+    public List<float> UiPadding { get; [UsedImplicitly] private set; } = [5, 5];
 #pragma warning restore MA0016
     /// <summary>Gets the child process to wait for before disposing.</summary>
 #pragma warning disable IDISP006
     public Process? ChildProcess { get; private set; }
 #pragma warning restore IDISP006
-    /// <summary>Mimics <see cref="ImGui.Combo(string, ref int, string)"/>.</summary>
-    /// <param name="label">The label.</param>
-    /// <param name="currentItem">The index of the current item.</param>
-    /// <param name="itemsSeparatedByZeros">The items separated by the character <c>\0</c>.</param>
-    /// <returns></returns>
-    public static bool Combo(string label, ref int currentItem, string itemsSeparatedByZeros)
-    {
-        var split = itemsSeparatedByZeros.SplitSpanOn('\0');
-
-        if (!ImGui.BeginCombo(label, split[currentItem]))
-            return false;
-
-        var i = 0;
-
-        foreach (var span in split)
-        {
-            if (ImGui.MenuItem(span))
-                currentItem = i;
-
-            i++;
-        }
-
-        ImGui.EndCombo();
-        return true;
-    }
-
     /// <summary>Shows the color edit widget.</summary>
     /// <param name="name">The displayed text.</param>
     /// <param name="color">The color that will change.</param>
@@ -835,6 +811,32 @@ public sealed partial class Preferences
         return ImGui.BeginChild(id, available);
     }
 
+    /// <summary>Mimics <see cref="ImGui.Combo(string, ref int, string)"/>.</summary>
+    /// <param name="label">The label.</param>
+    /// <param name="currentItem">The index of the current item.</param>
+    /// <param name="itemsSeparatedByZeros">The items separated by the character <c>\0</c>.</param>
+    /// <returns></returns>
+    public bool Combo(string label, ref int currentItem, string itemsSeparatedByZeros)
+    {
+        var split = itemsSeparatedByZeros.SplitSpanOn('\0');
+
+        if (!ImGui.BeginCombo(label, split[currentItem]))
+            return false;
+
+        var i = 0;
+
+        foreach (var span in split)
+        {
+            if (ImGui.MenuItem(span))
+                currentItem = i;
+
+            i++;
+        }
+
+        ImGui.EndCombo();
+        return true;
+    }
+
     /// <summary>Shows the preferences window.</summary>
     /// <param name="gameTime">The time elapsed.</param>
     /// <param name="clients">The list of clients to show.</param>
@@ -869,7 +871,6 @@ public sealed partial class Preferences
             tab = Show(gameTime, clients);
         }
 
-        _hasDrawEverBeenSuccessful = true;
         return ret;
     }
 
@@ -1198,7 +1199,7 @@ public sealed partial class Preferences
             Colors = [..Colors, ..s_defaultColors.AsSpan()[Colors.Count..]];
 
         if (UiPadding is not [_, _])
-            UiPadding = [6, 6];
+            UiPadding = [5, 5];
     }
 
     /// <summary>Shows the paste field.</summary>
@@ -1347,25 +1348,33 @@ public sealed partial class Preferences
     /// <returns>The clients created.</returns>
     IEnumerable<Client> ShowHistoryHeader(ConnectionGroup group)
     {
-        if (group.ToIList() is not [var f, ..] connection ||
-            $"{(connection.Count is 1 ? "" : $" ({connection.Count})")}" is var count &&
-            $"{f.Host}:{f.Port}" is var id &&
-            !ImGui.CollapsingHeader($"{(string.IsNullOrWhiteSpace(f.Alias) ? id : f.Alias)}{count}###{id}"))
+        if (group.ToIList() is not [var f, ..] connection)
             return [];
 
+        var count = $"{(connection.Count is 1 ? "" : $" ({connection.Count})")}";
+        var id = $"{f.Host}:{f.Port}";
+        ImGui.SetNextItemWidth(Width(100));
+        ref var state = ref CollectionsMarshal.GetValueRefOrAddDefault(_editStates, id, out _);
+        var label = $"{(string.IsNullOrWhiteSpace(f.Alias) ? id : f.Alias)}{count}###{id}";
+
+        if (!ImGui.CollapsingHeader(label, ImGuiTreeNodeFlags.SpanTextWidth))
+            return [];
+
+        ImGui.SameLine(0, 20);
+        _ = ImGui.Checkbox("Edit", ref state);
         var oldAlias = f.GetAliasOrEmpty();
         var newAlias = oldAlias;
         ImGui.SetNextItemWidth(Width(100));
 
-        _ = ImGuiRenderer.InputTextWithHint(
-            $"Alias###Alias:|{id}",
-            "Change the displayed name...",
-            ref newAlias,
-            ushort.MaxValue,
-            TextFlags
-        );
-
-        if (_hasDrawEverBeenSuccessful &&
+        if (state &&
+            ImGuiRenderer.InputTextWithHint(
+                $"Alias###Alias:|{id}",
+                "Type here to change the name, then hit enter to confirm...",
+                ref newAlias,
+                ushort.MaxValue,
+                TextFlags
+            ) &&
+            !(state = false) &&
             !FrozenSortedDictionary.Comparer.Equals(oldAlias, newAlias) &&
             f with { Alias = newAlias } is var alias)
             Sync(ref alias);

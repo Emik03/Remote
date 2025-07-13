@@ -314,7 +314,7 @@ public sealed partial class Client
 
         ImGui.SetNextItemWidth(preferences.Width(0));
 
-        Preferences.Combo(
+        _ = preferences.Combo(
             "###Item Sort",
             ref _itemSort,
             "Sort by Name\0Sort by Name (Reversed)\0Sort by First Acquired\0Sort by Last Acquired\0\0"
@@ -360,7 +360,7 @@ public sealed partial class Client
         _ = ImGui.Checkbox("Show obtained hints", ref _showObtainedHints);
         ImGui.SetNextItemWidth(preferences.Width(150));
 
-        _ = Preferences.Combo(
+        _ = preferences.Combo(
             "Filter",
             ref s_hintIndex,
             "Show sent hints\0Show received hints\0Show either hint type\0\0"
@@ -525,7 +525,7 @@ public sealed partial class Client
     void ShowLocations(Preferences preferences)
     {
         Debug.Assert(_session is not null);
-        _ = Preferences.Combo("##Location Sort", ref _locationSort, "Sort by Name\0Sort by ID\0\0");
+        _ = preferences.Combo("##Location Sort", ref _locationSort, "Sort by Name\0Sort by ID\0\0");
         _ = ImGui.Checkbox("Show Already Checked Locations", ref _showAlreadyChecked);
         var stuck = _evaluator is null ? ShowNonManualLocations(preferences) : ShowManualLocations(preferences);
         ImGui.EndChild();
