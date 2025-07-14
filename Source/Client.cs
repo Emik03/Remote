@@ -601,16 +601,20 @@ public sealed partial class Client(Yaml? yaml = null)
 
         _locationSuggestions =
         [
-            .._session.Locations.AllLocations
+            .._session.Locations.AllMissingLocations
                .Select(x => _session.Locations.GetLocationNameFromId(x, _yaml.Game))
                .Order(FrozenSortedDictionary.Comparer),
         ];
 
+        _itemSuggestions =
+        [
+            ..(_evaluator is null
+                ? _session.Items.AllItemsReceived.Select(x => x.ItemName).Distinct(FrozenSortedDictionary.Comparer)
+                : _evaluator.ItemCount.Where(HasMore).Select(x => x.Key)).Order(FrozenSortedDictionary.Comparer),
+        ];
+
         if (_evaluator is null)
         {
-            _itemSuggestions =
-                [.._session.Items.AllItemsReceived.Select(x => x.ItemName).Order(FrozenSortedDictionary.Comparer)];
-
             foreach (var location in locationHelper.AllLocations)
                 if (locationHelper.GetLocationNameFromId(location, _yaml.Game) is { } name)
                     Update(name, locationHelper);
@@ -618,13 +622,20 @@ public sealed partial class Client(Yaml? yaml = null)
             return;
         }
 
-        _itemSuggestions =
-            [.._evaluator.CategoryToItems.Array.SelectMany(x => x.Value).Order(FrozenSortedDictionary.Comparer)];
-
         foreach (var (_, locations) in _evaluator.CategoryToLocations)
             foreach (var location in locations)
                 Update(location, locationHelper);
     }
+
+    /// <summary>Determines whether there is more of a location to be found.</summary>
+    /// <param name="kvp">The item.</param>
+    /// <returns>Whether the parameter <paramref name="kvp"/> has more to find.</returns>
+    bool HasMore(KeyValuePair<string, int> kvp) =>
+        _session is not null &&
+        (_evaluator is null ||
+            _session.Items.AllItemsReceived.Where(x => FrozenSortedDictionary.Comparer.Equals(x.ItemName, kvp.Key))
+               .Skip(kvp.Value)
+               .Any());
 
     /// <summary>Determines whether the location matches the current goal.</summary>
     /// <param name="location">The location.</param>
@@ -783,16 +794,15 @@ public sealed partial class Client(Yaml? yaml = null)
 
     /// <summary>Gets the suggestions.</summary>
     /// <param name="message">The message to compare.</param>
-    /// <param name="toMatch">The string to match next against.</param>
+    /// <param name="next">The next span to match against.</param>
     /// <returns>The suggestions.</returns>
-    ImmutableArray<string> GetSuggestions(string message, out ReadOnlySpan<char> toMatch) =>
+    ImmutableArray<string> GetSuggestions(string message, out ReadOnlySpan<char> next) =>
         (message.SplitSpanWhitespace() is var (first, rest) ? first : "") switch
         {
-            "!getitem" or "!hint" when (toMatch = rest.Body) is var _ => _itemSuggestions,
-            "!hint_location" or "!missing" when (toMatch = rest.Body) is var _ => _locationSuggestions,
-            [] or ['!', ..] when (toMatch = first) is var _ && rest.Body.IsEmpty => s_commands,
-            _ when (toMatch = default) is var _ => [],
-            _ => throw Unreachable,
+            "!getitem" or "!hint" when (next = rest.Body) is var _ => _itemSuggestions,
+            "!hint_location" or "!missing" when (next = rest.Body) is var _ => _locationSuggestions,
+            [] or ['!', ..] when (next = first) is var _ && rest.Body.IsEmpty => s_commands,
+            _ => (next = default) is var _ ? [] : throw Unreachable,
         };
 
     /// <summary>Gets the item info.</summary>

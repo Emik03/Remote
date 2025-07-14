@@ -611,8 +611,9 @@ public sealed partial class Client
             return;
 
         var sum = 0;
+        var suggestions = GetSuggestions(message, out var user);
 
-        foreach (var suggestion in GetSuggestions(message, out var user))
+        foreach (var suggestion in suggestions)
             if (StrictStartsWith(user, suggestion) && ++sum >= preferences.Suggestions)
                 goto HasAnythingToRender;
 
@@ -624,7 +625,7 @@ public sealed partial class Client
         var pos = ImGui.GetCursorPos();
         var size = ImGui.CalcTextSize(message);
         var length = preferences.Suggestions.Min(sum);
-        pos.X += !isChatTab && preferences.SideBySide ? ImGui.GetWindowSize().X / 2 : 0;
+        pos.X += !isChatTab && preferences.SideBySide ? ImGui.GetWindowSize().X : 0;
         pos.Y += size.Y * -length;
         var (x, y) = (ImGui.GetContentRegionAvail().X, size.Y * (length + 1));
         ImGui.SetNextWindowPos(pos);
@@ -638,9 +639,8 @@ public sealed partial class Client
 
         ImGui.SetWindowFontScale(preferences.UiScale);
 
-        foreach (var suggestion in GetSuggestions(message, out var user))
-            if (StrictStartsWith(user, suggestion) &&
-                PasteIfClicked(user, suggestion, message.Nth(^1)?.IsWhitespace() is false))
+        foreach (var suggestion in suggestions)
+            if (StrictStartsWith(user, suggestion) && PasteIfClicked(user, suggestion, user.Nth(^1)))
                 break;
 
         ImGui.EndPopup();
@@ -1167,8 +1167,8 @@ public sealed partial class Client
     /// <summary>Adds the text provided if the selectable is clicked.</summary>
     /// <param name="user">The user input.</param>
     /// <param name="match">The match.</param>
-    /// <param name="addSpacePrefix">Whether to add whitespace as a prefix.</param>
-    bool PasteIfClicked(ReadOnlySpan<char> user, string match, bool addSpacePrefix)
+    /// <param name="last">The last character from the user input.</param>
+    bool PasteIfClicked(ReadOnlySpan<char> user, string match, char? last)
     {
         _ = ImGui.Selectable(match);
 
@@ -1180,11 +1180,12 @@ public sealed partial class Client
 
         ImGui.CloseCurrentPopup();
         _sentChatMessageLastFrame = true;
+        ImGui.GetIO().AddInputCharactersUTF8(match[user.Length..]);
 
-        if (addSpacePrefix)
+        if (match is "!getitem" or "!hint" or "!hint_location" or "!missing" ||
+            last?.IsWhitespace() is false && s_commands.Contains(match, FrozenSortedDictionary.Comparer))
             ImGui.GetIO().AddInputCharactersUTF8([' ']);
 
-        ImGui.GetIO().AddInputCharactersUTF8(match[user.Length..]);
         return true;
     }
 
