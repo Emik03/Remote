@@ -117,11 +117,11 @@ public sealed partial class Client
         var ret = ImGuiRenderer.BeginTabItem(
             name,
             ref Unsafe.NullRef<bool>(),
-            s_tab == tab ? ImGuiTabItemFlags.SetSelected : ImGuiTabItemFlags.None
+            CurrentTab == tab ? ImGuiTabItemFlags.SetSelected : ImGuiTabItemFlags.None
         );
 
         if (ImGui.IsItemClicked())
-            s_tab = tab;
+            CurrentTab = tab;
 
         return ret;
     }
@@ -219,12 +219,12 @@ public sealed partial class Client
     void ShowChatTab(Preferences preferences)
     {
         Debug.Assert(_session is not null);
-        var forced = s_tab is Tab.Chat || preferences is { AlwaysShowChat: false, MoveToChatTab: true } && IsReleasing;
+        var forced = CurrentTab is Tab.Chat || preferences is { AlwaysShowChat: false, MoveToChatTab: true } && IsReleasing;
         var flags = forced ? ImGuiTabItemFlags.SetSelected : ImGuiTabItemFlags.None;
         var ret = !ImGuiRenderer.BeginTabItem("Chat", ref Unsafe.NullRef<bool>(), flags);
 
         if (ImGui.IsItemClicked())
-            s_tab = Tab.Chat;
+            CurrentTab = Tab.Chat;
 
         if (forced)
         {
@@ -598,12 +598,6 @@ public sealed partial class Client
 
         if (preferences.Suggestions <= 0)
             return;
-
-        if (!_hasEverShownPopup)
-        {
-            ImGui.OpenPopup("Autocomplete");
-            _hasEverShownPopup = true;
-        }
 
         var sum = 0;
 

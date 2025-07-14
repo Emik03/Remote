@@ -218,9 +218,6 @@ public sealed partial class Client(Yaml? yaml = null)
     /// <summary>Whether to show errors in <see cref="MessageBox.Show"/>.</summary>
     static bool s_displayErrors = true;
 
-    /// <summary>Gets the currently selected tab.</summary>
-    static Tab s_tab;
-
     /// <summary>Contains the number of instances that have been created. Used to make each instance unique.</summary>
     static int s_instances;
 
@@ -328,6 +325,17 @@ public sealed partial class Client(Yaml? yaml = null)
 
     /// <summary>Gets the color.</summary>
     public AppColor? Color => AppColor.TryParse(_info.Color, out var color) ? color : null;
+
+    /// <summary>Gets the currently selected tab.</summary>
+    static Tab CurrentTab
+    {
+        get;
+        set
+        {
+            ImGui.OpenPopup("Autocomplete");
+            field = value;
+        }
+    }
 
     /// <summary>Contains the last retrieved hints.</summary>
     HintMessage[]? LastHints
@@ -590,11 +598,10 @@ public sealed partial class Client(Yaml? yaml = null)
 
         if (s_manager is not null && _pushNotifs && _sessionCreatedTimestamp + TimeSpan.FromSeconds(5) < DateTime.Now)
         {
-            var body = items.Where(x => !_lastItems.TryGetValue(x.Key, out var value) && x.Value != value)
-               .Select(x => $"• {x.Key}{(x.Value is 1 ? "" : $" ({x.Value})")}")
-               .Conjoin('\n');
+            var enumerable = items.Where(x => !_lastItems.TryGetValue(x.Key, out var value) && x.Value != value)
+               .Select(x => $"• {x.Key}{(x.Value is 1 ? "" : $" ({x.Value})")}");
 
-            if (!string.IsNullOrWhiteSpace(body))
+            if (enumerable.Conjoin('\n') is var body && !string.IsNullOrWhiteSpace(body))
                 _ = Task.Run(() => s_manager.ShowNotification(new() { Title = "New items received!", Body = body }));
         }
 
@@ -604,7 +611,7 @@ public sealed partial class Client(Yaml? yaml = null)
         [
             .._session.Locations.AllLocations
                .Select(x => _session.Locations.GetLocationNameFromId(x, _yaml.Game))
-               .Order(FrozenSortedDictionary.Comparer)
+               .Order(FrozenSortedDictionary.Comparer),
         ];
 
         if (_evaluator is null)
