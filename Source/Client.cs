@@ -610,7 +610,7 @@ public sealed partial class Client(Yaml? yaml = null)
         [
             ..(_evaluator is null
                 ? _session.Items.AllItemsReceived.Select(x => x.ItemName).Distinct(FrozenSortedDictionary.Comparer)
-                : _evaluator.ItemCount.Where(HasMore).Select(x => x.Key)).Order(FrozenSortedDictionary.Comparer),
+                : _evaluator.ItemCount.Select(x => x.Key).Where(HasMore)).Order(FrozenSortedDictionary.Comparer),
         ];
 
         if (_evaluator is null)
@@ -625,14 +625,14 @@ public sealed partial class Client(Yaml? yaml = null)
                     Update(location, locationHelper);
     }
 
-    /// <summary>Determines whether there is more of a location to be found.</summary>
-    /// <param name="kvp">The item.</param>
-    /// <returns>Whether the parameter <paramref name="kvp"/> has more to find.</returns>
-    bool HasMore(KeyValuePair<string, int> kvp) =>
+    /// <summary>Determines whether there is more of an item to be found.</summary>
+    /// <param name="item">The item.</param>
+    /// <returns>Whether the parameter <paramref name="item"/> has more to find.</returns>
+    bool HasMore(string item) =>
         _session is not null &&
         (_evaluator is null ||
-            _session.Items.AllItemsReceived.Where(x => FrozenSortedDictionary.Comparer.Equals(x.ItemName, kvp.Key))
-               .Skip(kvp.Value)
+            !_session.Items.AllItemsReceived.Where(x => FrozenSortedDictionary.Comparer.Equals(x.ItemName, item))
+               .Skip(_evaluator.ItemCount[item])
                .Any());
 
     /// <summary>Determines whether the location matches the current goal.</summary>
