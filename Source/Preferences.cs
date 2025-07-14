@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MPL-2.0
 namespace Remote;
 
+using ConnectionGroup = IGrouping<(string? Alias, string? Host, ushort Port), Preferences.Connection>;
 using JsonIgnoreAttribute = System.Text.Json.Serialization.JsonIgnoreAttribute;
 using JsonSerializer = System.Text.Json.JsonSerializer;
 using Vector2 = System.Numerics.Vector2;
-using ConnectionGroup = IGrouping<(string? Alias, string? Host, ushort Port), Preferences.Connection>;
 
 /// <summary>Contains the preferences that are stored persistently.</summary>
 public sealed partial class Preferences
@@ -255,11 +255,12 @@ public sealed partial class Preferences
 
     /// <summary>Contains the current UI settings.</summary>
     float _activeTabDim = 2.5f,
-        _windowDim = 10,
         _inactiveTabDim = 5,
+        _suggestions,
         _uiScale = 0.75f,
         _uiRounding = 4,
-        _uiSpacing = 6;
+        _uiSpacing = 6,
+        _windowDim = 10;
 
     /// <summary>Contains the current text field values.</summary>
     string _address = DefaultAddress,
@@ -367,13 +368,6 @@ public sealed partial class Preferences
         [UsedImplicitly] private set => _activeTabDim = value;
     }
 
-    /// <summary>Gets or sets the window dim.</summary>
-    public float WindowDim
-    {
-        get => _windowDim;
-        [UsedImplicitly] private set => _windowDim = value;
-    }
-
     /// <summary>Gets or sets the inactive tab dim.</summary>
     public float InactiveTabDim
     {
@@ -383,6 +377,13 @@ public sealed partial class Preferences
 
     /// <summary>Gets or sets the UI scaling.</summary>
     public float FontSize { get; [UsedImplicitly] private set; } = 36;
+
+    /// <summary>Gets or sets the number of suggestions in the autocomplete.</summary>
+    public float Suggestions
+    {
+        get => _suggestions;
+        [UsedImplicitly] private set => _suggestions = value;
+    }
 
     /// <summary>Gets or sets the UI scaling.</summary>
     public float UiScale
@@ -403,6 +404,13 @@ public sealed partial class Preferences
     {
         get => _uiSpacing;
         [UsedImplicitly] private set => _uiSpacing = value;
+    }
+
+    /// <summary>Gets or sets the window dim.</summary>
+    public float WindowDim
+    {
+        get => _windowDim;
+        [UsedImplicitly] private set => _windowDim = value;
     }
 
     /// <summary>Gets or sets the port.</summary>
@@ -470,32 +478,6 @@ public sealed partial class Preferences
 #pragma warning disable IDISP006
     public Process? ChildProcess { get; private set; }
 #pragma warning restore IDISP006
-    /// <summary>Mimics <see cref="ImGui.Combo(string, ref int, string)"/>.</summary>
-    /// <param name="label">The label.</param>
-    /// <param name="currentItem">The index of the current item.</param>
-    /// <param name="itemsSeparatedByZeros">The items separated by the character <c>\0</c>.</param>
-    /// <returns></returns>
-    public static bool Combo(string label, ref int currentItem, string itemsSeparatedByZeros)
-    {
-        var split = itemsSeparatedByZeros.SplitSpanOn('\0');
-
-        if (!ImGui.BeginCombo(label, split[currentItem]))
-            return false;
-
-        var i = 0;
-
-        foreach (var span in split)
-        {
-            if (ImGui.MenuItem(span))
-                currentItem = i;
-
-            i++;
-        }
-
-        ImGui.EndCombo();
-        return true;
-    }
-
     /// <summary>Shows the color edit widget.</summary>
     /// <param name="name">The displayed text.</param>
     /// <param name="color">The color that will change.</param>
@@ -633,7 +615,7 @@ public sealed partial class Preferences
     )
     {
         var (copy, pad, pushed) = (clipboard ?? text, false, true);
-        Pad();
+        Pad(text, copy);
 
         if (disabled && ImGui.GetStyleColorVec4(ImGuiCol.TextDisabled) is not null and var ptr)
             ImGui.PushStyleColor(ImGuiCol.Text, *ptr);
@@ -649,7 +631,7 @@ public sealed partial class Preferences
                 available <= width)
             {
                 ImGui.NewLine();
-                Pad();
+                Pad(text, copy);
                 (pad, width, available) = (false, ImGui.CalcTextSize(w).X, ImGui.GetContentRegionAvail().X);
             }
 
@@ -675,7 +657,7 @@ public sealed partial class Preferences
                 if (ImGui.GetContentRegionAvail().X <= ImGui.CalcTextSize(drain[..i]).X)
                 {
                     ImGui.TextUnformatted(drain[..(i - 1)]);
-                    Pad();
+                    Pad(text, copy);
                     CopyIfClicked(copy);
                     Tooltip(tooltip);
                     drain = drain[(i - 1)..];
@@ -835,6 +817,34 @@ public sealed partial class Preferences
             ImGui.SameLine();
 
         return ImGui.BeginChild(id, available);
+    }
+
+    /// <summary>Mimics <see cref="ImGui.Combo(string, ref int, string)"/>.</summary>
+    /// <param name="label">The label.</param>
+    /// <param name="currentItem">The index of the current item.</param>
+    /// <param name="itemsSeparatedByZeros">The items separated by the character <c>\0</c>.</param>
+    /// <param name="applyUiScale">Whether to apply the current UI scaling.</param>
+    /// <returns></returns>
+    public bool Combo(string label, ref int currentItem, string itemsSeparatedByZeros, bool applyUiScale = true)
+    {
+        var split = itemsSeparatedByZeros.SplitSpanOn('\0');
+
+        if (!ImGui.BeginCombo(label, split[currentItem]))
+            return false;
+
+        ImGui.SetWindowFontScale(UiScale);
+        var i = 0;
+
+        foreach (var span in split)
+        {
+            if (ImGui.MenuItem(span))
+                currentItem = i;
+
+            i++;
+        }
+
+        ImGui.EndCombo();
+        return true;
     }
 
     /// <summary>Shows the preferences window.</summary>
@@ -1041,9 +1051,10 @@ public sealed partial class Preferences
             );
 
     /// <summary>Adds padding.</summary>
-    void Pad()
+    void Pad(string? text, string? copy)
     {
-        if (UiPadding is not [var first, var second])
+        if (copy is not null && !FrozenSortedDictionary.Comparer.Equals(text, copy) ||
+            UiPadding is not [var first, var second])
             return;
 
         ImGui.Dummy(new(first, second));
@@ -1071,7 +1082,9 @@ public sealed partial class Preferences
         _ = ImGui.Checkbox("Always show chat", ref _alwaysShowChat);
 
         if (_alwaysShowChat)
-            ImGui.Checkbox("Chat window on side", ref _sideBySide);
+            _ = ImGui.Checkbox("Chat window on side", ref _sideBySide);
+
+        Slider("Suggestions", ref _suggestions, 0, 20, "%.0f");
     }
 
     /// <summary>Shows the behavior header and options.</summary>
@@ -1108,7 +1121,7 @@ public sealed partial class Preferences
         var (fontSize, language) = (FontSize, _language);
         Slider("Font Size", ref fontSize, 8, 72, "%.0f");
         ImGui.SetNextItemWidth(Width(250));
-        _ = Combo("Font Language", ref language, s_languages);
+        _ = Combo("Font Language", ref language, s_languages, false);
         // ReSharper disable once CompareOfFloatsByEqualityOperator
         s_requiresRestart |= FontSize != fontSize || _language != language;
         (FontSize, _language) = (fontSize, language);
@@ -1269,7 +1282,7 @@ public sealed partial class Preferences
         var ret = ImGui.Button("Enter slot manually") || enter;
         ImGui.SeparatorText("History");
         ImGui.SetNextItemWidth(Width(100));
-        _ = Combo("Sort", ref _sortHistoryBy, s_historyOrder);
+        _ = Combo("Sort", ref _sortHistoryBy, s_historyOrder, false);
 
         var message = _list.History.Count is 0
             ? "Join a game for buttons to appear here!"

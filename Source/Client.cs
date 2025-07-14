@@ -55,6 +55,7 @@ public sealed partial class Client(Yaml? yaml = null)
     /// <param name="Flags">The priority of the obtained item.</param>
     /// <param name="Name">The item name.</param>
     /// <param name="Count">The number of times this item was obtained.</param>
+    /// <param name="LastOrderReceived">The last time the specific item was obtained.</param>
     /// <param name="Locations">The locations that obtained this item.</param>
 #pragma warning disable MA0097
     readonly record struct ReceivedItem(
@@ -207,6 +208,13 @@ public sealed partial class Client(Yaml? yaml = null)
     static readonly FreeDesktopNotificationManager? s_manager =
         OperatingSystem.IsFreeBSD() || OperatingSystem.IsLinux() ? new() : null;
 
+    /// <summary>The commands.</summary>
+    static readonly ImmutableArray<string> s_commands =
+    [
+        "!admin", "!alias", "!checked", "!collect", "!countdown", "!getitem", "!help", "!hint", "!hint_location",
+        "!license", "!missing", "!options", "!players", "!release", "!remaining", "!status",
+    ];
+
     /// <summary>Whether to show errors in <see cref="MessageBox.Show"/>.</summary>
     static bool s_displayErrors = true;
 
@@ -267,6 +275,9 @@ public sealed partial class Client(Yaml? yaml = null)
 
     /// <summary>The logic evaluator.</summary>
     Evaluator? _evaluator;
+
+    /// <summary>Contains suggestions for autocomplete.</summary>
+    ImmutableArray<string> _itemSuggestions = [], _locationSuggestions = [];
 
     /// <summary>Gets the last successful connection.</summary>
     Preferences.Connection _info;
@@ -438,6 +449,7 @@ public sealed partial class Client(Yaml? yaml = null)
     public override bool Equals(object? obj) => obj is Client { _instance: var i } && i == _instance;
 
     /// <inheritdoc cref="Preferences.Connection.Equals(Preferences.Connection)"/>
+    [CLSCompliant(false)]
     public bool Has(Preferences.Connection connection) => _info.Equals(connection);
 
     /// <inheritdoc />
@@ -451,6 +463,13 @@ public sealed partial class Client(Yaml? yaml = null)
     /// <returns>Whether the parameter <paramref name="x"/> can be released.</returns>
     static bool IsReleasable(KeyValuePair<string, CheckboxStatus> x) =>
         x.Value is (_, LocationStatus.Reachable or LocationStatus.ProbablyReachable or LocationStatus.OutOfLogic, true);
+
+    /// <summary>Determines whether the two sequences start with the same content but are still different.</summary>
+    /// <param name="user">The user input.</param>
+    /// <param name="match">The value to match against.</param>
+    /// <returns>Whether both the parameters <paramref name="user"/> and <paramref name="match"/> are equal.</returns>
+    static bool StrictStartsWith(ReadOnlySpan<char> user, string match) =>
+        match.Length != user.Length && match.StartsWith(user, StringComparison.Ordinal);
 
     /// <summary>Converts the exception to the <see cref="string"/> array.</summary>
     /// <param name="e">The exception to convert.</param>
@@ -579,17 +598,29 @@ public sealed partial class Client(Yaml? yaml = null)
                 _ = Task.Run(() => s_manager.ShowNotification(new() { Title = "New items received!", Body = body }));
         }
 
-        _lastItems = items;
-        var locationHelper = _session.Locations;
+        (_lastItems, var locationHelper) = (items, _session.Locations);
+
+        _locationSuggestions =
+        [
+            .._session.Locations.AllLocations
+               .Select(x => _session.Locations.GetLocationNameFromId(x, _yaml.Game))
+               .Order(FrozenSortedDictionary.Comparer)
+        ];
 
         if (_evaluator is null)
         {
+            _itemSuggestions =
+                [.._session.Items.AllItemsReceived.Select(x => x.ItemName).Order(FrozenSortedDictionary.Comparer)];
+
             foreach (var location in locationHelper.AllLocations)
                 if (locationHelper.GetLocationNameFromId(location, _yaml.Game) is { } name)
                     Update(name, locationHelper);
 
             return;
         }
+
+        _itemSuggestions =
+            [.._evaluator.CategoryToItems.Array.SelectMany(x => x.Value).Order(FrozenSortedDictionary.Comparer)];
 
         foreach (var (_, locations) in _evaluator.CategoryToLocations)
             foreach (var location in locations)
@@ -683,6 +714,16 @@ public sealed partial class Client(Yaml? yaml = null)
         return (hint, $"{receivingPlayer}'s {item} is at {findingPlayer}'s {location}{entrance}");
     }
 
+    /// <summary>Gets the items.</summary>
+    /// <param name="tuple">The tuple to deconstruct.</param>
+    /// <returns>The items.</returns>
+    ICollection<(int Index, ItemInfo? Item)> GetItems((string Item, int Count) tuple) =>
+    [
+        .._session?.Items.AllItemsReceived.Index()
+           .Where(x => FrozenSortedDictionary.Comparer.Equals(x.Item.ItemName, tuple.Item)) ??
+        [],
+    ];
+
     /// <summary>Groups all items into sorted items with count.</summary>
     /// <param name="category">The category that the returned items must be under.</param>
     /// <param name="lookup">The lookup table.</param>
@@ -740,6 +781,28 @@ public sealed partial class Client(Yaml? yaml = null)
         list.Sort();
         return list;
     }
+
+    /// <summary>Gets the suggestions.</summary>
+    /// <param name="message">The message to compare.</param>
+    /// <param name="toMatch">The string to match next against.</param>
+    /// <returns>The suggestions.</returns>
+    ImmutableArray<string> GetSuggestions(string message, out ReadOnlySpan<char> toMatch) =>
+        (message.SplitSpanWhitespace() is var (first, rest) ? first : "") switch
+        {
+            "!getitem" or "!hint" when (toMatch = rest.Body) is var _ => _itemSuggestions,
+            "!hint_location" or "!missing" when (toMatch = rest.Body) is var _ => _locationSuggestions,
+            [] or ['!', ..] when (toMatch = first) is var _ && rest.Body.IsEmpty => s_commands,
+            _ when (toMatch = default) is var _ => [],
+            _ => throw Unreachable,
+        };
+
+    /// <summary>Gets the item info.</summary>
+    /// <param name="tuple">The tuple to deconstruct.</param>
+    /// <returns>The item info.</returns>
+    (ReceivedItem Item, int Count) GetItemInfo((string Item, int Count) tuple) =>
+        (_showYetToReceive
+            ? new(ItemFlags.None, tuple.Item, 1, int.MaxValue, [])
+            : new(GetItems(tuple)), tuple.Count);
 
     /// <summary>Gets the hints asynchronously.</summary>
     /// <returns>The task to get the hints.</returns>

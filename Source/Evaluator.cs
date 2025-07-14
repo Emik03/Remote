@@ -12,6 +12,7 @@ namespace Remote;
 /// <param name="ItemCount">The conversion from items to the amount of that item.</param>
 /// <param name="CategoryCount">The conversion from categories to the amount of that category.</param>
 /// <param name="ItemToPhantoms">The conversion from items to its phantom items.</param>
+/// <param name="PhantomToItems">The conversion from phantom items to its items.</param>
 /// <param name="Yaml">The yaml options.</param>
 /// <param name="IsOptAll">Whether to clamp requirements based on <see cref="Yaml"/>.</param>
 [CLSCompliant(false)]

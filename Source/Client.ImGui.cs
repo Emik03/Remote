@@ -20,7 +20,8 @@ public sealed partial class Client
     readonly List<string> _sentMessages = [""];
 
     /// <summary>Whether to show the dialog.</summary>
-    bool _showAlreadyChecked,
+    bool _hasEverShownPopup,
+        _showAlreadyChecked,
         _showConfirmationDialog,
         _showLocationFooter,
         _showObtainedHints,
@@ -40,7 +41,7 @@ public sealed partial class Client
     int _itemType, _lastItemCount = int.MinValue, _lastLocationCount = int.MaxValue, _locationSort, _sentMessagesIndex;
 
     /// <summary>The current state of the text field.</summary>
-    string _itemSearch = "", _locationSearch = "";
+    string _itemSearch = "", _lastSuggestion = "", _locationSearch = "";
 
     /// <summary>The amount of time before release.</summary>
     TimeSpan _confirmationTimer;
@@ -314,11 +315,14 @@ public sealed partial class Client
 
         ImGui.SetNextItemWidth(preferences.Width(0));
 
-        _ = Preferences.Combo(
+        _ = preferences.Combo(
             "###Item Sort",
             ref _itemSort,
             "Sort by Name\0Sort by Name (Reversed)\0Sort by First Acquired\0Sort by Last Acquired\0\0"
         );
+
+        if (_evaluator is { ItemToPhantoms.Count: not 0 })
+            preferences.Combo("Item type", ref _itemType, "Real items\0Phantom items\0\0");
 
         _ = ImGui.Checkbox("Show used items", ref _showUsedItems);
 
@@ -357,14 +361,15 @@ public sealed partial class Client
         var hintText = $"You can do {hintCount.Conjugate("hint")} ({roomState.HintPoints.Conjugate("point")})";
         preferences.ShowText(percentageText, disabled: true);
         preferences.ShowText(hintText, disabled: true);
-        _ = ImGui.Checkbox("Show obtained hints", ref _showObtainedHints);
         ImGui.SetNextItemWidth(preferences.Width(150));
 
-        _ = Preferences.Combo(
+        _ = preferences.Combo(
             "Filter",
             ref s_hintIndex,
             "Show sent hints\0Show received hints\0Show either hint type\0\0"
         );
+
+        _ = ImGui.Checkbox("Show obtained hints", ref _showObtainedHints);
 
         if (LastHints is { } hints)
             foreach (var (hint, message) in hints)
@@ -455,13 +460,14 @@ public sealed partial class Client
 
         ref var latestMessage = ref CollectionsMarshal.AsSpan(_sentMessages)[^1];
         var enter = ImGuiRenderer.InputText("##Message", ref latestMessage, ushort.MaxValue, Flags);
+        ShowAutocomplete(preferences, latestMessage);
         ImGui.SameLine();
 
-        if (ImGui.Button("Send") || enter)
+        if ((ImGui.Button("Send") || enter) && !string.IsNullOrWhiteSpace(latestMessage))
         {
             _session.Say(latestMessage);
+            _sentMessagesIndex = _sentMessages.Count;
             _sentMessages.Add("");
-            _sentMessagesIndex = _sentMessages.Count - 1;
         }
 
         preferences.ShowHelp(HelpMessage1);
@@ -525,7 +531,7 @@ public sealed partial class Client
     void ShowLocations(Preferences preferences)
     {
         Debug.Assert(_session is not null);
-        _ = Preferences.Combo("##Location Sort", ref _locationSort, "Sort by Name\0Sort by ID\0\0");
+        _ = preferences.Combo("##Location Sort", ref _locationSort, "Sort by Name\0Sort by ID\0\0");
         _ = ImGui.Checkbox("Show Already Checked Locations", ref _showAlreadyChecked);
         var stuck = _evaluator is null ? ShowNonManualLocations(preferences) : ShowManualLocations(preferences);
         ImGui.EndChild();
@@ -581,6 +587,53 @@ public sealed partial class Client
         _canGoal = true;
         _session.SetGoalAchieved();
         _session.SetClientState(ArchipelagoClientState.ClientGoal);
+    }
+
+    /// <summary>Shows the autocomplete.</summary>
+    /// <param name="preferences">The user preferences.</param>
+    /// <param name="message">The current message.</param>
+    void ShowAutocomplete(Preferences preferences, ref readonly string message)
+    {
+        Debug.Assert(_session is not null);
+
+        if (preferences.Suggestions <= 0)
+            return;
+
+        if (!_hasEverShownPopup)
+        {
+            ImGui.OpenPopup("Autocomplete");
+            _hasEverShownPopup = true;
+        }
+
+        var sum = 0;
+
+        foreach (var suggestion in GetSuggestions(message, out var user))
+            if (StrictStartsWith(user, suggestion) && ++sum >= preferences.Suggestions)
+                goto HasAnythingToRender;
+
+        if (sum is 0)
+            return;
+
+    HasAnythingToRender:
+
+        var pos = ImGui.GetCursorPos();
+        var size = ImGui.CalcTextSize(message);
+        var length = preferences.Suggestions.Min(sum);
+        pos.Y += size.Y * -length;
+        var (x, y) = (ImGui.GetContentRegionAvail().X, size.Y * (length + 1));
+        ImGui.SetNextWindowPos(pos);
+        ImGui.SetNextWindowSizeConstraints(default, new(x, y));
+
+        if (!ImGui.BeginPopup("Autocomplete"))
+            return;
+
+        ImGui.SetWindowFontScale(preferences.UiScale);
+
+        foreach (var suggestion in GetSuggestions(message, out var user))
+            if (StrictStartsWith(user, suggestion))
+                PasteIfClicked(user, suggestion, message.Nth(^1)?.IsWhitespace() is false);
+
+        ImGui.EndPopup();
     }
 
     /// <summary>Shows the message log.</summary>
@@ -963,10 +1016,6 @@ public sealed partial class Client
     {
         Debug.Assert(_evaluator is not null);
         _ = ImGui.Checkbox("Show pending items", ref _showYetToReceive);
-
-        if (_evaluator.ItemToPhantoms.Count is not 0)
-            Preferences.Combo("Item type", ref _itemType, "Real items\0Phantom items\0\0");
-
         ShowItemSearch(preferences);
         ImGui.SameLine();
         var setter = GetNextItemOpenSetter();
@@ -1010,16 +1059,6 @@ public sealed partial class Client
     /// <param name="setter">The setter.</param>
     void ShowPhantomManualItems(Preferences preferences, Action setter)
     {
-        (ReceivedItem Item, int Count) GetItemInfo((string Item, int Count) tuple)
-        {
-            bool Eq((int Index, ItemInfo Item) innerTuple) =>
-                FrozenSortedDictionary.Comparer.Equals(innerTuple.Item.ItemName, tuple.Item);
-
-            return (_showYetToReceive
-                ? new(ItemFlags.None, tuple.Item, 1, int.MaxValue, [])
-                : new([.._session.Items.AllItemsReceived.Index().Where(Eq)]), tuple.Count);
-        }
-
         Debug.Assert(_session is not null);
         Debug.Assert(_evaluator is not null);
         var requiresSync = false;
@@ -1113,6 +1152,26 @@ public sealed partial class Client
 
         foreach (var key in _sortedKeys)
             this[key].Checked = false;
+    }
+
+    /// <summary>Adds the text provided if the selectable is clicked.</summary>
+    /// <param name="user">The user input.</param>
+    /// <param name="match">The match.</param>
+    /// <param name="addSpacePrefix">Whether to add whitespace as a prefix.</param>
+    void PasteIfClicked(ReadOnlySpan<char> user, string match, bool addSpacePrefix)
+    {
+        _ = ImGui.Selectable(match);
+
+        if (ImGui.IsItemHovered())
+            _lastSuggestion = match;
+
+        if (!ImGui.IsMouseDown(ImGuiMouseButton.Left) || !match.Equals(_lastSuggestion, StringComparison.Ordinal))
+            return;
+
+        if (addSpacePrefix)
+            ImGui.GetIO().AddInputCharactersUTF8([' ']);
+
+        ImGui.GetIO().AddInputCharactersUTF8(match[user.Length..]);
     }
 
     /// <summary>Gets the message for having released locations.</summary>
