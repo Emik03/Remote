@@ -640,7 +640,7 @@ public sealed partial class Client
         ImGui.SetWindowFontScale(preferences.UiScale);
 
         foreach (var suggestion in suggestions)
-            if (StrictStartsWith(user, suggestion) && PasteIfClicked(user, suggestion, user.Nth(^1)))
+            if (StrictStartsWith(user, suggestion) && PasteIfClicked(user, suggestion, message.Nth(^1)))
                 break;
 
         ImGui.EndPopup();
@@ -1183,7 +1183,7 @@ public sealed partial class Client
         ImGui.GetIO().AddInputCharactersUTF8(match[user.Length..]);
 
         if (match is "!getitem" or "!hint" or "!hint_location" or "!missing" ||
-            last?.IsWhitespace() is false && s_commands.Contains(match, FrozenSortedDictionary.Comparer))
+            last?.IsWhitespace() is false && !s_commands.Contains(match, FrozenSortedDictionary.Comparer))
             ImGui.GetIO().AddInputCharactersUTF8([' ']);
 
         return true;
