@@ -20,7 +20,7 @@ public sealed partial class Client
     readonly List<string> _sentMessages = [""];
 
     /// <summary>Whether to show the dialog.</summary>
-    bool _hasEverShownPopup,
+    bool _sentChatMessageLastFrame,
         _showAlreadyChecked,
         _showConfirmationDialog,
         _showLocationFooter,
@@ -117,11 +117,11 @@ public sealed partial class Client
         var ret = ImGuiRenderer.BeginTabItem(
             name,
             ref Unsafe.NullRef<bool>(),
-            CurrentTab == tab ? ImGuiTabItemFlags.SetSelected : ImGuiTabItemFlags.None
+            s_tab == tab ? ImGuiTabItemFlags.SetSelected : ImGuiTabItemFlags.None
         );
 
         if (ImGui.IsItemClicked())
-            CurrentTab = tab;
+            s_tab = tab;
 
         return ret;
     }
@@ -219,12 +219,12 @@ public sealed partial class Client
     void ShowChatTab(Preferences preferences)
     {
         Debug.Assert(_session is not null);
-        var forced = CurrentTab is Tab.Chat || preferences is { AlwaysShowChat: false, MoveToChatTab: true } && IsReleasing;
+        var forced = s_tab is Tab.Chat || preferences is { AlwaysShowChat: false, MoveToChatTab: true } && IsReleasing;
         var flags = forced ? ImGuiTabItemFlags.SetSelected : ImGuiTabItemFlags.None;
         var ret = !ImGuiRenderer.BeginTabItem("Chat", ref Unsafe.NullRef<bool>(), flags);
 
         if (ImGui.IsItemClicked())
-            CurrentTab = Tab.Chat;
+            s_tab = Tab.Chat;
 
         if (forced)
         {
@@ -449,25 +449,33 @@ public sealed partial class Client
         ImGui.SeparatorText("Message");
         ImGui.SetNextItemWidth(preferences.Width(250));
 
-        if (isChatTab)
-            ImGui.SetKeyboardFocusHere();
-
         if (ImGui.IsKeyPressed(ImGuiKey.DownArrow))
             MoveSentMessageIndex(1);
 
         if (ImGui.IsKeyPressed(ImGuiKey.UpArrow))
             MoveSentMessageIndex(-1);
 
+        if (_sentChatMessageLastFrame)
+        {
+            _sentChatMessageLastFrame = false;
+            ImGui.SetKeyboardFocusHere();
+        }
+
         ref var latestMessage = ref CollectionsMarshal.AsSpan(_sentMessages)[^1];
         var enter = ImGuiRenderer.InputText("##Message", ref latestMessage, ushort.MaxValue, Flags);
-        ShowAutocomplete(preferences, latestMessage);
+        ShowAutocomplete(preferences, latestMessage, isChatTab);
         ImGui.SameLine();
 
-        if ((ImGui.Button("Send") || enter) && !string.IsNullOrWhiteSpace(latestMessage))
+        if (ImGui.Button("Send") || enter)
         {
-            _session.Say(latestMessage);
-            _sentMessagesIndex = _sentMessages.Count;
-            _sentMessages.Add("");
+            _sentChatMessageLastFrame = true;
+
+            if (!string.IsNullOrWhiteSpace(latestMessage))
+            {
+                _session.Say(latestMessage);
+                _sentMessagesIndex = _sentMessages.Count;
+                _sentMessages.Add("");
+            }
         }
 
         preferences.ShowHelp(HelpMessage1);
@@ -580,6 +588,8 @@ public sealed partial class Client
 
         if (isAnyReleasable || stuck is null or true)
             ImGui.SameLine(preferences.Width(75), 0);
+        else
+            ImGui.Dummy(new(preferences.Width(75), 1));
 
         if (!ImGui.Button("Goal"))
             return;
@@ -592,11 +602,12 @@ public sealed partial class Client
     /// <summary>Shows the autocomplete.</summary>
     /// <param name="preferences">The user preferences.</param>
     /// <param name="message">The current message.</param>
-    void ShowAutocomplete(Preferences preferences, ref readonly string message)
+    /// <param name="isChatTab">Whether this was called from the chat tab.</param>
+    void ShowAutocomplete(Preferences preferences, ref readonly string message, bool isChatTab)
     {
         Debug.Assert(_session is not null);
 
-        if (preferences.Suggestions <= 0)
+        if (preferences.Suggestions <= 0 || string.IsNullOrWhiteSpace(message))
             return;
 
         var sum = 0;
@@ -613,19 +624,24 @@ public sealed partial class Client
         var pos = ImGui.GetCursorPos();
         var size = ImGui.CalcTextSize(message);
         var length = preferences.Suggestions.Min(sum);
+        pos.X += !isChatTab && preferences.SideBySide ? ImGui.GetWindowSize().X / 2 : 0;
         pos.Y += size.Y * -length;
         var (x, y) = (ImGui.GetContentRegionAvail().X, size.Y * (length + 1));
         ImGui.SetNextWindowPos(pos);
         ImGui.SetNextWindowSizeConstraints(default, new(x, y));
 
-        if (!ImGui.BeginPopup("Autocomplete"))
+        if (!ImGui.IsPopupOpen("Autocomplete"))
+            ImGui.OpenPopup("Autocomplete");
+
+        if (!ImGui.BeginPopup("Autocomplete", ImGuiWindowFlags.NoFocusOnAppearing))
             return;
 
         ImGui.SetWindowFontScale(preferences.UiScale);
 
         foreach (var suggestion in GetSuggestions(message, out var user))
-            if (StrictStartsWith(user, suggestion))
-                PasteIfClicked(user, suggestion, message.Nth(^1)?.IsWhitespace() is false);
+            if (StrictStartsWith(user, suggestion) &&
+                PasteIfClicked(user, suggestion, message.Nth(^1)?.IsWhitespace() is false))
+                break;
 
         ImGui.EndPopup();
     }
@@ -1152,7 +1168,7 @@ public sealed partial class Client
     /// <param name="user">The user input.</param>
     /// <param name="match">The match.</param>
     /// <param name="addSpacePrefix">Whether to add whitespace as a prefix.</param>
-    void PasteIfClicked(ReadOnlySpan<char> user, string match, bool addSpacePrefix)
+    bool PasteIfClicked(ReadOnlySpan<char> user, string match, bool addSpacePrefix)
     {
         _ = ImGui.Selectable(match);
 
@@ -1160,12 +1176,16 @@ public sealed partial class Client
             _lastSuggestion = match;
 
         if (!ImGui.IsMouseDown(ImGuiMouseButton.Left) || !match.Equals(_lastSuggestion, StringComparison.Ordinal))
-            return;
+            return false;
+
+        ImGui.CloseCurrentPopup();
+        _sentChatMessageLastFrame = true;
 
         if (addSpacePrefix)
             ImGui.GetIO().AddInputCharactersUTF8([' ']);
 
         ImGui.GetIO().AddInputCharactersUTF8(match[user.Length..]);
+        return true;
     }
 
     /// <summary>Gets the message for having released locations.</summary>

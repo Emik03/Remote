@@ -221,6 +221,9 @@ public sealed partial class Client(Yaml? yaml = null)
     /// <summary>Contains the number of instances that have been created. Used to make each instance unique.</summary>
     static int s_instances;
 
+    /// <summary>Gets the currently selected tab.</summary>
+    static Tab s_tab;
+
     /// <summary>Contains this instance's unique id.</summary>
     readonly int _instance = ++s_instances;
 
@@ -325,17 +328,6 @@ public sealed partial class Client(Yaml? yaml = null)
 
     /// <summary>Gets the color.</summary>
     public AppColor? Color => AppColor.TryParse(_info.Color, out var color) ? color : null;
-
-    /// <summary>Gets the currently selected tab.</summary>
-    static Tab CurrentTab
-    {
-        get;
-        set
-        {
-            ImGui.OpenPopup("Autocomplete");
-            field = value;
-        }
-    }
 
     /// <summary>Contains the last retrieved hints.</summary>
     HintMessage[]? LastHints
