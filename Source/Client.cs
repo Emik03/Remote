@@ -618,13 +618,11 @@ public sealed partial class Client(Yaml? yaml = null)
             foreach (var location in locationHelper.AllLocations)
                 if (locationHelper.GetLocationNameFromId(location, _yaml.Game) is { } name)
                     Update(name, locationHelper);
-
-            return;
         }
-
-        foreach (var (_, locations) in _evaluator.CategoryToLocations)
-            foreach (var location in locations)
-                Update(location, locationHelper);
+        else
+            foreach (var (_, locations) in _evaluator.CategoryToLocations)
+                foreach (var location in locations)
+                    Update(location, locationHelper);
     }
 
     /// <summary>Determines whether there is more of a location to be found.</summary>
