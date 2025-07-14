@@ -1184,7 +1184,7 @@ public sealed partial class Client
         if (last?.IsWhitespace() is false && !s_commands.Contains(match, FrozenSortedDictionary.Comparer))
             ImGui.GetIO().AddInputCharactersUTF8([' ']);
 
-        ImGui.GetIO().AddInputCharactersUTF8(match[user.Length..]);
+        ImGui.GetIO().AddInputCharactersUTF8(match.AsSpan(user.Length));
 
         if (match is "!getitem" or "!hint" or "!hint_location" or "!missing")
             ImGui.GetIO().AddInputCharactersUTF8([' ']);
