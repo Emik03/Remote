@@ -32,6 +32,7 @@ public readonly partial struct Token
     public static void Tokenize<T>(ReadOnlyMemory<char> memory, ref T tokens)
         where T : ICollection<Token>
     {
+        var parens = 0;
         int? start = null;
         var span = memory.Span;
         var state = State.ReadingToken;
@@ -49,10 +50,10 @@ public readonly partial struct Token
                     ProcessIdentifierQuantity(memory, ref tokens, ref state, ref start, i);
                     break;
                 case State.ReadingFunction:
-                    ProcessFunction(memory, ref tokens, ref state, ref start, i);
+                    ProcessFunction(memory, ref tokens, ref state, ref start, ref parens, i);
                     break;
                 case State.ReadingFunctionArguments:
-                    ProcessFunctionArguments(memory, ref tokens, ref state, ref start, i);
+                    ProcessFunctionArguments(memory, ref tokens, ref state, ref start, ref parens, i);
                     break;
                 default: throw new ArgumentOutOfRangeException(nameof(memory), state, null);
             }
@@ -203,8 +204,16 @@ public readonly partial struct Token
     /// <param name="tokens">The list of tokens to write to.</param>
     /// <param name="state">The current state.</param>
     /// <param name="start">The index to remember that indicates the start of a buffer.</param>
+    /// <param name="parens">The number of nested layers of parentheses.</param>
     /// <param name="i">The index to be looking in <paramref name="memory"/>.</param>
-    static void ProcessFunction<T>(ReadOnlyMemory<char> memory, ref T tokens, ref State state, ref int? start, int i)
+    static void ProcessFunction<T>(
+        ReadOnlyMemory<char> memory,
+        ref T tokens,
+        ref State state,
+        ref int? start,
+        ref int parens,
+        int i
+    )
         where T : ICollection<Token>
     {
         switch (memory.Span[i])
@@ -218,6 +227,7 @@ public readonly partial struct Token
                 AddIdentifier(memory, ref tokens, ref start, i);
                 state = State.ReadingFunctionArguments;
                 tokens.Add(OfLeftParen());
+                parens = 1;
                 break;
             default:
                 start ??= i;
@@ -231,12 +241,14 @@ public readonly partial struct Token
     /// <param name="tokens">The list of tokens to write to.</param>
     /// <param name="state">The current state.</param>
     /// <param name="start">The index to remember that indicates the start of a buffer.</param>
+    /// <param name="parens">The number of nested layers of parentheses.</param>
     /// <param name="i">The index to be looking in <paramref name="memory"/>.</param>
     static void ProcessFunctionArguments<T>(
         ReadOnlyMemory<char> memory,
         ref T tokens,
         ref State state,
         ref int? start,
+        ref int parens,
         int i
     )
         where T : ICollection<Token>
@@ -245,7 +257,10 @@ public readonly partial struct Token
 
         switch (span[i])
         {
-            case ')' when i != span.Length && span[i + 1] is '}':
+            case '(':
+                parens++;
+                break;
+            case ')' when --parens is 0:
                 AddIdentifier(memory, ref tokens, ref start, i);
                 state = State.ReadingFunction;
                 tokens.Add(OfRightParen());
