@@ -142,7 +142,7 @@ public sealed partial record Evaluator
         int.TryParse(count.Span, out var c) &&
         e.MoveNext() &&
         e.Current is var comparator &&
-        YamlSpan[e.Body.Span] is var yaml &&
+        YamlSpan[e.Body.Span.TrimStart('!')] is var yaml &&
         comparator.Span switch
         {
             "=" or "==" => yaml == c,
@@ -152,7 +152,8 @@ public sealed partial record Evaluator
             "<" => yaml < c,
             "<=" => yaml <= c,
             _ => true,
-        };
+        } ^
+        e.Body.Span.StartsWith('!');
 
     /// <summary>Determines whether the item is disabled by yaml options, or the requirement itself is met.</summary>
     /// <param name="item">The item to check.</param>
