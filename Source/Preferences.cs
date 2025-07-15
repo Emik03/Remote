@@ -512,6 +512,30 @@ public sealed partial class Preferences
         return fromMemory;
     }
 
+    /// <summary>Copies the text if the mouse has been clicked.</summary>
+    /// <param name="text">The text to copy.</param>
+    /// <param name="button">The button to check for.</param>
+    [CLSCompliant(false)]
+    public void CopyIfClicked(string text, ImGuiMouseButton button = ImGuiMouseButton.Right)
+    {
+        if (!ImGui.IsItemHovered())
+            return;
+
+        if (ImGui.IsMouseDown(button))
+        {
+            ImGui.PushStyleColor(ImGuiCol.Text, this[AppPalette.Reachable]);
+            Tooltip("Copied!");
+            ImGui.PopStyleColor();
+        }
+
+        if (ImGui.IsMouseClicked(button))
+#if ANDROID
+            ImGui.SetClipboardText(text);
+#else
+            ClipboardService.SetText(text);
+#endif
+    }
+
     /// <summary>Prepends the element to the beginning of the history.</summary>
     /// <param name="connection">The connection to prepend.</param>
     [CLSCompliant(false)]
@@ -677,30 +701,6 @@ public sealed partial class Preferences
 
         if (pushed)
             ImGui.PopStyleColor();
-    }
-
-    /// <summary>Copies the text if the mouse has been clicked.</summary>
-    /// <param name="text">The text to copy.</param>
-    /// <param name="button">The button to check for.</param>
-    [CLSCompliant(false)]
-    public void CopyIfClicked(string text, ImGuiMouseButton button = ImGuiMouseButton.Right)
-    {
-        if (!ImGui.IsItemHovered())
-            return;
-
-        if (ImGui.IsMouseDown(button))
-        {
-            ImGui.PushStyleColor(ImGuiCol.Text, this[AppPalette.Reachable]);
-            Tooltip("Copied!");
-            ImGui.PopStyleColor();
-        }
-
-        if (ImGui.IsMouseClicked(button))
-#if ANDROID
-            ImGui.SetClipboardText(text);
-#else
-            ClipboardService.SetText(text);
-#endif
     }
 
     /// <summary>Convenience function for displaying a tooltip with text scaled by the user preferences.</summary>
@@ -887,13 +887,28 @@ public sealed partial class Preferences
     /// <summary>Gets the available width while conforming to the specified margin.</summary>
     /// <param name="margin">The margin.</param>
     /// <returns>The width to use.</returns>
-    public float Width(int margin) => ImGui.GetContentRegionAvail().X - UiScale * margin;
+    public float Width(int margin) => ImGui.GetWindowWidth() - ImGui.GetCursorPosX() - UiScale * margin;
 
     /// <summary>Gets the python path.</summary>
     /// <returns>The python path.</returns>
     public string GetPythonPath() =>
         string.IsNullOrWhiteSpace(_python) ? "python" :
         System.IO.Directory.Exists(_python) ? Path.Join(Python, "python") : _python;
+
+    /// <summary>Shows text in preparation for an element that is inline.</summary>
+    /// <param name="text">The text to show.</param>
+    /// <returns>The id for the next element.</returns>
+    public string ShowInline(string text)
+    {
+        const int Scale = 6, Offset = 18;
+        Vector2 offset = new(0, UiScale * Scale);
+        var current = ImGui.GetCursorPos();
+        ImGui.SetCursorPos(current + offset);
+        ShowText(text);
+        current.X += ImGui.CalcTextSize(text).X + UiPadding[0] + Offset;
+        ImGui.SetCursorPos(current);
+        return $"##{text}";
+    }
 
     /// <summary>Adds the current font.</summary>
     /// <returns>The created font, or <see langword="default"/> if the resource doesn't exist.</returns>
@@ -1084,7 +1099,7 @@ public sealed partial class Preferences
         if (_alwaysShowChat)
             _ = ImGui.Checkbox("Chat window on side", ref _sideBySide);
 
-        Slider("Suggestions", ref _suggestions, 0, 20, "%.0f");
+        Slider("Autocomplete suggestion count", ref _suggestions, 0, 20, "%.0f");
     }
 
     /// <summary>Shows the behavior header and options.</summary>
@@ -1108,20 +1123,19 @@ public sealed partial class Preferences
 
         Vector2 v = new(UiPadding[0], UiPadding[1]);
         ImGui.SetNextItemWidth(Width(250));
-        ImGui.SliderFloat2("UI Padding", ref v, 0, 20, "%.1f", ImGuiSliderFlags.AlwaysClamp);
+        ImGui.SliderFloat2(ShowInline("UI Padding"), ref v, 0, 20, "%.1f", ImGuiSliderFlags.AlwaysClamp);
         (UiPadding[0], UiPadding[1]) = (v.X, v.Y);
 
         Slider("UI Rounding", ref _uiRounding, 0, 30);
         Slider("UI Spacing", ref _uiSpacing, 0, 20);
-
         Slider("Window Dim", ref _windowDim, 1, 20, "%.2f");
         Slider("Inactive Dim", ref _inactiveTabDim, 1, 20, "%.2f");
         Slider("Active Dim", ref _activeTabDim, 1, 20, "%.2f");
 
         var (fontSize, language) = (FontSize, _language);
         Slider("Font Size", ref fontSize, 8, 72, "%.0f");
-        ImGui.SetNextItemWidth(Width(250));
-        _ = Combo("Font Language", ref language, s_languages, false);
+        ImGui.SetNextItemWidth(Width(0));
+        _ = Combo(ShowInline("Font Language"), ref language, s_languages, false);
         // ReSharper disable once CompareOfFloatsByEqualityOperator
         s_requiresRestart |= FontSize != fontSize || _language != language;
         (FontSize, _language) = (fontSize, language);
@@ -1180,13 +1194,20 @@ public sealed partial class Preferences
 
         ImGui.SeparatorText("Path");
         ImGui.SetNextItemWidth(Width(300));
-        _ = ImGuiRenderer.InputTextWithHint("AP Directory", DefaultDirectory, ref _directory, ushort.MaxValue);
+
+        _ = ImGuiRenderer.InputTextWithHint(
+            ShowInline("AP Directory"),
+            DefaultDirectory,
+            ref _directory,
+            ushort.MaxValue
+        );
+
         ShowHelp(DirectoryMessage);
         ImGui.SetNextItemWidth(Width(300));
-        _ = ImGuiRenderer.InputText("AP Git Repo", ref _repo, ushort.MaxValue);
+        _ = ImGuiRenderer.InputText(ShowInline("AP Git Repo"), ref _repo, ushort.MaxValue);
         ShowHelp(GitRepoMessage);
         ImGui.SetNextItemWidth(Width(300));
-        _ = ImGuiRenderer.InputTextWithHint("Python", "python", ref _python, ushort.MaxValue);
+        _ = ImGuiRenderer.InputTextWithHint(ShowInline("Python"), "python", ref _python, ushort.MaxValue);
         ShowHelp(PythonMessage);
     }
 
@@ -1198,8 +1219,8 @@ public sealed partial class Preferences
     /// <param name="format">The format to display.</param>
     void Slider(string title, ref float amount, float min, float max, string format = "%.1f")
     {
-        ImGui.SetNextItemWidth(Width(250));
-        _ = ImGui.SliderFloat(title, ref amount, min, max, format, ImGuiSliderFlags.AlwaysClamp);
+        ImGui.SetNextItemWidth(Width(0));
+        _ = ImGui.SliderFloat(ShowInline(title), ref amount, min, max, format, ImGuiSliderFlags.AlwaysClamp);
     }
 
     /// <summary>Sanitizes the port and colors.</summary>
@@ -1222,7 +1243,7 @@ public sealed partial class Preferences
         ImGui.SetNextItemWidth(Width(100));
 
         var enter = ImGuiRenderer.InputTextWithHint(
-            "Path",
+            ShowInline("Path"),
             "Paste the YAML path here and hit enter, or...",
             ref _yamlFilePath,
             ushort.MaxValue,
@@ -1246,7 +1267,7 @@ public sealed partial class Preferences
             ? ((AppPalette)i).ToString()
             : ((ImGuiCol)(i - (int)AppPalette.Count)).ToString();
 
-        Colors[i] = ShowColorEdit(name, Colors[i]);
+        Colors[i] = ShowColorEdit(ShowInline(name), Colors[i]);
     }
 
     /// <summary>Shows the connection tab.</summary>
@@ -1255,34 +1276,29 @@ public sealed partial class Preferences
     /// <returns>Whether to create a new <see cref="Client"/>.</returns>
     bool ShowConnectionTab(List<Client> clients, out IEnumerable<Client>? clientsToRegister)
     {
+        const int Max = ushort.MaxValue;
+        const ImGuiInputTextFlags Flags = ImGuiInputTextFlags.Password | TextFlags;
         clientsToRegister = null;
 
         if (!ImGui.BeginTabItem("Connection"))
             return false;
 
         ImGui.SeparatorText("Host");
-        ImGui.SetNextItemWidth(Width(450));
-        _ = ImGuiRenderer.InputTextWithHint("Address", DefaultAddress, ref _address, ushort.MaxValue, TextFlags);
+        ImGui.SetNextItemWidth(Width(600));
+        _ = ImGuiRenderer.InputTextWithHint(ShowInline("Address"), DefaultAddress, ref _address, Max, TextFlags);
         ImGui.SameLine();
-        ImGui.SetNextItemWidth(Width(100));
-        ImGui.InputInt("Port", ref _port, 0);
-        ImGui.SetNextItemWidth(Width(450));
-
-        var enter = ImGuiRenderer.InputText(
-            "Password",
-            ref _password,
-            ushort.MaxValue,
-            ImGuiInputTextFlags.Password | TextFlags
-        );
-
+        ImGui.SetNextItemWidth(Width(0));
+        ImGui.InputInt(ShowInline("Port"), ref _port, 0);
+        ImGui.SetNextItemWidth(Width(600));
+        var enter = ImGuiRenderer.InputText(ShowInline("Password"), ref _password, Max, Flags);
         ImGui.SeparatorText("Join");
         ShowText("Drop a YAML file to start playing, or...", disabled: true);
         ShowPasteTextField(ref clientsToRegister);
         Sanitize();
         var ret = ImGui.Button("Enter slot manually") || enter;
         ImGui.SeparatorText("History");
-        ImGui.SetNextItemWidth(Width(100));
-        _ = Combo("Sort", ref _sortHistoryBy, s_historyOrder, false);
+        ImGui.SetNextItemWidth(Width(0));
+        _ = Combo(ShowInline("Sort"), ref _sortHistoryBy, s_historyOrder, false);
 
         var message = _list.History.Count is 0
             ? "Join a game for buttons to appear here!"
@@ -1366,9 +1382,9 @@ public sealed partial class Preferences
 
         var count = $"{(connection.Count is 1 ? "" : $" ({connection.Count})")}";
         var id = $"{f.Host}:{f.Port}";
-        ImGui.SetNextItemWidth(Width(100));
         ref var state = ref CollectionsMarshal.GetValueRefOrAddDefault(_editStates, id, out _);
         var label = $"{(string.IsNullOrWhiteSpace(f.Alias) ? id : f.Alias)}{count}###{id}";
+        ImGui.SetNextItemWidth(Width(100));
 
         if (!ImGui.CollapsingHeader(label, ImGuiTreeNodeFlags.SpanTextWidth))
             return [];
@@ -1377,11 +1393,11 @@ public sealed partial class Preferences
         _ = ImGui.Checkbox($"Edit###Edit:|{id}", ref state);
         var oldAlias = f.GetAliasOrEmpty();
         var newAlias = oldAlias;
-        ImGui.SetNextItemWidth(Width(100));
+        ImGui.SetNextItemWidth(Width(0));
 
         if (state &&
             ImGuiRenderer.InputTextWithHint(
-                $"Alias###Alias:|{id}",
+                $"###Alias:|{id}",
                 "Type here to change the name, then hit enter to confirm...",
                 ref newAlias,
                 ushort.MaxValue,

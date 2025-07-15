@@ -415,7 +415,7 @@ public sealed partial class Client
 
         ImGui.SeparatorText("Theming");
         var color = AppColor.Parse(_info.Color);
-        var newColor = Preferences.ShowColorEdit("Color", color);
+        var newColor = Preferences.ShowColorEdit(preferences.ShowInline("Color"), color);
 
         if (newColor != color)
             _info = _info with { Color = newColor.ToString() };
