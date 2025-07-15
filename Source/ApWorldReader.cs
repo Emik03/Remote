@@ -304,7 +304,7 @@ public sealed record ApWorldReader(
             return null;
 
         Logic? path = null;
-        var exitRequires = obj.TryGetPropertyValue("exit_requires", out var e) && e is JsonObject o ? o : null;
+        var exitRequires = obj.TryGetPropertyValue("exit_requires", out var ex) && ex is JsonObject ox ? ox : null;
 
         foreach (var connection in array)
             if (connection?.GetValueKind() is JsonValueKind.String &&
@@ -319,7 +319,18 @@ public sealed record ApWorldReader(
                     continue;
 
                 foundTarget = true;
-                var and = innerLogic & TokenizeAndParse(exitRequires?[connectionString]);
+
+                var entranceRequires =
+                    regions[target] is JsonObject rt &&
+                    rt.TryGetPropertyValue("entrance_requires", out var en) &&
+                    en is JsonObject on
+                        ? on
+                        : null;
+
+                var and = innerLogic &
+                    TokenizeAndParse(exitRequires?[connectionString]) &
+                    TokenizeAndParse(entranceRequires?[connectionString]);
+
                 path = path is null ? and : path | and;
             }
 
