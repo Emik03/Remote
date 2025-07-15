@@ -622,9 +622,9 @@ public sealed partial class Client
             return;
 
         if (isAnyReleasable || stuck is null or true)
-            ImGui.SameLine(preferences.Width(75), 0);
+            ImGui.SameLine(preferences.Width(100), 0);
         else
-            ImGui.Dummy(new(preferences.Width(75), 1));
+            ImGui.Dummy(new(preferences.Width(100), 1));
 
         if (!ImGui.Button("Goal"))
             return;
