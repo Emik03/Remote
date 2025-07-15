@@ -252,7 +252,7 @@ public sealed record ApWorldReader(
             g?.Invoke($"Constructing region logic! Processing if {target} is accessible from {name}...");
 
             var visited = regions
-               .Where(x => !FrozenSortedDictionary.Equals(x.Key, name) && IsStarting(x.Value))
+               .Where(x => !FrozenSortedDictionary.Comparer.Equals(x.Key, name) && IsStarting(x.Value))
                .Select(x => x.Key)
                .ToSet(FrozenSortedDictionary.Comparer);
 
@@ -294,7 +294,7 @@ public sealed record ApWorldReader(
         if (logic is null && obj.TryGetPropertyValue("requires", out var requires))
             logic = TokenizeAndParse(requires);
 
-        if (FrozenSortedDictionary.Equals(current, target))
+        if (FrozenSortedDictionary.Comparer.Equals(current, target))
         {
             foundTarget = true;
             return logic;
