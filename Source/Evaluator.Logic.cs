@@ -122,38 +122,31 @@ public sealed partial record Evaluator
             _ => null,
         };
 
-    /// <summary>Determines whether the yaml option is enabled.</summary>
-    /// <param name="yamlOption">The yaml option to check.</param>
-    /// <returns>Whether the yaml option is enabled.</returns>
-    bool YamlEnabled(ReadOnlyMemory<char> yamlOption) => YamlSpan[yamlOption.Span] is not 0;
+    /// <summary>Determines whether the comparison of the yaml value returns <paramref langword="true"/>.</summary>
+    /// <param name="expression">The expression to evaluate.</param>
+    /// <returns>Whether the comparison of the yaml value returns <paramref langword="true"/>.</returns>
+    bool YamlCompare(ReadOnlyMemory<char> expression) =>
+        0 switch
+        {
+            _ when Split(expression, "==") is var (yaml, logic, inverted) => yaml == logic ^ inverted,
+            _ when Split(expression, "!=") is var (yaml, logic, inverted) => yaml != logic ^ inverted,
+            _ when Split(expression, ">=") is var (yaml, logic, inverted) => yaml >= logic ^ inverted,
+            _ when Split(expression, "<=") is var (yaml, logic, inverted) => yaml <= logic ^ inverted,
+            _ when Split(expression, "=") is var (yaml, logic, inverted) => yaml == logic ^ inverted,
+            _ when Split(expression, "<") is var (yaml, logic, inverted) => yaml < logic ^ inverted,
+            _ when Split(expression, ">") is var (yaml, logic, inverted) => yaml > logic ^ inverted,
+            _ => false,
+        };
 
     /// <summary>Determines whether the yaml option is disabled.</summary>
     /// <param name="yamlOption">The yaml option to check.</param>
     /// <returns>Whether the yaml option is disabled.</returns>
     bool YamlDisabled(ReadOnlyMemory<char> yamlOption) => YamlSpan[yamlOption.Span] is 0;
 
-    /// <summary>Determines whether the comparison of the yaml value returns <paramref langword="true"/>.</summary>
-    /// <param name="expression">The expression to evaluate.</param>
-    /// <returns>Whether the comparison of the yaml value returns <paramref langword="true"/>.</returns>
-    bool YamlCompare(ReadOnlyMemory<char> expression) =>
-        expression.SplitWhitespace().GetReversedEnumerator() is var e &&
-        e.MoveNext() &&
-        e.Current is var count &&
-        int.TryParse(count.Span, out var c) &&
-        e.MoveNext() &&
-        e.Current is var comparator &&
-        YamlSpan[e.Body.Span.TrimStart('!')] is var yaml &&
-        comparator.Span switch
-        {
-            "=" or "==" => yaml == c,
-            "!=" => yaml != c,
-            ">" => yaml > c,
-            ">=" => yaml >= c,
-            "<" => yaml < c,
-            "<=" => yaml <= c,
-            _ => true,
-        } ^
-        e.Body.Span.StartsWith('!');
+    /// <summary>Determines whether the yaml option is enabled.</summary>
+    /// <param name="yamlOption">The yaml option to check.</param>
+    /// <returns>Whether the yaml option is enabled.</returns>
+    bool YamlEnabled(ReadOnlyMemory<char> yamlOption) => YamlSpan[yamlOption.Span] is not 0;
 
     /// <summary>Determines whether the item is disabled by yaml options, or the requirement itself is met.</summary>
     /// <param name="item">The item to check.</param>
@@ -241,6 +234,16 @@ public sealed partial record Evaluator
 
         return sum;
     }
+
+    /// <summary>Splits the expression.</summary>
+    /// <param name="expression">The expression to split.</param>
+    /// <param name="comparator">The string to search for.</param>
+    /// <returns>The extracted parameters, or <see langword="null"/> if the match failed.</returns>
+    (int Yaml, int Logic, bool Inverted)? Split(ReadOnlyMemory<char> expression, string comparator) =>
+        expression.Span.SplitOn(comparator) is (var setting, { Body: not [] and var body }) &&
+        int.TryParse(body, out var logic)
+            ? (YamlSpan[setting.TrimStart('!').Trim()], logic, setting.StartsWith('!'))
+            : null;
 
     /// <summary>Returns the function to evaluate whether the specific item is in the provided category.</summary>
     /// <param name="category">The category to check against.</param>
