@@ -603,6 +603,7 @@ public sealed partial class Client(Yaml? yaml = null)
         [
             .._session.Locations.AllMissingLocations
                .Select(x => _session.Locations.GetLocationNameFromId(x, _yaml.Game))
+               .Concat(HintedLocations())
                .Order(FrozenSortedDictionary.Comparer),
         ];
 
@@ -631,7 +632,10 @@ public sealed partial class Client(Yaml? yaml = null)
     bool HasMore(string item) =>
         _session is not null &&
         (_evaluator is null ||
-            !_session.Items.AllItemsReceived.Where(x => FrozenSortedDictionary.Comparer.Equals(x.ItemName, item))
+            !_session.Items.AllItemsReceived
+               .Select(x => x.ItemName)
+               .Concat(HintedItems())
+               .Where(x => FrozenSortedDictionary.Comparer.Equals(x, item))
                .Skip(_evaluator.ItemCount[item])
                .Any());
 
@@ -731,6 +735,24 @@ public sealed partial class Client(Yaml? yaml = null)
            .Where(x => FrozenSortedDictionary.Comparer.Equals(x.Item.ItemName, tuple.Item)) ??
         [],
     ];
+
+    /// <summary>Gets the hinted items.</summary>
+    /// <returns>The hinted items.</returns>
+    IEnumerable<string> HintedItems() =>
+        _session is null
+            ? []
+            : LastHints?.Where(x => x.Hint.Found && x.Hint.ReceivingPlayer == _session.Players.ActivePlayer.Slot)
+               .Select(x => _session.Items.GetItemName(x.Hint.ItemId, _yaml.Game)) ??
+            [];
+
+    /// <summary>Gets the hinted locations.</summary>
+    /// <returns>The hinted locations.</returns>
+    IEnumerable<string> HintedLocations() =>
+        _session is null
+            ? []
+            : LastHints?.Where(x => x.Hint.Found && x.Hint.FindingPlayer == _session.Players.ActivePlayer.Slot)
+               .Select(x => _session.Locations.GetLocationNameFromId(x.Hint.LocationId, _yaml.Game)) ??
+            [];
 
     /// <summary>Groups all items into sorted items with count.</summary>
     /// <param name="category">The category that the returned items must be under.</param>
