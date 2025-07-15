@@ -1335,12 +1335,12 @@ public sealed partial class Preferences
         int? ret = null;
         ShownTooltip = false;
 
-        for (var i = clients.Count - 1; i >= 0 && clients[i] is var c; i--)
+        for (var i = clients.Count - 1; clients.Nth(i) is { } client; i--)
         {
-            if (c.Draw(gameTime, this, out var v))
+            if (client.Draw(gameTime, this, out var selected))
                 clients.RemoveAt(i);
 
-            if (v)
+            if (selected)
                 ret = i;
         }
 
