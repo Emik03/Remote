@@ -413,9 +413,9 @@ public sealed partial class Client(Yaml? yaml = null)
             _evaluator = Evaluator.Read(session.DataStorage, session.Items, _yaml, preferences, Set);
             _connectionMessage = "APWorld has been read!\nSaving history in memory... (6/6)";
             _info = new(_yaml, password, address, port, _info.Alias, _info.Color, hasDeathLink);
+            _sessionCreatedTimestamp = DateTime.Now;
             preferences.Prepend(_info);
             preferences.Sync(ref _info);
-            _sessionCreatedTimestamp = DateTime.Now;
             _connectionMessage = "";
 
             if (_evaluator is not null)
@@ -616,10 +616,10 @@ public sealed partial class Client(Yaml? yaml = null)
 
         if (_pushNotifs && _sessionCreatedTimestamp + TimeSpan.FromSeconds(5) < DateTime.Now)
         {
-            var enumerable = items.Where(x => !_lastItems.TryGetValue(x.Key, out var value) && x.Value != value)
+            var enumerable = items.Where(x => !_lastItems.TryGetValue(x.Key, out var value) || x.Value != value)
                .Select(x => $"• {x.Key}{(x.Value is 1 ? "" : $" ({x.Value})")}");
 
-            if (enumerable.Conjoin('\n') is var body && !string.IsNullOrWhiteSpace(body))
+            if (enumerable.Conjoin('\n') is var body && !string.IsNullOrEmpty(body))
                 DesktopNotification.Notify("New items received!", body);
         }
 
