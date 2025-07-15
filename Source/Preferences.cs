@@ -49,6 +49,7 @@ public sealed partial class Preferences
     /// <param name="Tagged">The tagged locations.</param>
     /// <param name="Alias">The alias when displaying in history.</param>
     /// <param name="Color">The color for the tab or window.</param>
+    /// <param name="HasDeathLink">Whether death link is enabled.</param>
     [CLSCompliant(false), StructLayout(LayoutKind.Auto)]
     public readonly record struct Connection(
         string? Name,
@@ -60,7 +61,8 @@ public sealed partial class Preferences
         ImmutableHashSet<string>? Locations,
         ImmutableHashSet<string>? Tagged,
         string? Alias,
-        string? Color
+        string? Color,
+        bool HasDeathLink
     )
     {
         /// <summary>Contains the list of connections.</summary>
@@ -134,7 +136,8 @@ public sealed partial class Preferences
                 connection.GetLocationsOrEmpty().Union(locations ?? []),
                 connection.Tagged,
                 string.IsNullOrWhiteSpace(connection.Alias) ? alias : connection.Alias,
-                color ?? connection.Color
+                color ?? connection.Color,
+                connection.HasDeathLink
             ) { }
 
         /// <summary>Initializes a new instance of the <see cref="Connection"/> struct.</summary>
@@ -144,15 +147,17 @@ public sealed partial class Preferences
         /// <param name="port">The port of the host.</param>
         /// <param name="alias">The alias for the history header.</param>
         /// <param name="color">The color for the tab or window.</param>
+        /// <param name="hasDeathLink">Whether death link is enabled.</param>
         public Connection(
             Yaml yaml,
             string? password,
             string? host,
             ushort port,
             string? alias,
-            string? color
+            string? color,
+            bool hasDeathLink
         )
-            : this(yaml.Name, password, host, port, yaml.Game, [], [], [], alias, color) { }
+            : this(yaml.Name, password, host, port, yaml.Game, [], [], [], alias, color, hasDeathLink) { }
 
         /// <summary>Determines whether this instance is invalid, usually from default construction.</summary>
         [JsonIgnore]
@@ -847,6 +852,23 @@ public sealed partial class Preferences
         return true;
     }
 
+    /// <summary>Determines whether <see cref="Connection.HasDeathLink"/> should be enabled.</summary>
+    /// <param name="address">The address.</param>
+    /// <param name="port">The port.</param>
+    /// <param name="name">The name of the slot.</param>
+    /// <returns>Whether death link should be enabled.</returns>
+    [CLSCompliant(false)]
+    public bool HasDeathLink(string address, ushort port, string name)
+    {
+        for (var i = 0; _list.History.Nth(i) is { IsInvalid: false } connection; i++)
+            if (port == connection.Port &&
+                FrozenSortedDictionary.Comparer.Equals(address, connection.Host) &&
+                FrozenSortedDictionary.Comparer.Equals(name, connection.Name))
+                return connection.HasDeathLink;
+
+        return false;
+    }
+
     /// <summary>Shows the preferences window.</summary>
     /// <param name="gameTime">The time elapsed.</param>
     /// <param name="clients">The list of clients to show.</param>
@@ -1085,7 +1107,7 @@ public sealed partial class Preferences
         if (_alwaysShowChat)
             _ = ImGui.Checkbox("Chat window on side", ref _sideBySide);
 
-        Slider("Suggestions", ref _suggestions, 0, 20, "%.0f");
+        Slider("Autocomplete suggestion count", ref _suggestions, 0, 20, "%.0f", 750);
     }
 
     /// <summary>Shows the behavior header and options.</summary>
@@ -1197,9 +1219,10 @@ public sealed partial class Preferences
     /// <param name="min">The minimum.</param>
     /// <param name="max">The maximum.</param>
     /// <param name="format">The format to display.</param>
-    void Slider(string title, ref float amount, float min, float max, string format = "%.1f")
+    /// <param name="width">The amount of space to leave for the title.</param>
+    void Slider(string title, ref float amount, float min, float max, string format = "%.1f", int width = 250)
     {
-        ImGui.SetNextItemWidth(Width(250));
+        ImGui.SetNextItemWidth(Width(width));
         _ = ImGui.SliderFloat(title, ref amount, min, max, format, ImGuiSliderFlags.AlwaysClamp);
     }
 

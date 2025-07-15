@@ -41,7 +41,7 @@ public sealed partial class Client
     int _itemType, _lastItemCount = int.MinValue, _lastLocationCount = int.MaxValue, _locationSort, _sentMessagesIndex;
 
     /// <summary>The current state of the text field.</summary>
-    string _itemSearch = "", _lastSuggestion = "", _locationSearch = "";
+    string _deathLinkMessage = "", _itemSearch = "", _lastSuggestion = "", _locationSearch = "";
 
     /// <summary>The amount of time before release.</summary>
     TimeSpan _confirmationTimer;
@@ -395,6 +395,7 @@ public sealed partial class Client
             return;
         }
 
+        ShowDeathLink(preferences);
         ImGui.SeparatorText("Diagnostics");
 
         if (ImGui.Button("Open APWorld Directory") && Evaluator.FindApWorld(_yaml, preferences, Set) is { } apWorld)
@@ -425,6 +426,40 @@ public sealed partial class Client
         ImGui.EndTabItem();
     }
 
+    /// <summary>Shows the death link settings.</summary>
+    /// <param name="preferences">The user preferences.</param>
+    void ShowDeathLink(Preferences preferences)
+    {
+        const ImGuiInputTextFlags Flags = Preferences.TextFlags | ImGuiInputTextFlags.AllowTabInput;
+        ImGui.SeparatorText("DeathLink");
+        var hasDeathLink = _info.HasDeathLink;
+        _ = ImGui.Checkbox($"Enable {nameof(DeathLink)}", ref hasDeathLink);
+
+        if (hasDeathLink != _info.HasDeathLink)
+        {
+            if (hasDeathLink)
+                _deathLink?.EnableDeathLink();
+            else
+                _deathLink?.DisableDeathLink();
+
+            _info = _info with { HasDeathLink = hasDeathLink };
+            preferences.Sync(ref _info);
+        }
+
+        if (!hasDeathLink)
+            return;
+
+        ImGui.SetNextItemWidth(preferences.Width(250));
+        ImGuiRenderer.InputTextWithHint("##Cause", "What happened?", ref _deathLinkMessage, ushort.MaxValue, Flags);
+        ImGui.SameLine();
+
+        if (!ImGui.Button($"Send {nameof(DeathLink)}"))
+            return;
+
+        var cause = string.IsNullOrWhiteSpace(_deathLinkMessage) ? null : _deathLinkMessage;
+        _deathLink?.SendDeathLink(new(_yaml.Name, cause));
+    }
+
     /// <summary>Shows the chat.</summary>
     /// <param name="preferences">The user preferences.</param>
     /// <param name="isChatTab">Whether this was called from the chat tab.</param>
@@ -447,7 +482,6 @@ public sealed partial class Client
 
         ShowLog(preferences);
         ImGui.SeparatorText("Message");
-        ImGui.SetNextItemWidth(preferences.Width(250));
 
         if (ImGui.IsKeyPressed(ImGuiKey.DownArrow))
             MoveSentMessageIndex(1);
@@ -461,6 +495,7 @@ public sealed partial class Client
             ImGui.SetKeyboardFocusHere();
         }
 
+        ImGui.SetNextItemWidth(preferences.Width(250));
         ref var latestMessage = ref CollectionsMarshal.AsSpan(_sentMessages)[^1];
         var enter = ImGuiRenderer.InputText("##Message", ref latestMessage, ushort.MaxValue, Flags);
         ShowAutocomplete(preferences, latestMessage, isChatTab);

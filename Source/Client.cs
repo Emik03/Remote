@@ -205,7 +205,7 @@ public sealed partial class Client(Yaml? yaml = null)
             """;
 
     /// <summary>The notification manager.</summary>
-    static readonly FreeDesktopNotificationManager? s_manager =
+    static readonly FreeDesktopNotificationManager? s_notifier =
         OperatingSystem.IsFreeBSD() || OperatingSystem.IsLinux() ? new() : null;
 
     /// <summary>The commands.</summary>
@@ -270,6 +270,9 @@ public sealed partial class Client(Yaml? yaml = null)
     /// <summary>When <see cref="_session"/> was created.</summary>
     DateTime _sessionCreatedTimestamp;
 
+    /// <summary>Gets the death link service.</summary>
+    DeathLinkService? _deathLink;
+
     /// <summary>The last set of items with count.</summary>
     Dictionary<string, int> _lastItems = [];
 
@@ -304,8 +307,8 @@ public sealed partial class Client(Yaml? yaml = null)
     /// <summary>Initializes the manager.</summary>
     static Client()
     {
-        if (s_manager is not null)
-            _ = Task.Run(s_manager.Initialize);
+        if (s_notifier is not null)
+            _ = Task.Run(s_notifier.Initialize);
     }
 
     /// <summary>Gets or adds this location and retrieves the checkbox status of that location.</summary>
@@ -384,11 +387,12 @@ public sealed partial class Client(Yaml? yaml = null)
             await Task.Yield();
             var session = ArchipelagoSessionFactory.CreateSession(address, port);
             session.MessageLog.OnMessageReceived += OnMessageReceived;
+
             string[] tags = ["AP", nameof(Remote)];
-            _connectionMessage = "Attempting new connection.\nConnecting... (1/5)";
+            _connectionMessage = "Attempting new connection.\nConnecting... (1/6)";
             _ = await session.ConnectAsync();
             _yaml.EscapeName();
-            _connectionMessage = "Connected!\nLogging in... (2/5)";
+            _connectionMessage = "Connected!\nLogging in... (2/6)";
             var login = await session.LoginAsync(_yaml.Game, _yaml.Name, Flags, tags: tags, password: password);
 
             if (login is LoginFailure failure)
@@ -398,18 +402,28 @@ public sealed partial class Client(Yaml? yaml = null)
                 return;
             }
 
-            _errors = null;
+            _connectionMessage = "Logged in!\nConfiguring DeathLink... (3/6)";
             _windowName = $"{_yaml.Name}###{_instance}";
-            _connectionMessage = "Logged in!\nReading slot data... (3/5)";
+            _errors = null;
+            _deathLink = session.CreateDeathLinkService();
+            _deathLink.OnDeathLinkReceived += OnDeathLink;
             (_session = session).SetClientState(ArchipelagoClientState.ClientPlaying);
+            var hasDeathLink = preferences.HasDeathLink(address, port, _yaml.Name);
+
+            if (hasDeathLink)
+                _deathLink.EnableDeathLink();
+            else
+                _deathLink.DisableDeathLink();
+
+            _connectionMessage = "Configured DeathLink!\nReading slot data... (4/6)";
 
             foreach (var (key, value) in await session.DataStorage.GetSlotDataAsync())
                 ((IDictionary<string, object?>)_yaml)[key] = value;
 
-            _connectionMessage = "Slot data has been read!\nReading APWorld... (4/5)";
+            _connectionMessage = "Slot data has been read!\nReading APWorld... (5/6)";
             _evaluator = Evaluator.Read(session.DataStorage, session.Items, _yaml, preferences, Set);
-            _connectionMessage = "APWorld has been read!\nSaving history in memory... (5/5)";
-            _info = new(_yaml, password, address, port, _info.Alias, _info.Color);
+            _connectionMessage = "APWorld has been read!\nSaving history in memory... (6/6)";
+            _info = new(_yaml, password, address, port, _info.Alias, _info.Color, hasDeathLink);
             preferences.Prepend(_info);
             preferences.Sync(ref _info);
             _sessionCreatedTimestamp = DateTime.Now;
@@ -483,6 +497,31 @@ public sealed partial class Client(Yaml? yaml = null)
            .Select(x => x.Message),
     ];
 
+    /// <summary>Invoked when a death link message is received.</summary>
+    /// <param name="deathLink">The death link.</param>
+    void OnDeathLink(DeathLink deathLink)
+    {
+        if (!_info.HasDeathLink)
+            return;
+
+        File.WriteAllLines(
+            Path.Join(Path.GetTempPath(), nameof(DeathLink)),
+            [deathLink.Source, deathLink.Timestamp.ToString("O", CultureInfo.InvariantCulture), deathLink.Cause]
+        );
+
+        if (s_notifier is null || !_pushNotifs)
+            return;
+
+        var title = $"{nameof(DeathLink)} from {deathLink.Source}";
+
+        var body = deathLink.Cause ??
+            (Random.Shared.Next(0, 1000) is 0
+                ? "death.fell.accident.water"
+                : $"{deathLink.Source} fell out of this world.");
+
+        _ = Task.Run(() => s_notifier.ShowNotification(new() { Body = body, Title = title }));
+    }
+
     /// <summary>Invoked when a new message is received, adds the message to the log.</summary>
     /// <param name="message">The new message.</param>
     void OnMessageReceived(LogMessage message)
@@ -555,7 +594,7 @@ public sealed partial class Client(Yaml? yaml = null)
 
     /// <summary>Sets the connection message.</summary>
     /// <param name="message">The message to set.</param>
-    void Set(string message) => _connectionMessage = message;
+    void Set(string message) => _connectionMessage = $"Slot data has been read!\nReading APWorld... (5/6)\n{message}";
 
     /// <summary>Resets the timer.</summary>
     /// <param name="outOfLogic">Whether to use the time span for in- or out-of-logic.</param>
@@ -588,13 +627,13 @@ public sealed partial class Client(Yaml? yaml = null)
         var items = _session.Items.AllItemsReceived.GroupBy(x => x.ItemName, FrozenSortedDictionary.Comparer)
            .ToDictionary(x => x.Key, x => x.Count(), FrozenSortedDictionary.Comparer);
 
-        if (s_manager is not null && _pushNotifs && _sessionCreatedTimestamp + TimeSpan.FromSeconds(5) < DateTime.Now)
+        if (s_notifier is not null && _pushNotifs && _sessionCreatedTimestamp + TimeSpan.FromSeconds(5) < DateTime.Now)
         {
             var enumerable = items.Where(x => !_lastItems.TryGetValue(x.Key, out var value) && x.Value != value)
                .Select(x => $"• {x.Key}{(x.Value is 1 ? "" : $" ({x.Value})")}");
 
             if (enumerable.Conjoin('\n') is var body && !string.IsNullOrWhiteSpace(body))
-                _ = Task.Run(() => s_manager.ShowNotification(new() { Title = "New items received!", Body = body }));
+                _ = Task.Run(() => s_notifier.ShowNotification(new() { Body = body, Title = "New items received!" }));
         }
 
         (_lastItems, var locationHelper) = (items, _session.Locations);
