@@ -940,7 +940,7 @@ public sealed partial class Preferences
         if (_alwaysShowChat)
             _ = ImGui.Checkbox("Chat window on side", ref _sideBySide);
 
-        Slider("Autocomplete suggestion count", ref _suggestions, 0, 20, "%.0f", 500);
+        Slider("Autocomplete suggestion count", ref _suggestions, 0, 20, "%.0f", 550);
     }
 
     /// <summary>Shows the behavior header and options.</summary>
@@ -952,8 +952,12 @@ public sealed partial class Preferences
         if (!_alwaysShowChat)
             ImGui.Checkbox("Move to chat tab when releasing", ref _moveToChatTab);
 
-        if (OperatingSystem.IsFreeBSD() || OperatingSystem.IsLinux())
-            _ = ImGui.Checkbox("Push notifications for new items", ref _desktopNotifications);
+        _ = ImGui.Checkbox(
+            DesktopNotification.IsSupported
+                ? "Push notifications for new items and DeathLink"
+                : "Popups for new items and DeathLink",
+            ref _desktopNotifications
+        );
     }
 
     /// <summary>Shows the style header and options.</summary>

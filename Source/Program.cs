@@ -1,14 +1,14 @@
 ﻿// SPDX-License-Identifier: MPL-2.0
 #if !ANDROID
-AppDomain.CurrentDomain.AssemblyResolve +=
-    (_, a) => a.Name.StartsWith("Remote.Resources")
-        ? Assembly.LoadFile(
-            Path.Join(
-                Path.GetDirectoryName(typeof(RemoteGame).Assembly.Location),
-                $"{nameof(Remote)}.{nameof(Remote.Resources)}.dll"
-            )
-        )
+static Assembly? LoadFile(string name, ResolveEventArgs args) =>
+    args.Name.StartsWith(name)
+        ? Assembly.LoadFile(Path.Join(Path.GetDirectoryName(typeof(RemoteGame).Assembly.Location), $"{name}.dll"))
         : null;
+
+AppDomain.CurrentDomain.AssemblyResolve +=
+    (_, a) => LoadFile("Remote.Resources", a) ??
+        LoadFile("DesktopNotifications.Windows", a) ??
+        LoadFile("Microsoft.Toolkit.Uwp.Notifications", a);
 
 AppDomain.CurrentDomain.UnhandledException += (_, e) => File.WriteAllText(
     Path.Join(Path.GetTempPath(), $"{nameof(Remote)}.{DateTime.Now.ToString("s").Replace(':', '_')}.crash.txt"),

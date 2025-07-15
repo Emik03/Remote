@@ -449,7 +449,7 @@ public sealed partial class Client
         if (!hasDeathLink)
             return;
 
-        ImGui.SetNextItemWidth(preferences.Width(250));
+        ImGui.SetNextItemWidth(preferences.Width(300));
         ImGuiRenderer.InputTextWithHint("##Cause", "What happened?", ref _deathLinkMessage, ushort.MaxValue, Flags);
         ImGui.SameLine();
 
