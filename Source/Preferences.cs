@@ -94,7 +94,7 @@ public sealed partial class Preferences
     /// <summary>Contains the current UI settings.</summary>
     float _activeTabDim = 2.5f,
         _inactiveTabDim = 5,
-        _suggestions = 10,
+        _suggestions = 5,
         _uiScale = 0.75f,
         _uiRounding = 4,
         _uiSpacing = 6,
