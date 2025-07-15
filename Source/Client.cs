@@ -204,10 +204,6 @@ public sealed partial class Client(Yaml? yaml = null)
                     For example !hint_location atomic-bomb to get a spoiler peek for that location.
             """;
 
-    /// <summary>The notification manager.</summary>
-    static readonly FreeDesktopNotificationManager? s_notifier =
-        OperatingSystem.IsFreeBSD() || OperatingSystem.IsLinux() ? new() : null;
-
     /// <summary>The commands.</summary>
     static readonly ImmutableArray<string> s_commands =
     [
@@ -303,13 +299,6 @@ public sealed partial class Client(Yaml? yaml = null)
     internal Client(HistoryEntry historyEntry)
         : this(historyEntry.ToYaml()) =>
         _info = historyEntry;
-
-    /// <summary>Initializes the manager.</summary>
-    static Client()
-    {
-        if (s_notifier is not null)
-            _ = Task.Run(s_notifier.Initialize);
-    }
 
     /// <summary>Gets or adds this location and retrieves the checkbox status of that location.</summary>
     /// <param name="key">The key to add or get.</param>
@@ -509,17 +498,15 @@ public sealed partial class Client(Yaml? yaml = null)
             [deathLink.Source, deathLink.Timestamp.ToString("O", CultureInfo.InvariantCulture), deathLink.Cause]
         );
 
-        if (s_notifier is null || !_pushNotifs)
+        if (!_pushNotifs)
             return;
-
-        var title = $"{nameof(DeathLink)} from {deathLink.Source}";
 
         var body = deathLink.Cause ??
             (Random.Shared.Next(0, 1000) is 0
                 ? "death.fell.accident.water"
                 : $"{deathLink.Source} fell out of this world.");
 
-        _ = Task.Run(() => s_notifier.ShowNotification(new() { Body = body, Title = title }));
+        DesktopNotification.Notify($"{nameof(DeathLink)} from {deathLink.Source}", body);
     }
 
     /// <summary>Invoked when a new message is received, adds the message to the log.</summary>
@@ -627,13 +614,13 @@ public sealed partial class Client(Yaml? yaml = null)
         var items = _session.Items.AllItemsReceived.GroupBy(x => x.ItemName, FrozenSortedDictionary.Comparer)
            .ToDictionary(x => x.Key, x => x.Count(), FrozenSortedDictionary.Comparer);
 
-        if (s_notifier is not null && _pushNotifs && _sessionCreatedTimestamp + TimeSpan.FromSeconds(5) < DateTime.Now)
+        if (_pushNotifs && _sessionCreatedTimestamp + TimeSpan.FromSeconds(5) < DateTime.Now)
         {
             var enumerable = items.Where(x => !_lastItems.TryGetValue(x.Key, out var value) && x.Value != value)
                .Select(x => $"• {x.Key}{(x.Value is 1 ? "" : $" ({x.Value})")}");
 
             if (enumerable.Conjoin('\n') is var body && !string.IsNullOrWhiteSpace(body))
-                _ = Task.Run(() => s_notifier.ShowNotification(new() { Body = body, Title = "New items received!" }));
+                DesktopNotification.Notify("New items received!", body);
         }
 
         (_lastItems, var locationHelper) = (items, _session.Locations);

@@ -940,7 +940,7 @@ public sealed partial class Preferences
         if (_alwaysShowChat)
             _ = ImGui.Checkbox("Chat window on side", ref _sideBySide);
 
-        Slider("Autocomplete suggestion count", ref _suggestions, 0, 20, "%.0f", 750);
+        Slider("Autocomplete suggestion count", ref _suggestions, 0, 20, "%.0f", 500);
     }
 
     /// <summary>Shows the behavior header and options.</summary>
