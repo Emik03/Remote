@@ -1,9 +1,7 @@
 // SPDX-License-Identifier: MPL-2.0
 namespace Remote;
 
-using ConnectionGroup = IGrouping<(string? Alias, string? Host, ushort Port), Preferences.Connection>;
-using JsonIgnoreAttribute = System.Text.Json.Serialization.JsonIgnoreAttribute;
-using JsonSerializer = System.Text.Json.JsonSerializer;
+using ConnectionGroup = IGrouping<(string? Alias, string? Host, ushort Port), HistoryEntry>;
 using Vector2 = System.Numerics.Vector2;
 
 /// <summary>Contains the preferences that are stored persistently.</summary>
@@ -36,171 +34,6 @@ public sealed partial class Preferences
 
         /// <summary>This value indicates to sort the history alphabetically.</summary>
         Name,
-    }
-
-    /// <summary>Holds a previous connection info.</summary>
-    /// <param name="Name">The slot.</param>
-    /// <param name="Password">The password of the game.</param>
-    /// <param name="Host">The host.</param>
-    /// <param name="Port">The port of the host.</param>
-    /// <param name="Game">The game.</param>
-    /// <param name="Items">The used items.</param>
-    /// <param name="Locations">The checked locations.</param>
-    /// <param name="Tagged">The tagged locations.</param>
-    /// <param name="Alias">The alias when displaying in history.</param>
-    /// <param name="Color">The color for the tab or window.</param>
-    /// <param name="HasDeathLink">Whether death link is enabled.</param>
-    [CLSCompliant(false), StructLayout(LayoutKind.Auto)]
-    public readonly record struct Connection(
-        string? Name,
-        string? Password,
-        string? Host,
-        ushort Port,
-        string? Game,
-        ImmutableDictionary<string, int>? Items,
-        ImmutableHashSet<string>? Locations,
-        ImmutableHashSet<string>? Tagged,
-        string? Alias,
-        string? Color,
-        bool HasDeathLink
-    )
-    {
-        /// <summary>Contains the list of connections.</summary>
-        /// <param name="History">The history.</param>
-        // ReSharper disable MemberHidesStaticFromOuterClass
-#pragma warning disable MA0016
-        public readonly record struct List(List<Connection> History)
-#pragma warning restore MA0016
-        {
-            /// <summary>The default host address that hosts Archipelago games.</summary>
-            const string HistoryFile = "history.json";
-
-            /// <summary>Contains the path to the preferences file to read and write from.</summary>
-            public static string FilePath { get; } = PathTo(HistoryFile, "REMOTE_HISTORY_PATH");
-
-            /// <summary>Loads the history from disk.</summary>
-            /// <returns>The preferences.</returns>
-            public static List Load()
-            {
-                if (File.Exists(FilePath) && !Go(Deserialize, out _, out var fromDisk) && fromDisk is not null)
-                    return new(fromDisk);
-
-                var directory = Path.GetDirectoryName(FilePath);
-                Debug.Assert(directory is not null);
-                System.IO.Directory.CreateDirectory(directory);
-                List fromMemory = new([]);
-                fromMemory.Save();
-                return fromMemory;
-            }
-
-            /// <summary>Writes this instance to disk.</summary>
-            public void Save() =>
-                File.WriteAllText(
-                    FilePath,
-                    JsonSerializer.Serialize(History, RemoteJsonSerializerContext.Default.ListConnection)
-                );
-
-            /// <summary>Finds the index that matches the key of the group.</summary>
-            /// <param name="group">The group.</param>
-            /// <returns>The index that matches the parameter <paramref name="group"/>.</returns>
-            public int Find(ConnectionGroup group) =>
-                History.FindIndex(
-                    x => group.Key.Port == x.Port && FrozenSortedDictionary.Comparer.Equals(group.Key.Host, x.Host)
-                );
-
-            static List<Connection>? Deserialize() =>
-                JsonSerializer.Deserialize<List<Connection>>(
-                    File.OpenRead(FilePath),
-                    RemoteJsonSerializerContext.Default.ListConnection
-                );
-        }
-
-        /// <summary>Initializes a new instance of the <see cref="Connection"/> struct.</summary>
-        /// <param name="connection">The connection to copy.</param>
-        /// <param name="locations">The locations to inherit.</param>
-        /// <param name="alias">The alias for the history header.</param>
-        /// <param name="color">The color for the tab or window.</param>
-        public Connection(
-            Connection connection,
-            IEnumerable<string>? locations,
-            string? alias = null,
-            string? color = null
-        )
-            : this(
-                connection.Name,
-                connection.Password,
-                connection.Host,
-                connection.Port,
-                connection.Game,
-                connection.Items,
-                connection.GetLocationsOrEmpty().Union(locations ?? []),
-                connection.Tagged,
-                string.IsNullOrWhiteSpace(connection.Alias) ? alias : connection.Alias,
-                color ?? connection.Color,
-                connection.HasDeathLink
-            ) { }
-
-        /// <summary>Initializes a new instance of the <see cref="Connection"/> struct.</summary>
-        /// <param name="yaml">The yaml to deconstruct.</param>
-        /// <param name="password">The password of the game.</param>
-        /// <param name="host">The host.</param>
-        /// <param name="port">The port of the host.</param>
-        /// <param name="alias">The alias for the history header.</param>
-        /// <param name="color">The color for the tab or window.</param>
-        /// <param name="hasDeathLink">Whether death link is enabled.</param>
-        public Connection(
-            Yaml yaml,
-            string? password,
-            string? host,
-            ushort port,
-            string? alias,
-            string? color,
-            bool hasDeathLink
-        )
-            : this(yaml.Name, password, host, port, yaml.Game, [], [], [], alias, color, hasDeathLink) { }
-
-        /// <summary>Determines whether this instance is invalid, usually from default construction.</summary>
-        [JsonIgnore]
-        public bool IsInvalid => Name is null || Host is null || Port is 0 || Game is null;
-
-        /// <inheritdoc />
-        public bool Equals(Connection other) =>
-            HostEquals(other) && FrozenSortedDictionary.Comparer.Equals(Name, other.Name);
-
-        /// <summary>Determines whether both hosts are equal.</summary>
-        /// <param name="other">The instance to compare.</param>
-        /// <returns>Whether both hosts are equal.</returns>
-        public bool HostEquals(Connection other) =>
-            Port == other.Port &&
-            FrozenSortedDictionary.Comparer.Equals(Host, other.Host);
-
-        /// <inheritdoc />
-        public override int GetHashCode() => HashCode.Combine(Port, Name, Game, Host, Password ?? "");
-
-        /// <summary>Gets the alias.</summary>
-        /// <returns>The alias.</returns>
-        public string GetAliasOrEmpty() => Alias ?? "";
-
-        /// <summary>Gets the items.</summary>
-        /// <returns>The items.</returns>
-        public ImmutableDictionary<string, int> GetItemsOrEmpty() => Items ?? ImmutableDictionary<string, int>.Empty;
-
-        /// <summary>Gets the locations.</summary>
-        /// <returns>The locations.</returns>
-        public ImmutableHashSet<string> GetLocationsOrEmpty() => Locations ?? ImmutableHashSet<string>.Empty;
-
-        /// <summary>Gets the tagged locations.</summary>
-        /// <returns>The tagged locations.</returns>
-        public ImmutableHashSet<string> GetTaggedOrEmpty() => Tagged ?? ImmutableHashSet<string>.Empty;
-
-        /// <summary>Converts this instance to the equivalent <see cref="Yaml"/> instance.</summary>
-        /// <returns>The <see cref="Yaml"/> instance, or <see langword="null"/> if none found on disk.</returns>
-        public Yaml ToYaml() =>
-            new()
-            {
-                Game = Game ?? "",
-                Name = Name ?? "",
-            };
     }
 
     /// <summary>The flags to use across any text field.</summary>
@@ -245,7 +78,7 @@ public sealed partial class Preferences
     readonly Dictionary<string, bool> _editStates = new(FrozenSortedDictionary.Comparer);
 
     /// <summary>Contains the history.</summary>
-    readonly Connection.List _list = Connection.List.Load();
+    readonly HistoryEntry.List _list = HistoryEntry.List.Load();
 
     /// <summary>Contains boolean settings.</summary>
     bool _alwaysShowChat,
@@ -498,6 +331,19 @@ public sealed partial class Preferences
 #pragma warning disable MA0016
     public List<AppColor> Colors { get; private set; } = [];
 #pragma warning restore MA0016
+    /// <summary>Gets the full path to the file.</summary>
+    /// <param name="file">The file path to get.</param>
+    /// <param name="environment">The environment variable that allows users to override the return.</param>
+    /// <returns>The full path to the parameter <paramref name="file"/>.</returns>
+    public static string PathTo(string file, string environment) =>
+        Environment.GetEnvironmentVariable(environment) is { } preferences
+            ? System.IO.Directory.Exists(preferences) ? Path.Join(preferences, file) : preferences
+            : Path.Join(
+                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                typeof(Preferences).Assembly.GetName().Name,
+                file
+            );
+
     /// <summary>Loads the preferences from disk.</summary>
     /// <returns>The preferences.</returns>
     public static Preferences Load()
@@ -518,9 +364,9 @@ public sealed partial class Preferences
     }
 
     /// <summary>Prepends the element to the beginning of the history.</summary>
-    /// <param name="connection">The connection to prepend.</param>
+    /// <param name="historyEntry">The connection to prepend.</param>
     [CLSCompliant(false)]
-    public void Prepend(Connection connection) => _list.History.Insert(0, connection);
+    public void Prepend(HistoryEntry historyEntry) => _list.History.Insert(0, historyEntry);
 
     /// <summary>Pushes the specific color into most widgets.</summary>
     /// <param name="color">The color.</param>
@@ -753,9 +599,9 @@ public sealed partial class Preferences
         ShowText(text, this[color], clipboard, tooltip);
 
     /// <summary>Synchronizes the connection with the one found within the internal collection.</summary>
-    /// <param name="connection">The connection to synchronize.</param>
+    /// <param name="historyEntry">The connection to synchronize.</param>
     [CLSCompliant(false)]
-    public void Sync(ref Connection connection)
+    public void Sync(ref HistoryEntry historyEntry)
     {
         string FindNextAvailableColor()
         {
@@ -785,20 +631,20 @@ public sealed partial class Preferences
         {
             ref var next = ref history[i];
 
-            if (string.IsNullOrWhiteSpace(connection.Color) && string.IsNullOrWhiteSpace(next.Color))
+            if (string.IsNullOrWhiteSpace(historyEntry.Color) && string.IsNullOrWhiteSpace(next.Color))
                 next = next with { Color = FindNextAvailableColor() };
 
-            if (!connection.HostEquals(next))
+            if (!historyEntry.HostEquals(next))
                 continue;
 
-            if (!FrozenSortedDictionary.Comparer.Equals(connection.Alias, next.Alias))
-                next = next with { Alias = connection.Alias };
+            if (!FrozenSortedDictionary.Comparer.Equals(historyEntry.Alias, next.Alias))
+                next = next with { Alias = historyEntry.Alias };
 
-            if (!FrozenSortedDictionary.Comparer.Equals(connection.Name, next.Name))
+            if (!FrozenSortedDictionary.Comparer.Equals(historyEntry.Name, next.Name))
                 continue;
 
-            connection = new(connection, next.GetLocationsOrEmpty(), next.Alias, next.Color);
-            next = connection;
+            historyEntry = new(historyEntry, next.GetLocationsOrEmpty(), next.Alias, next.Color);
+            next = historyEntry;
         }
     }
 
@@ -852,7 +698,7 @@ public sealed partial class Preferences
         return true;
     }
 
-    /// <summary>Determines whether <see cref="Connection.HasDeathLink"/> should be enabled.</summary>
+    /// <summary>Determines whether <see cref="HistoryEntry.HasDeathLink"/> should be enabled.</summary>
     /// <param name="address">The address.</param>
     /// <param name="port">The port.</param>
     /// <param name="name">The name of the slot.</param>
@@ -1059,19 +905,6 @@ public sealed partial class Preferences
     static string NamesSeparatedByZeros<T>()
         where T : struct, Enum =>
         Enum.GetNames<T>().Append("\0").Conjoin('\0');
-
-    /// <summary>Gets the full path to the file.</summary>
-    /// <param name="file">The file path to get.</param>
-    /// <param name="environment">The environment variable that allows users to override the return.</param>
-    /// <returns>The full path to the parameter <paramref name="file"/>.</returns>
-    static string PathTo(string file, string environment) =>
-        Environment.GetEnvironmentVariable(environment) is { } preferences
-            ? System.IO.Directory.Exists(preferences) ? Path.Join(preferences, file) : preferences
-            : Path.Join(
-                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                typeof(Preferences).Assembly.GetName().Name,
-                file
-            );
 
     /// <summary>Adds padding.</summary>
     void Pad(string? text, string? copy)
@@ -1338,14 +1171,14 @@ public sealed partial class Preferences
     }
 
     /// <summary>Shows the connection.</summary>
-    /// <param name="connection">The connection to show.</param>
+    /// <param name="historyEntry">The connection to show.</param>
     /// <returns>Whether the button was clicked.</returns>
-    bool ShowHistoryButton(Connection connection)
+    bool ShowHistoryButton(HistoryEntry historyEntry)
     {
-        var ret = ImGui.Button($"{connection.Name}###{connection.Host}:|{connection.Port}:|{connection.Name}");
+        var ret = ImGui.Button($"{historyEntry.Name}###{historyEntry.Host}:|{historyEntry.Port}:|{historyEntry.Name}");
 
         if (ImGui.IsItemClicked(ImGuiMouseButton.Middle) || ImGui.IsItemClicked(ImGuiMouseButton.Right))
-            _list.History.Remove(connection);
+            _list.History.Remove(historyEntry);
 
         return ret;
     }
@@ -1371,13 +1204,13 @@ public sealed partial class Preferences
         return ret;
     }
 
-    /// <summary>Connects to the server using the <see cref="Connection"/> instance.</summary>
-    /// <param name="connection">The connection to use.</param>
-    /// <returns>The <see cref="Client"/> created based on the parameter <paramref name="connection"/>.</returns>
-    Client ConnectAndReturn(Connection connection)
+    /// <summary>Connects to the server using the <see cref="HistoryEntry"/> instance.</summary>
+    /// <param name="historyEntry">The connection to use.</param>
+    /// <returns>The <see cref="Client"/> created based on the parameter <paramref name="historyEntry"/>.</returns>
+    Client ConnectAndReturn(HistoryEntry historyEntry)
     {
-        Client client = new(connection);
-        client.Connect(this, connection.Host ?? Address, connection.Port, connection.Password);
+        Client client = new(historyEntry);
+        client.Connect(this, historyEntry.Host ?? Address, historyEntry.Port, historyEntry.Password);
         return client;
     }
 
@@ -1423,7 +1256,7 @@ public sealed partial class Preferences
     /// <summary>Orders the connections.</summary>
     /// <param name="cs">The connections.</param>
     /// <returns>The ordered enumerable of the parameter <paramref name="cs"/>.</returns>
-    IOrderedEnumerable<Connection> Order(IEnumerable<Connection> cs) =>
+    IOrderedEnumerable<HistoryEntry> Order(IEnumerable<HistoryEntry> cs) =>
         SortHistoryBy switch
         {
             HistoryOrder.Date => cs.OrderBy(_list.History.IndexOf),

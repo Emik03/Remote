@@ -86,14 +86,14 @@ public sealed partial class Client(Yaml? yaml = null)
         public bool IsMatch(string search) => Name?.Contains(search, StringComparison.OrdinalIgnoreCase) is true;
 
         /// <summary>Determines whether this instance matches the preferences for showing used items.</summary>
-        /// <param name="connection">The items that were used.</param>
+        /// <param name="historyEntry">The items that were used.</param>
         /// <param name="showUsedItems">Whether to accept completely used items.</param>
         /// <returns>Whether this instance has any unused items, or has no used items.</returns>
         [MemberNotNullWhen(true, nameof(Name))]
-        public bool IsMatch(Preferences.Connection connection, bool showUsedItems) =>
+        public bool IsMatch(HistoryEntry historyEntry, bool showUsedItems) =>
             Name is not null &&
             (showUsedItems ||
-                connection.GetItemsOrEmpty().GetValueOrDefault(Name) is var used &&
+                historyEntry.GetItemsOrEmpty().GetValueOrDefault(Name) is var used &&
                 used is 0 ||
                 used != Count);
 
@@ -102,7 +102,7 @@ public sealed partial class Client(Yaml? yaml = null)
         /// <param name="info">The connection info to display and update the counter.</param>
         /// <param name="header">Whether to display this with <see cref="ImGui.CollapsingHeader(string)"/>.</param>
         /// <returns>Whether the parameter <paramref name="info"/> was updated.</returns>
-        public bool? Show(Preferences preferences, ref Preferences.Connection info, bool header = false)
+        public bool? Show(Preferences preferences, ref HistoryEntry info, bool header = false)
         {
             if (Name is null)
                 return false;
@@ -283,7 +283,7 @@ public sealed partial class Client(Yaml? yaml = null)
     ImmutableArray<string> _itemSuggestions = [], _locationSuggestions = [];
 
     /// <summary>Gets the last successful connection.</summary>
-    Preferences.Connection _info;
+    HistoryEntry _info;
 
     /// <summary>The attempt to login.</summary>
     Task _connectingTask = Task.CompletedTask;
@@ -298,11 +298,11 @@ public sealed partial class Client(Yaml? yaml = null)
         _errors = errors;
 
     /// <summary>Initializes a new instance of the <see cref="Client"/> class.</summary>
-    /// <param name="connection">The connection information.</param>
+    /// <param name="historyEntry">The connection information.</param>
     [CLSCompliant(false)]
-    internal Client(Preferences.Connection connection)
-        : this(connection.ToYaml()) =>
-        _info = connection;
+    internal Client(HistoryEntry historyEntry)
+        : this(historyEntry.ToYaml()) =>
+        _info = historyEntry;
 
     /// <summary>Initializes the manager.</summary>
     static Client()
@@ -462,9 +462,9 @@ public sealed partial class Client(Yaml? yaml = null)
     /// <inheritdoc />
     public override bool Equals(object? obj) => obj is Client { _instance: var i } && i == _instance;
 
-    /// <inheritdoc cref="Preferences.Connection.Equals(Preferences.Connection)"/>
+    /// <inheritdoc cref="HistoryEntry.Equals(HistoryEntry)"/>
     [CLSCompliant(false)]
-    public bool Has(Preferences.Connection connection) => _info.Equals(connection);
+    public bool Has(HistoryEntry historyEntry) => _info.Equals(historyEntry);
 
     /// <inheritdoc />
     public override int GetHashCode() => _instance;

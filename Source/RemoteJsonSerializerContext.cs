@@ -2,6 +2,6 @@
 namespace Remote;
 
 /// <summary>Contains the context used for JSON serialization.</summary>
-[JsonSerializable(typeof(JsonNode)), JsonSerializable(typeof(List<Preferences.Connection>)),
+[JsonSerializable(typeof(JsonNode)), JsonSerializable(typeof(List<HistoryEntry>)),
  JsonSourceGenerationOptions(WriteIndented = true)]
 sealed partial class RemoteJsonSerializerContext : JsonSerializerContext;
