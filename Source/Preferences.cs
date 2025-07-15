@@ -859,10 +859,11 @@ public sealed partial class Preferences
 #pragma warning restore MA0016
     {
         clientsToRegister = null;
+        var useTabs = _useTabs;
 
         if (!ImGui.BeginTabBar("Tabs", ImGuiTabBarFlags.Reorderable))
         {
-            tab = _useTabs ? null : Show(gameTime, clients);
+            tab = useTabs ? null : Show(gameTime, clients);
             return false;
         }
 
@@ -870,7 +871,7 @@ public sealed partial class Preferences
         var ret = ShowConnectionTab(clients, out clientsToRegister);
         ShowPreferences();
 
-        if (_useTabs)
+        if (useTabs)
         {
             tab = Show(gameTime, clients);
             ImGui.EndTabBar();
