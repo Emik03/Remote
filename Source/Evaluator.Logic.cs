@@ -16,10 +16,15 @@ public sealed partial record Evaluator
     public FrozenDictionary<string, int>.AlternateLookup<ReadOnlySpan<char>> YamlSpan =>
         Yaml.GetAlternateLookup<ReadOnlySpan<char>>();
 
+    /// <summary>Gets <see cref="LocationsToLogic"/> with a <see cref="ReadOnlySpan{T}"/> lookup.</summary>
+    public FrozenDictionary<string, Logic>.AlternateLookup<ReadOnlySpan<char>> LocationsToLogicSpan =>
+        LocationsToLogic.GetAlternateLookup<ReadOnlySpan<char>>();
+#pragma warning disable MA0016
     /// <summary>Determines whether the logic is fulfilled.</summary>
     /// <param name="logic">The logic to check.</param>
+    /// <param name="no">The locations that should not be expanded during <c>canReachLocation</c>.</param>
     /// <returns>Whether the parameter <paramref name="logic"/> is fulfilled.</returns>
-    public Logic? In([NotNullWhen(false)] Logic? logic) =>
+    public Logic? In([NotNullWhen(false)] Logic? logic, HashSet<string>? no = null) =>
         logic switch
         {
             null => null,
@@ -32,14 +37,16 @@ public sealed partial record Evaluator
             { IsCategoryCount: true, CategoryCount: var l } => OnCategoryCount(l) ? null : logic,
             { IsItemPercent: true, ItemPercent: var l } => OnItemPercent(l) ? null : logic,
             { IsCategoryPercent: true, CategoryPercent: var l } => OnCategoryPercent(l) ? null : logic,
-            { IsFunction: true, Function: var l } => OnFunction(logic, l),
+            { IsFunction: true, Function: var l } => OnFunction(logic, l, no ?? new(FrozenSortedDictionary.Comparer)),
             _ => throw new NotSupportedException(logic.ToString()),
         };
 
     /// <summary>Determines whether the name of the location is in-logic.</summary>
     /// <param name="location">The location to check.</param>
+    /// <param name="no">The locations that should not be expanded during <c>canReachLocation</c>.</param>
     /// <returns>Whether the parameter <paramref name="location"/> is the name of a location that is in-logic.</returns>
-    public Logic? InLogic(string location) => LocationsToLogic.TryGetValue(location, out var logic) ? In(logic) : null;
+    public Logic? InLogic(ReadOnlySpan<char> location, HashSet<string>? no = null) =>
+        LocationsToLogicSpan.TryGetValue(location, out var logic) ? In(logic) : null;
 
     /// <summary>Determines whether both spans of characters are equal in contents.</summary>
     /// <param name="next">The left-hand side.</param>
@@ -109,10 +116,12 @@ public sealed partial record Evaluator
     /// <summary>Determines whether the function returns <see langword="true"/>.</summary>
     /// <param name="logic">The logic.</param>
     /// <param name="tuple">The tuple to deconstruct.</param>
+    /// <param name="no">The locations that should not be expanded during <c>canReachLocation</c>.</param>
     /// <returns>Whether the function returns <see langword="true"/>.</returns>
-    Logic? OnFunction(Logic? logic, (ReadOnlyMemory<char> Name, ReadOnlyMemory<char> Args) tuple) =>
+    Logic? OnFunction(Logic? logic, (ReadOnlyMemory<char> Name, ReadOnlyMemory<char> Args) tuple, HashSet<string> no) =>
         tuple.Name.Span.Trim() switch
         {
+            "canReachLocation" => CanReachLocation(tuple.Args, no),
             nameof(ItemValue) => ItemValue(tuple.Args) ? null : logic,
             nameof(OptAll) => OptAll(tuple.Args),
             nameof(OptOne) => OptOne(tuple.Args),
@@ -147,18 +156,6 @@ public sealed partial record Evaluator
     /// <param name="yamlOption">The yaml option to check.</param>
     /// <returns>Whether the yaml option is enabled.</returns>
     bool YamlEnabled(ReadOnlyMemory<char> yamlOption) => YamlSpan[yamlOption.Span] is not 0;
-
-    /// <summary>Determines whether the item is disabled by yaml options, or the requirement itself is met.</summary>
-    /// <param name="item">The item to check.</param>
-    /// <returns>Whether the item is disabled by yaml options, or the requirement itself is met.</returns>
-    Logic? OptOne(ReadOnlyMemory<char> item) =>
-        IsItemDisabled(item.SplitOn(':').First.Span) ? null : In(Logic.TokenizeAndParse(item));
-
-    /// <summary>Evaluates <see cref="In"/> but with <see cref="IsOptAll"/> enabled.</summary>
-    /// <param name="memory">The string of characters to parse.</param>
-    /// <returns>The returned value from <see cref="In"/>.</returns>
-    Logic? OptAll(ReadOnlyMemory<char> memory) =>
-        (IsOptAll ? this : this with { IsOptAll = true }).In(Logic.TokenizeAndParse(memory));
 
     /// <summary>Determines whether the amount of a phantom item is sufficiently obtained.</summary>
     /// <param name="phantomItem">The phantom item to check.</param>
@@ -253,4 +250,23 @@ public sealed partial record Evaluator
     /// </returns>
     Func<ItemInfo, bool> IsItemInCategory(ReadOnlyMemory<char> category) =>
         item => ItemToCategories.TryGetValue(item.ItemName, out var value) && value.Any(x => Eq(x, category));
+
+    /// <summary>Determines whether the location is reachable.</summary>
+    /// <param name="location">The location to check.</param>
+    /// <param name="seen">Locations that were previously processed.</param>
+    /// <returns>Whether the parameter <paramref name="location"/> represents an unreachable location.</returns>
+    Logic? CanReachLocation(ReadOnlyMemory<char> location, HashSet<string> seen) =>
+        location.Span is var l && seen.GetAlternateLookup<ReadOnlySpan<char>>().Add(l) ? InLogic(l, seen) : null;
+
+    /// <summary>Determines whether the item is disabled by yaml options, or the requirement itself is met.</summary>
+    /// <param name="item">The item to check.</param>
+    /// <returns>Whether the item is disabled by yaml options, or the requirement itself is met.</returns>
+    Logic? OptOne(ReadOnlyMemory<char> item) =>
+        IsItemDisabled(item.SplitOn(':').First.Span) ? null : In(Logic.TokenizeAndParse(item));
+
+    /// <summary>Evaluates <see cref="In"/> but with <see cref="IsOptAll"/> enabled.</summary>
+    /// <param name="memory">The string of characters to parse.</param>
+    /// <returns>The returned value from <see cref="In"/>.</returns>
+    Logic? OptAll(ReadOnlyMemory<char> memory) =>
+        (IsOptAll ? this : this with { IsOptAll = true }).In(Logic.TokenizeAndParse(memory));
 }
