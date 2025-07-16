@@ -952,12 +952,7 @@ public sealed partial class Preferences
         if (!_alwaysShowChat)
             ImGui.Checkbox("Move to chat tab when releasing", ref _moveToChatTab);
 
-        _ = ImGui.Checkbox(
-            DesktopNotification.IsSupported
-                ? "Push notifications for new items and DeathLink"
-                : "Popups for new items and DeathLink",
-            ref _desktopNotifications
-        );
+        _ = ImGui.Checkbox("Push notifications for new items and DeathLink", ref _desktopNotifications);
     }
 
     /// <summary>Shows the style header and options.</summary>

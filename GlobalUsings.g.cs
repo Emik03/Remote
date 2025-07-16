@@ -213,7 +213,6 @@ global using global::CommunityToolkit.HighPerformance.Memory.Views;
 global using global::CommunityToolkit.HighPerformance.Streams;
 global using global::DesktopNotifications;
 global using global::DesktopNotifications.FreeDesktop;
-global using global::DesktopNotifications.Windows;
 global using global::DotNetProjectFile;
 global using global::DotNetProjectFile.Analyzers;
 global using global::DotNetProjectFile.Analyzers.EditorConfig;
@@ -412,11 +411,6 @@ global using global::Microsoft.Extensions.DependencyInjection.Extensions;
 global using global::Microsoft.Extensions.Internal;
 global using global::Microsoft.SqlServer;
 global using global::Microsoft.SqlServer.Server;
-global using global::Microsoft.Toolkit;
-global using global::Microsoft.Toolkit.Uwp;
-global using global::Microsoft.Toolkit.Uwp.Notifications;
-global using global::Microsoft.Toolkit.Uwp.Notifications.Adaptive;
-global using global::Microsoft.Toolkit.Uwp.Notifications.Adaptive.Elements;
 global using global::Microsoft.VisualBasic;
 global using global::Microsoft.VisualBasic.CompilerServices;
 global using global::Microsoft.VisualBasic.FileIO;
@@ -919,8 +913,6 @@ namespace DesktopNotifications { }
 
 namespace DesktopNotifications.FreeDesktop { }
 
-namespace DesktopNotifications.Windows { }
-
 namespace DotNetProjectFile { }
 
 namespace DotNetProjectFile.Analyzers { }
@@ -1316,16 +1308,6 @@ namespace Microsoft.Extensions.Internal { }
 namespace Microsoft.SqlServer { }
 
 namespace Microsoft.SqlServer.Server { }
-
-namespace Microsoft.Toolkit { }
-
-namespace Microsoft.Toolkit.Uwp { }
-
-namespace Microsoft.Toolkit.Uwp.Notifications { }
-
-namespace Microsoft.Toolkit.Uwp.Notifications.Adaptive { }
-
-namespace Microsoft.Toolkit.Uwp.Notifications.Adaptive.Elements { }
 
 namespace Microsoft.VisualBasic { }
 

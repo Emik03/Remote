@@ -505,7 +505,7 @@ public sealed partial class Client(Yaml? yaml = null)
             return;
 
         var body = DeathLinkException.MessageOf(deathLink);
-        DesktopNotification.Notify($"{nameof(DeathLink)} from {deathLink.Source}", body);
+        DesktopNotification.Notify($"{nameof(DeathLink)} from {deathLink.Source}", body, true);
     }
 
     /// <summary>Invoked when a new message is received, adds the message to the log.</summary>
@@ -619,7 +619,7 @@ public sealed partial class Client(Yaml? yaml = null)
                .Select(x => $"• {x.Key}{(x.Value is 1 ? "" : $" ({x.Value})")}");
 
             if (enumerable.Conjoin('\n') is var body && !string.IsNullOrEmpty(body))
-                DesktopNotification.Notify("New items received!", body);
+                DesktopNotification.Notify("New items received!", body, false);
         }
 
         (_lastItems, var locationHelper) = (items, _session.Locations);
