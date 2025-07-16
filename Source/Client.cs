@@ -467,13 +467,6 @@ public sealed partial class Client(Yaml? yaml = null)
     static bool IsReleasable(KeyValuePair<string, CheckboxStatus> x) =>
         x.Value is (_, LocationStatus.Reachable or LocationStatus.ProbablyReachable or LocationStatus.OutOfLogic, true);
 
-    /// <summary>Determines whether the two sequences start with the same content but are still different.</summary>
-    /// <param name="user">The user input.</param>
-    /// <param name="match">The value to match against.</param>
-    /// <returns>Whether both the parameters <paramref name="user"/> and <paramref name="match"/> are equal.</returns>
-    static bool StrictStartsWith(ReadOnlySpan<char> user, string match) =>
-        match.Length != user.Length && match.StartsWith(user, StringComparison.Ordinal);
-
     /// <summary>Converts the exception to the <see cref="string"/> array.</summary>
     /// <param name="e">The exception to convert.</param>
     /// <param name="additions">The additional strings to add before-hand.</param>
@@ -842,8 +835,8 @@ public sealed partial class Client(Yaml? yaml = null)
     /// <param name="message">The message to compare.</param>
     /// <param name="next">The next span to match against.</param>
     /// <returns>The suggestions.</returns>
-    ImmutableArray<string> GetSuggestions(string message, out ReadOnlySpan<char> next) =>
-        (message.SplitSpanWhitespace() is var (first, rest) ? first : "") switch
+    ImmutableArray<string> GetSuggestions(string message, out ReadOnlyMemory<char> next) =>
+        (message.SplitWhitespace() is var (first, rest) ? first : default).Span switch
         {
             "!getitem" or "!hint" when (next = rest.Body) is var _ => _itemSuggestions,
             "!hint_location" or "!missing" when (next = rest.Body) is var _ => _locationSuggestions,

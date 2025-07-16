@@ -648,26 +648,24 @@ public sealed partial class Client
     /// <param name="isChatTab">Whether this was called from the chat tab.</param>
     void ShowAutocomplete(Preferences preferences, ref readonly string message, bool isChatTab)
     {
-        Debug.Assert(_session is not null);
+        static bool EqualsIgnoreCase(char x, char y) => x.ToUpper() == y.ToUpper();
 
-        if (preferences.Suggestions <= 0 || string.IsNullOrWhiteSpace(message))
+        const int Frames = 3;
+
+        if (_hoverFrameCount < 0)
+        {
+            _hoverFrameCount++;
             return;
+        }
 
-        var sum = 0;
-        var suggestions = GetSuggestions(message, out var user);
-
-        foreach (var suggestion in suggestions)
-            if (StrictStartsWith(user, suggestion) && ++sum >= preferences.Suggestions)
-                goto HasAnythingToRender;
-
-        if (sum is 0)
+        if (preferences.Suggestions <= 0 ||
+            string.IsNullOrWhiteSpace(message) ||
+            GetSuggestions(message, out var user) is not { IsEmpty: false } suggestions)
             return;
-
-    HasAnythingToRender:
 
         var pos = ImGui.GetCursorPos();
         var size = ImGui.CalcTextSize(message);
-        var length = preferences.Suggestions.Min(sum);
+        var length = preferences.Suggestions.Min(suggestions.Length);
         pos.X += !isChatTab && preferences.SideBySide ? ImGui.GetWindowSize().X : 0;
         pos.Y += size.Y * -length + (!isChatTab && !preferences.SideBySide ? ImGui.GetWindowSize().Y : 0);
         var (x, y) = (ImGui.GetContentRegionAvail().X, size.Y * (length + 1));
@@ -681,10 +679,12 @@ public sealed partial class Client
             return;
 
         ImGui.SetWindowFontScale(preferences.UiScale);
+        var last = message.Nth(^1);
 
-        foreach (var suggestion in suggestions)
-            if (StrictStartsWith(user, suggestion) && PasteIfClicked(user, suggestion, message.Nth(^1)))
-                break;
+        if (suggestions.OrderByDescending(x => user.Span.JaroEmik(x, EqualsIgnoreCase))
+           .ThenBy(x => x, FrozenSortedDictionary.Comparer)
+           .Any(x => PasteIfClicked(user, x, last)))
+            _hoverFrameCount = -Frames;
 
         if (_hoverFrameCount > 0)
             _hoverFrameCount--;
@@ -1215,7 +1215,7 @@ public sealed partial class Client
     /// <param name="user">The user input.</param>
     /// <param name="match">The match.</param>
     /// <param name="last">The last character from the user input.</param>
-    bool PasteIfClicked(ReadOnlySpan<char> user, string match, char? last)
+    bool PasteIfClicked(ReadOnlyMemory<char> user, string match, char? last)
     {
         const int Frames = 3;
         _ = ImGui.Selectable(match);
@@ -1229,13 +1229,20 @@ public sealed partial class Client
         if (!ImGui.IsMouseDown(ImGuiMouseButton.Left) || !match.Equals(_lastSuggestion, StringComparison.Ordinal))
             return false;
 
-        ImGui.CloseCurrentPopup();
         _sentChatMessageLastFrame = true;
+        ImGui.CloseCurrentPopup();
+        var io = ImGui.GetIO();
+
+        for (var i = 0; i < user.Length; i++)
+        {
+            io.AddKeyEvent(ImGuiKey.Backspace, true);
+            io.AddKeyEvent(ImGuiKey.Backspace, false);
+        }
 
         if (last?.IsWhitespace() is false && !s_commands.Contains(match, FrozenSortedDictionary.Comparer))
             ImGui.GetIO().AddInputCharactersUTF8([' ']);
 
-        ImGui.GetIO().AddInputCharactersUTF8(match.AsSpan(user.Length));
+        ImGui.GetIO().AddInputCharactersUTF8(match);
 
         if (match is "!getitem" or "!hint" or "!hint_location" or "!missing")
             ImGui.GetIO().AddInputCharactersUTF8([' ']);
