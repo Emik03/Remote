@@ -554,31 +554,15 @@ public sealed partial class Preferences
 #endif
     }
 
-    /// <summary>Convenience function for displaying a tooltip with text scaled by the user preferences.</summary>
-    /// <param name="text">The text to display.</param>
-    /// <param name="colored">Whether to make the text colorful.</param>
-    public void Tooltip(string? text, bool colored = false)
+    /// <summary>Adds padding.</summary>
+    public void Pad(string? text, string? copy)
     {
-        if (text is null || !ImGui.IsItemHovered())
+        if (copy is not null && !FrozenSortedDictionary.Comparer.Equals(text, copy) ||
+            UiPadding is not [var first, var second])
             return;
 
-        ImGui.PushStyleColor(ImGuiCol.PopupBg, this[AppPalette.Count + (int)ImGuiCol.PopupBg]);
-
-        if (!ImGui.BeginTooltip())
-        {
-            ImGui.PopStyleColor();
-            return;
-        }
-
-        ImGui.SetWindowFontScale(UiScale);
-
-        if (ShownTooltip)
-            ImGui.NewLine();
-
-        ShownTooltip = true;
-        Wrapped(text, ImGui.GetMainViewport().Size.X, colored);
-        ImGui.EndTooltip();
-        ImGui.PopStyleColor();
+        ImGui.Dummy(new(first, second));
+        ImGui.SameLine();
     }
 
     /// <summary>Shows the text.</summary>
@@ -646,6 +630,33 @@ public sealed partial class Preferences
             historyEntry = new(historyEntry, next.GetLocationsOrEmpty(), next.Alias, next.Color);
             next = historyEntry;
         }
+    }
+
+    /// <summary>Convenience function for displaying a tooltip with text scaled by the user preferences.</summary>
+    /// <param name="text">The text to display.</param>
+    /// <param name="colored">Whether to make the text colorful.</param>
+    public void Tooltip(string? text, bool colored = false)
+    {
+        if (text is null || !ImGui.IsItemHovered())
+            return;
+
+        ImGui.PushStyleColor(ImGuiCol.PopupBg, this[AppPalette.Count + (int)ImGuiCol.PopupBg]);
+
+        if (!ImGui.BeginTooltip())
+        {
+            ImGui.PopStyleColor();
+            return;
+        }
+
+        ImGui.SetWindowFontScale(UiScale);
+
+        if (ShownTooltip)
+            ImGui.NewLine();
+
+        ShownTooltip = true;
+        Wrapped(text, ImGui.GetMainViewport().Size.X, colored);
+        ImGui.EndTooltip();
+        ImGui.PopStyleColor();
     }
 
     /// <summary>Invokes <see cref="ImGui.BeginChild(string)"/>.</summary>
@@ -905,17 +916,6 @@ public sealed partial class Preferences
     static string NamesSeparatedByZeros<T>()
         where T : struct, Enum =>
         Enum.GetNames<T>().Append("\0").Conjoin('\0');
-
-    /// <summary>Adds padding.</summary>
-    void Pad(string? text, string? copy)
-    {
-        if (copy is not null && !FrozenSortedDictionary.Comparer.Equals(text, copy) ||
-            UiPadding is not [var first, var second])
-            return;
-
-        ImGui.Dummy(new(first, second));
-        ImGui.SameLine();
-    }
 
     /// <summary>Displays the preferences tab.</summary>
     void ShowPreferences()

@@ -38,10 +38,18 @@ public sealed partial class Client
     bool? _isAttemptingToRelease;
 
     /// <summary>Contains the last amount of checks.</summary>
-    int _itemType, _lastItemCount = int.MinValue, _lastLocationCount = int.MaxValue, _locationSort, _sentMessagesIndex;
+    int _hoverFrameCount,
+        _itemType,
+        _lastItemCount = int.MinValue,
+        _lastLocationCount = int.MaxValue,
+        _locationSort,
+        _sentMessagesIndex;
 
     /// <summary>The current state of the text field.</summary>
-    string _deathLinkMessage = "", _itemSearch = "", _lastSuggestion = "", _locationSearch = "";
+    string _deathLinkMessage = "", _itemSearch = "", _locationSearch = "";
+
+    /// <summary>The last suggestion that was hovered over.</summary>
+    string? _lastSuggestion;
 
     /// <summary>The amount of time before release.</summary>
     TimeSpan _confirmationTimer;
@@ -661,10 +669,10 @@ public sealed partial class Client
         var size = ImGui.CalcTextSize(message);
         var length = preferences.Suggestions.Min(sum);
         pos.X += !isChatTab && preferences.SideBySide ? ImGui.GetWindowSize().X : 0;
-        pos.Y += size.Y * -length;
+        pos.Y += size.Y * -length + (!isChatTab && !preferences.SideBySide ? ImGui.GetWindowSize().Y : 0);
         var (x, y) = (ImGui.GetContentRegionAvail().X, size.Y * (length + 1));
-        ImGui.SetNextWindowPos(pos);
         ImGui.SetNextWindowSizeConstraints(default, new(x, y));
+        ImGui.SetNextWindowPos(pos);
 
         if (!ImGui.IsPopupOpen("Autocomplete"))
             ImGui.OpenPopup("Autocomplete");
@@ -677,6 +685,11 @@ public sealed partial class Client
         foreach (var suggestion in suggestions)
             if (StrictStartsWith(user, suggestion) && PasteIfClicked(user, suggestion, message.Nth(^1)))
                 break;
+
+        if (_hoverFrameCount > 0)
+            _hoverFrameCount--;
+        else
+            _lastSuggestion = null;
 
         ImGui.EndPopup();
     }
@@ -967,13 +980,11 @@ public sealed partial class Client
         for (; startIndex < _messages.Count && _messages[startIndex].Parts is var parts; startIndex++)
         {
             var first = true;
+            preferences.Pad(null, null);
             var message = parts.Conjoin("");
 
             foreach (var part in parts)
             {
-                if (!first || (first = false))
-                    ImGui.SameLine(0, 0);
-
                 var priority = part.PaletteColor switch
                 {
                     PaletteColor.SlateBlue => AppPalette.Useful,
@@ -991,14 +1002,15 @@ public sealed partial class Client
                     _ => AppPalette.Neutral,
                 };
 
+                if (!first)
+                    ImGui.SameLine(0, 0);
+
+                first = false;
                 preferences.ShowText(part.Text, palette, message);
 
                 if (priority is not AppPalette.Neutral)
                     preferences.Tooltip($"Item Class: {priority}");
             }
-
-            for (var i = 0; i < 5; i++)
-                ImGui.Spacing();
         }
     }
 
@@ -1205,10 +1217,14 @@ public sealed partial class Client
     /// <param name="last">The last character from the user input.</param>
     bool PasteIfClicked(ReadOnlySpan<char> user, string match, char? last)
     {
+        const int Frames = 3;
         _ = ImGui.Selectable(match);
 
         if (ImGui.IsItemHovered())
+        {
+            _hoverFrameCount = Frames;
             _lastSuggestion = match;
+        }
 
         if (!ImGui.IsMouseDown(ImGuiMouseButton.Left) || !match.Equals(_lastSuggestion, StringComparison.Ordinal))
             return false;
