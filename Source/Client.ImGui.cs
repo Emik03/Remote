@@ -443,6 +443,12 @@ public sealed partial class Client
         var hasDeathLink = _info.HasDeathLink;
         _ = ImGui.Checkbox($"Enable {nameof(DeathLink)}", ref hasDeathLink);
 
+        if (hasDeathLink)
+        {
+            ImGui.SameLine();
+            ImGui.Checkbox($"Crash {nameof(Remote)} when receiving DeathLink", ref _crashOnDeathLink);
+        }
+
         if (hasDeathLink != _info.HasDeathLink)
         {
             if (hasDeathLink)

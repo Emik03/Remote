@@ -241,7 +241,7 @@ public sealed partial class Client(Yaml? yaml = null)
     readonly Yaml _yaml = yaml ?? new();
 
     /// <summary>Whether to send push notifications for receiving new items.</summary>
-    bool _pushNotifs;
+    bool _crashOnDeathLink, _pushNotifs;
 
     /// <summary>Whether this client can be or has reached its goal.</summary>
     /// <remarks><para>
@@ -498,14 +498,13 @@ public sealed partial class Client(Yaml? yaml = null)
             [deathLink.Source, deathLink.Timestamp.ToString("O", CultureInfo.InvariantCulture), deathLink.Cause]
         );
 
+        if (_crashOnDeathLink)
+            throw new DeathLinkException(deathLink);
+
         if (!_pushNotifs)
             return;
 
-        var body = deathLink.Cause ??
-            (Random.Shared.Next(0, 1000) is 0
-                ? "death.fell.accident.water"
-                : $"{deathLink.Source} fell out of this world.");
-
+        var body = DeathLinkException.MessageOf(deathLink);
         DesktopNotification.Notify($"{nameof(DeathLink)} from {deathLink.Source}", body);
     }
 
