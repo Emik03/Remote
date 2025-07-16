@@ -446,7 +446,15 @@ public sealed partial class Client
         if (hasDeathLink)
         {
             ImGui.SameLine();
-            ImGui.Checkbox($"Crash {nameof(Remote)} when receiving DeathLink", ref _crashOnDeathLink);
+            var crashOnDeathLink = _crashOnDeathLink;
+            _ = ImGui.Checkbox($"Crash {nameof(Remote)} when receiving DeathLink", ref _crashOnDeathLink);
+
+            if (_crashOnDeathLink != crashOnDeathLink)
+                _session?.ConnectionInfo.UpdateConnectionOptions(
+                    _crashOnDeathLink
+                        ? ["AP", nameof(Remote), nameof(DeathLink), "Will Crash on DeathLink"]
+                        : ["AP", nameof(Remote), nameof(DeathLink)]
+                );
         }
 
         if (hasDeathLink != _info.HasDeathLink)
