@@ -3,13 +3,13 @@ namespace Remote;
 #pragma warning disable CS9113
 /// <summary>
 /// Represents the set of requirements in order for a location or region to be considered reachable.
-/// Traversal to determine whether this instance is fulfilled can be seen in <see cref="Evaluator"/>.
+/// Traversal to determine whether this instance is fulfilled can be seen in <see cref="ManualEvaluator"/>.
 /// </summary>
 [Choice] // ReSharper disable once ClassNeverInstantiated.Global
-public sealed partial class Logic(
-    Logic? grouping,
-    (Logic Left, Logic Right) and,
-    (Logic Left, Logic Right) or,
+public sealed partial class ManualLogic(
+    ManualLogic? grouping,
+    (ManualLogic Left, ManualLogic Right) and,
+    (ManualLogic Left, ManualLogic Right) or,
     ReadOnlyMemory<char> item,
     ReadOnlyMemory<char> category,
     (ReadOnlyMemory<char> Item, ReadOnlyMemory<char> Count) itemCount,
@@ -21,27 +21,27 @@ public sealed partial class Logic(
 {
     /// <summary>Encapsulates the rented array from <see cref="ArrayPool{Token}.Shared"/>.</summary>
     /// <param name="tokens">The rented array.</param>
-    struct RentedTokenArray(Token[] tokens) : ICollection<Token>, IDisposable, IReadOnlyList<Token>
+    struct RentedTokenArray(ManualToken[] tokens) : ICollection<ManualToken>, IDisposable, IReadOnlyList<ManualToken>
     {
         /// <summary>Initializes a new instance of the <see cref="RentedTokenArray"/> struct.</summary>
         /// <param name="capacity">The minimum length of the array.</param>
         public RentedTokenArray(int capacity)
-            : this(ArrayPool<Token>.Shared.Rent(capacity)) { }
+            : this(ArrayPool<ManualToken>.Shared.Rent(capacity)) { }
 
         /// <inheritdoc />
-        public readonly Token this[int index] => tokens[index];
+        public readonly ManualToken this[int index] => tokens[index];
 
         /// <summary>Gets the segment of what was written.</summary>
-        public readonly ArraySegment<Token> Segment => new(tokens, 0, Count);
+        public readonly ArraySegment<ManualToken> Segment => new(tokens, 0, Count);
 
         /// <inheritdoc />
-        readonly bool ICollection<Token>.IsReadOnly => false;
+        readonly bool ICollection<ManualToken>.IsReadOnly => false;
 
         /// <inheritdoc cref="IReadOnlyCollection{Token}.Count"/>
         public int Count { get; private set; }
 
         /// <inheritdoc />
-        public void Add(Token item)
+        public void Add(ManualToken item)
         {
             if (Count < tokens.Length)
                 tokens[Count++] = item;
@@ -51,16 +51,16 @@ public sealed partial class Logic(
         public void Clear() => Count = 0;
 
         /// <inheritdoc />
-        public readonly void CopyTo(Token[] array, int arrayIndex) => tokens.AsSpan().CopyTo(array.AsSpan(arrayIndex));
+        public readonly void CopyTo(ManualToken[] array, int arrayIndex) => tokens.AsSpan().CopyTo(array.AsSpan(arrayIndex));
 
         /// <inheritdoc />
-        public readonly void Dispose() => ArrayPool<Token>.Shared.Return(tokens);
+        public readonly void Dispose() => ArrayPool<ManualToken>.Shared.Return(tokens);
 
         /// <inheritdoc />
-        public readonly bool Contains(Token item) => tokens.Contains(item);
+        public readonly bool Contains(ManualToken item) => tokens.Contains(item);
 
         /// <inheritdoc />
-        public bool Remove(Token item)
+        public bool Remove(ManualToken item)
         {
             var i = tokens.IndexOf(item);
 
@@ -75,7 +75,7 @@ public sealed partial class Logic(
         readonly IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
         /// <inheritdoc />
-        public readonly IEnumerator<Token> GetEnumerator() => tokens.AsEnumerable().GetEnumerator();
+        public readonly IEnumerator<ManualToken> GetEnumerator() => tokens.AsEnumerable().GetEnumerator();
     }
 
     /// <summary>Whether to show errors in <see cref="MessageBox.Show"/>.</summary>
@@ -88,18 +88,18 @@ public sealed partial class Logic(
     public bool IsYamlFunction =>
         Function.Name.Span is "YamlCompare" or "YamlDisabled" or "YamlEnabled" || Grouping?.IsYamlFunction is true;
 
-    /// <summary>Gets the number of <see cref="Logic"/> instances, including itself.</summary>
+    /// <summary>Gets the number of <see cref="ManualLogic"/> instances, including itself.</summary>
     // ReSharper disable ConditionalAccessQualifierIsNonNullableAccordingToAPIContract
     public int Count => (_grouping?.Count ?? 0) + (_and.Left?.Count ?? 0) + (_and.Right?.Count ?? 0) + 1;
 
     /// <summary>Makes a requirement that either of the instances should be fulfilled.</summary>
     /// <param name="l">The left-hand side.</param>
     /// <param name="r">The right-hand side.</param>
-    /// <returns>The new <see cref="Logic"/> instance.</returns>
+    /// <returns>The new <see cref="ManualLogic"/> instance.</returns>
     // ReSharper restore ConditionalAccessQualifierIsNonNullableAccordingToAPIContract
     [return: NotNullIfNotNull(nameof(l)), NotNullIfNotNull(nameof(r))]
     [Pure] // ReSharper disable once ReturnTypeCanBeNotNullable
-    public static Logic? operator |(Logic? l, Logic? r) =>
+    public static ManualLogic? operator |(ManualLogic? l, ManualLogic? r) =>
         l is null ? l.Check(r) : // Identity Law
         r is null ? r.Check(l) :
         l.StructuralEquals(r) ? l.Check(r) : // Idempotent Law
@@ -126,10 +126,10 @@ public sealed partial class Logic(
     /// <summary>Makes a requirement that both of the instances should be fulfilled.</summary>
     /// <param name="l">The left-hand side.</param>
     /// <param name="r">The right-hand side.</param>
-    /// <returns>The new <see cref="Logic"/> instance.</returns>
+    /// <returns>The new <see cref="ManualLogic"/> instance.</returns>
     [return: NotNullIfNotNull(nameof(l)), NotNullIfNotNull(nameof(r))]
     [Pure] // ReSharper disable once ReturnTypeCanBeNotNullable
-    public static Logic? operator &(Logic? l, Logic? r) =>
+    public static ManualLogic? operator &(ManualLogic? l, ManualLogic? r) =>
         l is null ? r.Check(l) : // Annulment Law
         r is null ? l.Check(r) :
         l.StructuralEquals(r) ? l.Check(r) : // Idempotent Law
@@ -155,32 +155,32 @@ public sealed partial class Logic(
         // We cannot optimize this.
         OfAnd(l, r);
 
-    /// <summary>Parses the sequence of tokens into the <see cref="Logic"/> object.</summary>
+    /// <summary>Parses the sequence of tokens into the <see cref="ManualLogic"/> object.</summary>
     /// <typeparam name="T">The type of list of tokens.</typeparam>
     /// <param name="tokens">The list of tokens.</param>
-    /// <returns>The <see cref="Logic"/> object if parsing was successful, otherwise <see langword="null"/>.</returns>
-    public static Logic? Parse<T>(T tokens)
-        where T : IReadOnlyList<Token>
+    /// <returns>The <see cref="ManualLogic"/> object if parsing was successful, otherwise <see langword="null"/>.</returns>
+    public static ManualLogic? Parse<T>(T tokens)
+        where T : IReadOnlyList<ManualToken>
     {
         var i = 0;
         var ret = Binary(tokens, ref i);
         return i + 1 == tokens.Count && tokens[i].IsEOL ? ret : Error(tokens, i, false);
     }
 
-    /// <summary>Parses the <see cref="ReadOnlyMemory{T}"/> directly to the <see cref="Logic"/> object.</summary>
+    /// <summary>Parses the <see cref="ReadOnlyMemory{T}"/> directly to the <see cref="ManualLogic"/> object.</summary>
     /// <param name="str">The sequences of characters to parse.</param>
-    /// <returns>The <see cref="Logic"/> object if parsing was successful, otherwise <see langword="null"/>.</returns>
-    public static Logic? TokenizeAndParse(string str) => TokenizeAndParse(str.AsMemory());
+    /// <returns>The <see cref="ManualLogic"/> object if parsing was successful, otherwise <see langword="null"/>.</returns>
+    public static ManualLogic? TokenizeAndParse(string str) => TokenizeAndParse(str.AsMemory());
 
-    /// <summary>Parses the <see cref="ReadOnlyMemory{T}"/> directly to the <see cref="Logic"/> object.</summary>
+    /// <summary>Parses the <see cref="ReadOnlyMemory{T}"/> directly to the <see cref="ManualLogic"/> object.</summary>
     /// <param name="memory">The sequences of characters to parse.</param>
-    /// <returns>The <see cref="Logic"/> object if parsing was successful, otherwise <see langword="null"/>.</returns>
-    public static Logic? TokenizeAndParse(ReadOnlyMemory<char> memory)
+    /// <returns>The <see cref="ManualLogic"/> object if parsing was successful, otherwise <see langword="null"/>.</returns>
+    public static ManualLogic? TokenizeAndParse(ReadOnlyMemory<char> memory)
     {
         // Most compact valid logic possible is a repeated sequence of '|a:1%|OR|a:1%|OR|a:1%|OR|a:1%|…'.
         const int MinimumValidLogic = 8;
         RentedTokenArray array = new(memory.Length - (memory.Length + 1) / MinimumValidLogic);
-        Token.Tokenize(memory, ref array);
+        ManualToken.Tokenize(memory, ref array);
         var ret = Parse(array.Segment);
 #pragma warning disable IDISP017
         array.Dispose();
@@ -191,7 +191,7 @@ public sealed partial class Logic(
     /// <summary>Determines whether logic contains structurally the same data.</summary>
     /// <param name="other">The logic to compare to.</param>
     /// <returns>Whether both instances are equal.</returns>
-    public bool StructuralEquals(Logic other) =>
+    public bool StructuralEquals(ManualLogic other) =>
         other._grouping is { } otherGrouping // ReSharper disable once TailRecursiveCall
             ? StructuralEquals(otherGrouping)
             : _grouping?.StructuralEquals(other) ??
@@ -205,10 +205,10 @@ public sealed partial class Logic(
 
     /// <summary>Converts this instance back into the <see cref="string"/> representation.</summary>
     /// <param name="and">
-    /// The string to insert between two <see cref="Logic"/> instances to indicate an <c>AND</c> operation.
+    /// The string to insert between two <see cref="ManualLogic"/> instances to indicate an <c>AND</c> operation.
     /// </param>
     /// <param name="or">
-    /// The string to insert between two <see cref="Logic"/> instances to indicate an <c>OR</c> operation.
+    /// The string to insert between two <see cref="ManualLogic"/> instances to indicate an <c>OR</c> operation.
     /// </param>
     /// <returns>The <see cref="string"/> representation that can be used to reconstruct this instance.</returns>
     public string ToBooleanAlgebra(string and, string or) => ToBooleanAlgebra(and, or, []);
@@ -237,9 +237,9 @@ public sealed partial class Logic(
     /// <typeparam name="T">The type of list of tokens.</typeparam>
     /// <param name="tokens">The list of tokens.</param>
     /// <param name="i">The current index.</param>
-    /// <returns>The <see cref="Logic"/> object if parsing was successful, otherwise <see langword="null"/>.</returns>
-    static Logic? Binary<T>(T tokens, ref int i)
-        where T : IReadOnlyList<Token>
+    /// <returns>The <see cref="ManualLogic"/> object if parsing was successful, otherwise <see langword="null"/>.</returns>
+    static ManualLogic? Binary<T>(T tokens, ref int i)
+        where T : IReadOnlyList<ManualToken>
     {
         if (Unary(tokens, ref i) is not { } left)
             return Error(tokens, i, false);
@@ -259,10 +259,10 @@ public sealed partial class Logic(
     /// <typeparam name="T">The type of list of tokens.</typeparam>
     /// <param name="tokens">The list of tokens.</param>
     /// <param name="i">The current index.</param>
-    /// <returns>The <see cref="Logic"/> object if parsing was successful, otherwise <see langword="null"/>.</returns>
+    /// <returns>The <see cref="ManualLogic"/> object if parsing was successful, otherwise <see langword="null"/>.</returns>
     // ReSharper disable DuplicatedSequentialIfBodies
-    static Logic? Unary<T>(T tokens, ref int i)
-        where T : IReadOnlyList<Token>
+    static ManualLogic? Unary<T>(T tokens, ref int i)
+        where T : IReadOnlyList<ManualToken>
     {
         if (tokens[i].IsPipe)
             return Pipe(tokens, ref i);
@@ -283,9 +283,9 @@ public sealed partial class Logic(
     /// <typeparam name="T">The type of list of tokens.</typeparam>
     /// <param name="tokens">The list of tokens.</param>
     /// <param name="i">The current index.</param>
-    /// <returns>The <see cref="Logic"/> object if parsing was successful, otherwise <see langword="null"/>.</returns>
-    static Logic? Pipe<T>(T tokens, ref int i)
-        where T : IReadOnlyList<Token>
+    /// <returns>The <see cref="ManualLogic"/> object if parsing was successful, otherwise <see langword="null"/>.</returns>
+    static ManualLogic? Pipe<T>(T tokens, ref int i)
+        where T : IReadOnlyList<ManualToken>
     {
         var isCategory = tokens[++i].IsAt && i++ is var _;
 
@@ -335,9 +335,9 @@ public sealed partial class Logic(
     /// <typeparam name="T">The type of list of tokens.</typeparam>
     /// <param name="tokens">The list of tokens.</param>
     /// <param name="i">The current index.</param>
-    /// <returns>The <see cref="Logic"/> object if parsing was successful, otherwise <see langword="null"/>.</returns>
-    static Logic? Curly<T>(T tokens, ref int i)
-        where T : IReadOnlyList<Token>
+    /// <returns>The <see cref="ManualLogic"/> object if parsing was successful, otherwise <see langword="null"/>.</returns>
+    static ManualLogic? Curly<T>(T tokens, ref int i)
+        where T : IReadOnlyList<ManualToken>
     {
         if (tokens[++i] is not { IsIdent: true, Ident: var name })
             return Error(tokens, i);
@@ -362,13 +362,13 @@ public sealed partial class Logic(
     /// <typeparam name="T">The type of list of tokens.</typeparam>
     /// <param name="tokens">The list of tokens.</param>
     /// <param name="i">The current index.</param>
-    /// <param name="hasConsumedMismatchedToken">
+    /// <param name="hasConsumedToken">
     /// Whether the mismatched token was consumed, in which case the previous token should be highlighted.
     /// </param>
     /// <param name="line">The line number to show where the error occured from.</param>
-    /// <returns>The <see cref="Logic"/> object if parsing was successful, otherwise <see langword="null"/>.</returns>
-    static Logic? Error<T>(T tokens, int i, bool hasConsumedMismatchedToken = true, [CallerLineNumber] int line = 0)
-        where T : IReadOnlyList<Token>
+    /// <returns>The <see cref="ManualLogic"/> object if parsing was successful, otherwise <see langword="null"/>.</returns>
+    static ManualLogic? Error<T>(T tokens, int i, bool hasConsumedToken = true, [CallerLineNumber] int line = 0)
+        where T : IReadOnlyList<ManualToken>
     {
         async Task? DisplayErrorAsync()
         {
@@ -377,8 +377,8 @@ public sealed partial class Logic(
             IEnumerable<string> buttons = ["Dismiss all", "Step to next error"];
 
             var description =
-                $"Locations will have improper logic.\nUnable to parse \"{tokens[i - (hasConsumedMismatchedToken ? 1 : 0)]
-                }\" (index {i - (hasConsumedMismatchedToken ? 1 : 0)
+                $"Locations will have improper logic.\nUnable to parse \"{tokens[i - (hasConsumedToken ? 1 : 0)]
+                }\" (index {i - (hasConsumedToken ? 1 : 0)
                 }) from line {line}.\nLine: {tokens.Select(x => x.Detokenize()).Conjoin("")
                 }\n\nTokens:\n\n{tokens.Index()
                    .Skip(i - Lookaround)
@@ -401,14 +401,14 @@ public sealed partial class Logic(
 
     /// <summary>Converts this instance back into the <see cref="string"/> representation.</summary>
     /// <param name="and">
-    /// The string to insert between two <see cref="Logic"/> instances to indicate an <c>AND</c> operation.
+    /// The string to insert between two <see cref="ManualLogic"/> instances to indicate an <c>AND</c> operation.
     /// </param>
     /// <param name="or">
-    /// The string to insert between two <see cref="Logic"/> instances to indicate an <c>OR</c> operation.
+    /// The string to insert between two <see cref="ManualLogic"/> instances to indicate an <c>OR</c> operation.
     /// </param>
     /// <param name="list">The assignments for variables.</param>
     /// <returns>The <see cref="string"/> representation that can be used to reconstruct this instance.</returns>
-    string ToBooleanAlgebra(string and, string or, List<Logic> list)
+    string ToBooleanAlgebra(string and, string or, List<ManualLogic> list)
     {
         if (Grouping is { } g)
             return g.ToBooleanAlgebra(and, or, list);

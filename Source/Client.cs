@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MPL-2.0
 namespace Remote;
 
-using CheckboxStatus = (Logic? Logic, Client.LocationStatus Status, bool Checked);
+using CheckboxStatus = (ManualLogic? Logic, Client.LocationStatus Status, bool Checked);
 using HintMessage = (Hint Hint, string Message);
 
 /// <summary>
@@ -273,7 +273,7 @@ public sealed partial class Client(Yaml? yaml = null)
     Dictionary<string, int> _lastItems = [];
 
     /// <summary>The logic evaluator.</summary>
-    Evaluator? _evaluator;
+    ManualEvaluator? _evaluator;
 
     /// <summary>Contains suggestions for autocomplete.</summary>
     ImmutableArray<string> _itemSuggestions = [], _locationSuggestions = [];
@@ -410,7 +410,17 @@ public sealed partial class Client(Yaml? yaml = null)
                 ((IDictionary<string, object?>)_yaml)[key] = value;
 
             _connectionMessage = "Slot data has been read!\nReading APWorld... (5/6)";
-            _evaluator = Evaluator.Read(session.DataStorage, session.Items, _yaml, preferences, Set);
+
+            _evaluator = ManualEvaluator.Read(
+                new ItemNameEnumerable(session.Items),
+                _yaml,
+                preferences.Directory,
+                preferences.Repo,
+                preferences.GetPythonPath(),
+                GoalGetter,
+                Set
+            );
+
             _connectionMessage = "APWorld has been read!\nSaving history in memory... (6/6)";
             _info = new(_yaml, password, address, port, _info.Alias, _info.Color, hasDeathLink);
             _sessionCreatedTimestamp = DateTime.Now;
@@ -734,6 +744,10 @@ public sealed partial class Client(Yaml? yaml = null)
         return _session.Players.GetPlayerAlias(playerSlot) ??
             _session.Players.GetPlayerName(playerSlot) ?? $"Player: {playerSlot}";
     }
+
+    /// <summary>Gets the goal data.</summary>
+    /// <returns>The goal data.</returns>
+    ManualReader.GoalData? GoalGetter() => _session?.DataStorage.GetSlotData<ManualReader.GoalData>();
 
     /// <summary>Gets the message for the hint.</summary>
     /// <param name="hint">The hint to get the message of.</param>

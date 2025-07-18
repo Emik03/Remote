@@ -10,7 +10,7 @@ using JsonSerializer = System.Text.Json.JsonSerializer;
 /// <param name="Locations">The locations.</param>
 /// <param name="Options">The options.</param>
 /// <param name="Regions">The regions.</param>
-public sealed record ApWorldReader(
+public sealed record ManualReader(
     JsonObject? Game,
     JsonObject? Categories,
     JsonArray? Items,
@@ -22,7 +22,7 @@ public sealed record ApWorldReader(
     /// <summary>Contains the goal index.</summary>
     /// <param name="Goal">The index.</param>
     [Serializable] // ReSharper disable once ClassNeverInstantiated.Local
-    sealed record GoalData(int Goal);
+    public sealed record GoalData(int Goal);
 
     /// <summary>The default category name.</summary>
     public const string Uncategorized = "(No Category)";
@@ -30,13 +30,38 @@ public sealed record ApWorldReader(
     /// <summary>Contains the python script that runs <c>Data.py</c>.</summary>
     static readonly string? s_script = Script();
 
-    /// <summary>Initializes a new instance of the <see cref="ApWorldReader"/> class.</summary>
+    /// <summary>Initializes a new instance of the <see cref="ManualReader"/> class.</summary>
     /// <param name="path">The path to read.</param>
-    /// <param name="python">The path to the python binary to execute python.</param>
     /// <param name="ap">The path to the archipelago repository.</param>
-    /// <param name="g">The logger.</param>
-    public ApWorldReader(string path, string? python = "python", string? ap = null, Action<string>? g = null)
-        : this(Read(path, python, ap, g, out var c, out var i, out var l, out var o, out var r), c, i, l, o, r) { }
+    /// <param name="python">The path to the python binary to execute python.</param>
+    /// <param name="logger">The logger.</param>
+    public ManualReader(string path, string? ap = null, string? python = "python", Action<string>? logger = null)
+        : this(Read(path, ap, python, logger, out var c, out var i, out var l, out var o, out var r), c, i, l, o, r) { }
+
+    /// <summary>Attempts to find the <c>.apworld</c>.</summary>
+    /// <param name="game">The game to search for.</param>
+    /// <param name="directory">The directory to search in.</param>
+    /// <param name="logger">The logger.</param>
+    /// <returns>The path to the <c>.apworld</c>, or <see langword="null"/> if none found.</returns>
+    public static string? Find(string game, string directory, Action<string>? logger = null)
+    {
+        var world = $"{game}.apworld";
+
+        string? Enumerate(string root, string? relative)
+        {
+            logger?.Invoke($"Locating {world} within {relative ?? "root"}...");
+
+            return Path.Join(root, relative) is var directory &&
+                Directory.Exists(directory)
+                    ? Directory.EnumerateFiles(directory)
+                       .FirstOrDefault(
+                            x => world.Equals(Path.GetFileName(x.AsSpan()), StringComparison.OrdinalIgnoreCase)
+                        )
+                    : null;
+        }
+
+        return Enumerate(directory, "worlds") ?? Enumerate(directory, "custom_worlds") ?? Enumerate(directory, null);
+    }
 
     /// <summary>Extracts all categories.</summary>
     /// <param name="logger">The logger.</param>
@@ -54,21 +79,21 @@ public sealed record ApWorldReader(
     }
 
     /// <summary>Extracts all locations.</summary>
-    /// <param name="wrapper">The wrapper to get the goal data.</param>
     /// <param name="yaml">The yaml options.</param>
+    /// <param name="goalGetter">The wrapper to get the goal data.</param>
     /// <param name="logger">The logger.</param>
     /// <returns>The locations.</returns>
     [CLSCompliant(false)]
-    public (FrozenDictionary<string, Logic>, FrozenSortedDictionary)
-        ExtractLocations(IDataStorageWrapper wrapper, Yaml yaml, Action<string>? logger)
+    public (FrozenDictionary<string, ManualLogic>, FrozenSortedDictionary)
+        ExtractLocations(Yaml yaml, Func<GoalData?>? goalGetter, Action<string>? logger)
     {
         if (Locations is null)
             return default;
 
-        if (GetGoal(wrapper) is { } goal)
+        if (GetGoal(goalGetter) is { } goal)
             yaml.Goal = goal;
 
-        Dictionary<string, Logic> locationsToLogic = new(FrozenSortedDictionary.Comparer);
+        Dictionary<string, ManualLogic> locationsToLogic = new(FrozenSortedDictionary.Comparer);
         Dictionary<string, HashSet<string>> categoriesToLogic = new(FrozenSortedDictionary.Comparer);
 
         foreach (var location in Locations)
@@ -80,7 +105,7 @@ public sealed record ApWorldReader(
 
             if (o.TryGetPropertyValue("requires", out var requires) &&
                 requires?.GetValueKind() is JsonValueKind.String &&
-                Logic.TokenizeAndParse(requires.ToString()) is { } logic)
+                ManualLogic.TokenizeAndParse(requires.ToString()) is { } logic)
                 locationsToLogic[name] = logic;
 
             if (Regions is not null &&
@@ -171,7 +196,7 @@ public sealed record ApWorldReader(
 
     /// <summary>Whether it contains a <c>hidden</c> property that is true.</summary>
     /// <param name="kvp">The pair to check.</param>
-    /// <returns>Whether to include this in <see cref="Evaluator.HiddenCategories"/>.</returns>
+    /// <returns>Whether to include this in <see cref="ManualEvaluator.HiddenCategories"/>.</returns>
     static bool IsHiddenTrue(KeyValuePair<string, JsonNode?> kvp) =>
         kvp.Value is JsonObject obj &&
         obj.TryGetPropertyValue("hidden", out var hidden) &&
@@ -184,29 +209,6 @@ public sealed record ApWorldReader(
         value is JsonObject obj &&
         obj.TryGetPropertyValue("starting", out var starting) &&
         starting?.GetValueKind() is JsonValueKind.True;
-
-    /// <summary>Gets the goal location, if possible.</summary>
-    /// <param name="wrapper">The slot data.</param>
-    /// <returns>The goal location, or <see langword="null"/> if it cannot be determined.</returns>
-    string? GetGoal(IDataStorageWrapper wrapper)
-    {
-        static bool IsVictory(JsonNode? x) =>
-            x is JsonObject obj &&
-            obj.TryGetPropertyValue("victory", out var node) &&
-            node?.GetValueKind() is JsonValueKind.True;
-
-        if (Locations is null)
-            return null;
-
-        IReadOnlyList<string?> victories = [..Locations.Where(IsVictory).Select(x => x?["name"]?.ToString())];
-
-        if (!Go(x => x.GetSlotData<GoalData>(), wrapper, out _, out var ok) &&
-            ok is { Goal: var index } &&
-            (uint)index < (uint)victories.Count)
-            return victories[index];
-
-        return victories is [var single] ? single : null;
-    }
 
     /// <summary>Gets the python script that runs <c>Data.py</c>.</summary>
     /// <returns>The python script that runs <c>Data.py</c>.</returns>
@@ -236,13 +238,13 @@ public sealed record ApWorldReader(
     /// <param name="target">The region to find.</param>
     /// <param name="regions">The root of the <c>regions.json</c> node.</param>
     /// <param name="regionToLogic">
-    /// Maps the region name to the already parsed <see cref="Logic"/> for caching purposes.
+    /// Maps the region name to the already parsed <see cref="ManualLogic"/> for caching purposes.
     /// </param>
     /// <param name="g">The logger.</param>
-    /// <returns>The resulting <see cref="Logic"/> to get to the parameter <paramref name="target"/>.</returns>
-    static Logic? Find(string target, JsonObject regions, Dictionary<string, Logic> regionToLogic, Action<string>? g)
+    /// <returns>The resulting <see cref="ManualLogic"/> to get to the parameter <paramref name="target"/>.</returns>
+    static ManualLogic? Find(string target, JsonObject regions, Dictionary<string, ManualLogic> regionToLogic, Action<string>? g)
     {
-        Logic? path = null;
+        ManualLogic? path = null;
 
         foreach (var (name, value) in regions)
         {
@@ -272,16 +274,16 @@ public sealed record ApWorldReader(
     /// <param name="target">The target region.</param>
     /// <param name="regions">The root of the <c>regions.json</c> node.</param>
     /// <param name="regionToLogic">
-    /// Maps the region name to the already parsed <see cref="Logic"/> for caching purposes.
+    /// Maps the region name to the already parsed <see cref="ManualLogic"/> for caching purposes.
     /// </param>
     /// <param name="visited">The regions that have already been visited, so as to remove unnecessary branching.</param>
     /// <param name="foundTarget">Whether the target has been found successfully.</param>
-    /// <returns>The resulting <see cref="Logic"/> to get to the parameter <paramref name="target"/>.</returns>
-    static Logic? Find(
+    /// <returns>The resulting <see cref="ManualLogic"/> to get to the parameter <paramref name="target"/>.</returns>
+    static ManualLogic? Find(
         string current,
         string target,
         JsonNode regions,
-        Dictionary<string, Logic> regionToLogic, // ReSharper disable once SuggestBaseTypeForParameter
+        Dictionary<string, ManualLogic> regionToLogic, // ReSharper disable once SuggestBaseTypeForParameter
         HashSet<string> visited,
         ref bool foundTarget
     )
@@ -303,7 +305,7 @@ public sealed record ApWorldReader(
         if (!obj.TryGetPropertyValue("connects_to", out var connectsTo) || connectsTo is not JsonArray array)
             return null;
 
-        Logic? path = null;
+        ManualLogic? path = null;
         var exitRequires = obj.TryGetPropertyValue("exit_requires", out var ex) && ex is JsonObject ox ? ox : null;
 
         foreach (var connection in array)
@@ -339,9 +341,9 @@ public sealed record ApWorldReader(
 
     /// <summary>Tokenizes and parses the <see cref="JsonNode"/>.</summary>
     /// <param name="requires">The requires string to parse.</param>
-    /// <returns>The <see cref="Logic"/> of the parameter <paramref name="requires"/>.</returns>
-    static Logic? TokenizeAndParse(JsonNode? requires) =>
-        requires?.GetValueKind() is JsonValueKind.String ? Logic.TokenizeAndParse(requires.ToString()) : null;
+    /// <returns>The <see cref="ManualLogic"/> of the parameter <paramref name="requires"/>.</returns>
+    static ManualLogic? TokenizeAndParse(JsonNode? requires) =>
+        requires?.GetValueKind() is JsonValueKind.String ? ManualLogic.TokenizeAndParse(requires.ToString()) : null;
 
     /// <summary>Converts the <see cref="JsonArray"/> into the <see cref="HashSet{T}"/>.</summary>
     /// <param name="array">The array to convert.</param>
@@ -382,11 +384,11 @@ public sealed record ApWorldReader(
 
     /// <summary>Attempts to get the world data from executing python.</summary>
     /// <param name="path">The path to the <c>.apworld</c>.</param>
-    /// <param name="python">The path to the python binary to execute python.</param>
     /// <param name="ap">The path to the archipelago repository.</param>
+    /// <param name="python">The path to the python binary to execute python.</param>
     /// <param name="logger">The logger.</param>
     /// <returns>The world data, or <see langword="null"/> if it was unable to execute the script.</returns>
-    static JsonObject? GetWorldDataFromPython(string path, string? python, string? ap, Action<string>? logger)
+    static JsonObject? GetWorldDataFromPython(string path, string? ap, string? python, Action<string>? logger)
     {
         if (string.IsNullOrWhiteSpace(python) || string.IsNullOrWhiteSpace(ap))
         {
@@ -427,8 +429,8 @@ public sealed record ApWorldReader(
 
     /// <summary>Reads the <c>.apworld</c>.</summary>
     /// <param name="path"></param>
-    /// <param name="python">The path to the python binary to execute python.</param>
     /// <param name="ap">The path to the archipelago repository.</param>
+    /// <param name="python">The path to the python binary to execute python.</param>
     /// <param name="logger">The logger.</param>
     /// <param name="categories">The categories.</param>
     /// <param name="items">The items.</param>
@@ -438,8 +440,8 @@ public sealed record ApWorldReader(
     /// <returns>The game.</returns>
     static JsonObject? Read(
         string path,
-        string? python,
         string? ap,
+        string? python,
         Action<string>? logger,
         out JsonObject? categories,
         out JsonArray? items,
@@ -461,7 +463,7 @@ public sealed record ApWorldReader(
             return Extract<JsonObject>(zip, "/data/game.json", logger);
         }
 
-        if (GetWorldDataFromPython(path, python, ap, logger) is not { } obj)
+        if (GetWorldDataFromPython(path, ap, python, logger) is not { } obj)
             return Fail(out categories, out options, out regions);
 
         logger?.Invoke("Extracting values from the json object...");
@@ -504,4 +506,27 @@ public sealed record ApWorldReader(
     static T? Index<T>(JsonObject obj, string name)
         where T : JsonNode =>
         obj.TryGetPropertyValue(name, out var node) ? node as T : null;
+
+    /// <summary>Gets the goal location, if possible.</summary>
+    /// <param name="goalGetter">The goal.</param>
+    /// <returns>The goal location, or <see langword="null"/> if it cannot be determined.</returns>
+    string? GetGoal(Func<GoalData?>? goalGetter)
+    {
+        static bool IsVictory(JsonNode? x) =>
+            x is JsonObject obj &&
+            obj.TryGetPropertyValue("victory", out var node) &&
+            node?.GetValueKind() is JsonValueKind.True;
+
+        if (Locations is null)
+            return null;
+
+        IReadOnlyList<string?> victories = [..Locations.Where(IsVictory).Select(x => x?["name"]?.ToString())];
+
+        return goalGetter is null ||
+            Go(goalGetter, out _, out var ok) ||
+            ok is not { Goal: var goal } ||
+            (uint)goal >= (uint)victories.Count
+                ? victories is [var single] ? single : null
+                : victories[goal];
+    }
 }

@@ -3,7 +3,7 @@ namespace Remote;
 
 /// <summary>Represents the token from a larger <c>requires</c> strings.</summary>
 [Choice.EOL.And.Or.LeftParen.RightParen.Pipe.At.Colon.All.Half.Percent.LeftCurly.RightCurly.Ident<ReadOnlyMemory<char>>]
-public readonly partial struct Token
+public readonly partial struct ManualToken
 {
     /// <summary>The enumeration of different states that the tokenizer can go through.</summary>
     enum State
@@ -30,7 +30,7 @@ public readonly partial struct Token
     /// <param name="tokens">The list of tokens to write to.</param>
     /// <exception cref="ArgumentOutOfRangeException">A state thought to be unreachable was reached.</exception>
     public static void Tokenize<T>(ReadOnlyMemory<char> memory, ref T tokens)
-        where T : ICollection<Token>
+        where T : ICollection<ManualToken>
     {
         var parens = 0;
         int? start = null;
@@ -64,9 +64,9 @@ public readonly partial struct Token
     /// <summary>Tokenizes the <see cref="ReadOnlyMemory{T}"/> into the list of tokens.</summary>
     /// <param name="memory">The sequences of characters to parse.</param>
     /// <returns>The list of tokens parsed.</returns>
-    public static IReadOnlyList<Token> Tokenize(ReadOnlyMemory<char> memory)
+    public static IReadOnlyList<ManualToken> Tokenize(ReadOnlyMemory<char> memory)
     {
-        List<Token> tokens = [];
+        List<ManualToken> tokens = [];
         Tokenize(memory, ref tokens);
         return tokens;
     }
@@ -99,7 +99,7 @@ public readonly partial struct Token
     /// <param name="start">The index to remember that indicates the start of a buffer.</param>
     /// <param name="i">The index to be looking in <paramref name="memory"/>.</param>
     static void ProcessToken<T>(ReadOnlyMemory<char> memory, ref T tokens, ref State state, ref int? start, int i)
-        where T : ICollection<Token>
+        where T : ICollection<ManualToken>
     {
         switch (memory.Span[i])
         {
@@ -138,7 +138,7 @@ public readonly partial struct Token
     /// <param name="start">The index to remember that indicates the start of a buffer.</param>
     /// <param name="i">The index to be looking in <paramref name="memory"/>.</param>
     static void ProcessIdentifier<T>(ReadOnlyMemory<char> memory, ref T tokens, ref State state, ref int? start, int i)
-        where T : ICollection<Token>
+        where T : ICollection<ManualToken>
     {
         var span = memory.Span;
 
@@ -178,7 +178,7 @@ public readonly partial struct Token
         ref int? start,
         int i
     )
-        where T : ICollection<Token>
+        where T : ICollection<ManualToken>
     {
         switch (memory.Span[i])
         {
@@ -214,7 +214,7 @@ public readonly partial struct Token
         ref int parens,
         int i
     )
-        where T : ICollection<Token>
+        where T : ICollection<ManualToken>
     {
         switch (memory.Span[i])
         {
@@ -251,7 +251,7 @@ public readonly partial struct Token
         ref int parens,
         int i
     )
-        where T : ICollection<Token>
+        where T : ICollection<ManualToken>
     {
         var span = memory.Span;
 
@@ -278,7 +278,7 @@ public readonly partial struct Token
     /// <param name="start">The index to remember that indicates the start of a buffer.</param>
     /// <param name="i">The index to be looking in <paramref name="memory"/>.</param>
     static void AddAndOr<T>(ReadOnlyMemory<char> memory, ref T tokens, ref int? start, int i)
-        where T : ICollection<Token>
+        where T : ICollection<ManualToken>
     {
         if (start is not { } s)
             return;
@@ -300,7 +300,7 @@ public readonly partial struct Token
     /// <param name="start">The index to remember that indicates the start of a buffer.</param>
     /// <param name="i">The index to be looking in <paramref name="memory"/>.</param>
     static void AddIdentifier<T>(ReadOnlyMemory<char> memory, ref T tokens, ref int? start, int i)
-        where T : ICollection<Token>
+        where T : ICollection<ManualToken>
     {
         if (start is not { } s)
             return;
@@ -316,7 +316,7 @@ public readonly partial struct Token
     /// <param name="start">The index to remember that indicates the start of a buffer.</param>
     /// <param name="i">The index to be looking in <paramref name="memory"/>.</param>
     static void AddIdentifierQuantity<T>(ReadOnlyMemory<char> memory, ref T tokens, ref int? start, int i)
-        where T : ICollection<Token>
+        where T : ICollection<ManualToken>
     {
         if (start is not { } s)
             return;

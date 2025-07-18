@@ -406,10 +406,11 @@ public sealed partial class Client
         ShowDeathLink(preferences);
         ImGui.SeparatorText("Diagnostics");
 
-        if (ImGui.Button("Open APWorld Directory") && Evaluator.FindApWorld(_yaml, preferences, Set) is { } apWorld)
+        if (ImGui.Button("Open APWorld Directory") &&
+            ManualReader.Find(_yaml.Game, preferences.Directory, Set) is { } world)
         {
             ProcessStartInfo startInfo = new()
-                { FileName = Path.GetDirectoryName(apWorld), CreateNoWindow = true, UseShellExecute = true };
+                { FileName = Path.GetDirectoryName(world), CreateNoWindow = true, UseShellExecute = true };
 
             using var _ = Process.Start(startInfo);
         }
@@ -841,7 +842,7 @@ public sealed partial class Client
             : locations.Order().Select(GetLocationNameFromId);
 
         foreach (var location in orderedLocations.Where(ShouldBeVisible))
-            Checkbox(preferences, location, ApWorldReader.Uncategorized);
+            Checkbox(preferences, location, ManualReader.Uncategorized);
 
         return locationHelper.AllMissingLocations.Count is 0;
     }
@@ -1072,7 +1073,7 @@ public sealed partial class Client
     /// <param name="preferences">The user preferences.</param>
     void ShowNonManualItems(Preferences preferences)
     {
-        const string Default = ApWorldReader.Uncategorized;
+        const string Default = ManualReader.Uncategorized;
         ShowItemSearch(preferences);
 
         if (GroupItems(Default, default)

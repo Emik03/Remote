@@ -2,7 +2,7 @@
 namespace Remote;
 
 /// <summary>The record for processing <see cref="OnAnd"/> and whether something is in logic.</summary>
-/// <param name="Helper">The list of items received.</param>
+/// <param name="CurrentItems">The list of items received.</param>
 /// <param name="HiddenCategories">The set of categories that shouldn't be visible to the user.</param>
 /// <param name="LocationsToLogic">The conversion from locations to its <see cref="OnAnd"/> instances.</param>
 /// <param name="CategoryToLocations">The conversion from categories to its set of locations.</param>
@@ -16,10 +16,10 @@ namespace Remote;
 /// <param name="Yaml">The yaml options.</param>
 /// <param name="IsOptAll">Whether to clamp requirements based on <see cref="Yaml"/>.</param>
 [CLSCompliant(false)]
-public sealed partial record Evaluator(
-    IReceivedItemsHelper Helper,
+public sealed partial record ManualEvaluator(
+    IReadOnlyCollection<string> CurrentItems,
     FrozenSet<string> HiddenCategories,
-    FrozenDictionary<string, Logic> LocationsToLogic,
+    FrozenDictionary<string, ManualLogic> LocationsToLogic,
     FrozenSortedDictionary CategoryToLocations,
     FrozenSortedDictionary CategoryToYaml,
     FrozenSortedDictionary CategoryToItems,
@@ -32,8 +32,8 @@ public sealed partial record Evaluator(
     bool IsOptAll
 )
 {
-    /// <summary>Initializes a new instance of the <see cref="Evaluator"/> record.</summary>
-    /// <param name="helper">The list of items received.</param>
+    /// <summary>Initializes a new instance of the <see cref="ManualEvaluator"/> record.</summary>
+    /// <param name="currentItems">The list of items received.</param>
     /// <param name="hiddenCategories">The set of categories that shouldn't be visible to the user.</param>
     /// <param name="locationsToLogic">The conversion from locations to its <see cref="OnAnd"/> instances.</param>
     /// <param name="categoryToLocations">The conversion from categories to its set of locations.</param>
@@ -42,10 +42,10 @@ public sealed partial record Evaluator(
     /// <param name="itemCount">The conversion from items to the amount of that item.</param>
     /// <param name="itemToPhantoms">The conversion from items to its phantom items.</param>
     /// <param name="yaml">The yaml options.</param>
-    public Evaluator(
-        IReceivedItemsHelper helper,
+    public ManualEvaluator(
+        IReadOnlyCollection<string> currentItems,
         FrozenSet<string> hiddenCategories,
-        FrozenDictionary<string, Logic> locationsToLogic,
+        FrozenDictionary<string, ManualLogic> locationsToLogic,
         FrozenSortedDictionary categoryToLocations,
         FrozenSortedDictionary categoryToYaml,
         FrozenSortedDictionary itemToCategories,
@@ -54,7 +54,7 @@ public sealed partial record Evaluator(
         FrozenDictionary<string, int> yaml
     )
         : this(
-            helper,
+            currentItems,
             hiddenCategories,
             locationsToLogic,
             categoryToLocations,
@@ -69,59 +69,34 @@ public sealed partial record Evaluator(
             false
         ) { }
 
-    /// <summary>Attempts to find the <c>.apworld</c>.</summary>
-    /// <param name="yaml">The yaml options.</param>
-    /// <param name="preferences">The user preferences.</param>
-    /// <param name="logger">The logger.</param>
-    /// <returns>The path to the <c>.apworld</c>, or <see langword="null"/> if none found.</returns>
-    public static string? FindApWorld(Yaml yaml, Preferences preferences, Action<string>? logger = null)
-    {
-        var world = $"{yaml.Game}.apworld";
-
-        string? Enumerate(string root, string? relative)
-        {
-            logger?.Invoke($"Locating {world} within {relative ?? "root"}...");
-
-            return Path.Join(root, relative) is var directory &&
-                Directory.Exists(directory)
-                    ? Directory.EnumerateFiles(directory)
-                       .FirstOrDefault(
-                            x => world.Equals(Path.GetFileName(x.AsSpan()), StringComparison.OrdinalIgnoreCase)
-                        )
-                    : null;
-        }
-
-        return Enumerate(preferences.Directory, "worlds") ??
-            Enumerate(preferences.Directory, "custom_worlds") ??
-            Enumerate(preferences.Directory, null);
-    }
-
     /// <summary>Attempts to process the manual <c>.apworld</c>.</summary>
-    /// <param name="wrapper">The wrapper to get the goal data.</param>
-    /// <param name="helper">The list of items.</param>
+    /// <param name="currentItems">The list of items.</param>
     /// <param name="yaml">The yaml options.</param>
-    /// <param name="preferences">
-    /// The user preferences, containing the directory of the Archipelago installation.
-    /// </param>
+    /// <param name="directory">The directory containing all yaml files.</param>
+    /// <param name="ap">The path to the archipelago repository.</param>
+    /// <param name="python">The path to the python binary to execute python.</param>
+    /// <param name="goalGetter">The wrapper to get the goal data.</param>
     /// <param name="logger">The current status.</param>
     /// <returns>
-    /// The <see cref="Evaluator"/> to evaluate <see cref="OnAnd"/>, or <see langword="null"/> if not a manual world,
+    /// The <see cref="ManualEvaluator"/> to evaluate <see cref="OnAnd"/>, or <see langword="null"/> if not a manual world,
     /// parsing failed, or the <c>.apworld</c> doesn't exist.
     /// </returns>
-    public static Evaluator? Read(
-        IDataStorageWrapper wrapper,
-        IReceivedItemsHelper helper,
+    public static ManualEvaluator? Read(
+        IReadOnlyCollection<string> currentItems,
         Yaml yaml,
-        Preferences preferences,
+        string directory,
+        string? ap = null,
+        string? python = "python",
+        Func<ManualReader.GoalData?>? goalGetter = null,
         Action<string>? logger = null
     )
     {
-        if (FindApWorld(yaml, preferences, logger) is not { } path)
+        if (ManualReader.Find(yaml.Game, directory, logger) is not { } path)
             return null;
 
         try
         {
-            return ReadZip(wrapper, helper, yaml, preferences, path, logger);
+            return ReadZip(currentItems, yaml, path, ap, python, goalGetter, logger);
         }
         catch (Exception e)
         {
@@ -131,38 +106,40 @@ public sealed partial record Evaluator(
     }
 
     /// <summary>Reads the path as a zip file. Can throw.</summary>
-    /// <param name="wrapper">The wrapper to get the goal data.</param>
-    /// <param name="helper">The list of items.</param>
+    /// <param name="currentItems">The list of items.</param>
     /// <param name="yaml">The yaml options.</param>
-    /// <param name="preferences">The user preferences.</param>
     /// <param name="path">The path to the zip file.</param>
+    /// <param name="ap">The path to the archipelago repository.</param>
+    /// <param name="python">The path to the python binary to execute python.</param>
+    /// <param name="goalGetter">The wrapper to get the goal data.</param>
     /// <param name="logger">The current status.</param>
     /// <returns>
-    /// The <see cref="Evaluator"/> to evaluate <see cref="OnAnd"/>, or <see langword="null"/> if not a manual world,
+    /// The <see cref="ManualEvaluator"/> to evaluate <see cref="OnAnd"/>, or <see langword="null"/> if not a manual world,
     /// parsing failed, or the <c>.apworld</c> doesn't exist.
     /// </returns>
-    static Evaluator? ReadZip(
-        IDataStorageWrapper wrapper,
-        IReceivedItemsHelper helper,
+    static ManualEvaluator? ReadZip(
+        IReadOnlyCollection<string> currentItems,
         Yaml yaml,
-        Preferences preferences,
         string path,
+        string? ap,
+        string? python,
+        Func<ManualReader.GoalData?>? goalGetter,
         Action<string>? logger
     )
     {
-        ApWorldReader reader = new(path, preferences.GetPythonPath(), preferences.Repo, logger);
+        ManualReader reader = new(path, ap, python, logger);
         logger?.Invoke("Copying yaml options found .apworld...");
         yaml.CopyFrom(reader.Options);
 
         if (reader.ExtractCategories(logger) is not ({ } hiddenCategories, var categoryToYaml) ||
             reader.ExtractItems(logger) is not (var itemToCategories, { } itemCount, { } itemValues) ||
-            reader.ExtractLocations(wrapper, yaml, logger) is not ({ } locationsToLogic, var categoryToLocations))
+            reader.ExtractLocations(yaml, goalGetter, logger) is not ({ } locationsToLogic, var categoryToLocations))
             return null;
 
         logger?.Invoke("Finalizing...");
 
         return new(
-            helper,
+            currentItems,
             hiddenCategories,
             locationsToLogic,
             categoryToLocations,

@@ -5,7 +5,7 @@ namespace Remote;
 /// Provides methods to inspect values before one gets returned.
 /// This is not a member method in order to allow <see keyword="null"/>.
 /// </summary>
-static class LogicTrimmer
+static class ManualLogicTrimmer
 {
 #if LOGIC_TRIM_CONSOLE_WRITE
     /// <summary>The maximum number of variables for assertions.</summary>
@@ -24,8 +24,8 @@ static class LogicTrimmer
     /// <param name="lookup">The collection for logic.</param>
     /// <param name="inputs">The inputs.</param>
     /// <returns>Whether this logic is fulfilled by the set of inputs.</returns>
-    public static bool Test<T>([NotNullWhen(false)] this Logic? that, T lookup, ReadOnlySpan<bool> inputs)
-        where T : IList<Logic> =>
+    public static bool Test<T>([NotNullWhen(false)] this ManualLogic? that, T lookup, ReadOnlySpan<bool> inputs)
+        where T : IList<ManualLogic> =>
         that switch
         {
             null => true,
@@ -45,7 +45,7 @@ static class LogicTrimmer
 #endif
     [return: NotNullIfNotNull(nameof(left))]
 #pragma warning disable MA0051
-    public static Logic? Check(this Logic? left, [UsedImplicitly] Logic? right, [CallerLineNumber] int line = 0)
+    public static ManualLogic? Check(this ManualLogic? left, [UsedImplicitly] ManualLogic? right, [CallerLineNumber] int line = 0)
 #pragma warning restore MA0051
 #if LOGIC_TRIM_CONSOLE_WRITE
     {
@@ -136,10 +136,10 @@ static class LogicTrimmer
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
 #endif
     [return: NotNullIfNotNull(nameof(left))]
-    public static Logic? Check(
-        this Logic? left,
-        [UsedImplicitly] in (Logic Left, Logic Right) tuple,
-        [UsedImplicitly] Evaluator evaluator,
+    public static ManualLogic? Check(
+        this ManualLogic? left,
+        [UsedImplicitly] in (ManualLogic Left, ManualLogic Right) tuple,
+        [UsedImplicitly] ManualEvaluator evaluator,
         [CallerLineNumber] int line = 0
     )
 #if LOGIC_TRIM_CONSOLE_WRITE // ReSharper disable once ExplicitCallerInfoArgument
@@ -153,8 +153,8 @@ static class LogicTrimmer
 #endif
 
     /// <inheritdoc cref="Test{T}"/>
-    static bool TestUnary<T>(this Logic that, T lookup, ReadOnlySpan<bool> inputs)
-        where T : IList<Logic>
+    static bool TestUnary<T>(this ManualLogic that, T lookup, ReadOnlySpan<bool> inputs)
+        where T : IList<ManualLogic>
     {
         static bool Index(ReadOnlySpan<bool> inputs, int i) => (uint)i < (uint)inputs.Length && inputs[i];
 
