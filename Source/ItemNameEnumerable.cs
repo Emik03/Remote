@@ -4,7 +4,8 @@ namespace Remote;
 /// <summary>
 /// The wrapper of <see cref="IReceivedItemsHelper"/> to implement a <see cref="IReadOnlyCollection{T}"/> of item names.
 /// </summary>
-/// <param name="helper"></param>
+/// <param name="helper">The received items.</param>
+[CLSCompliant(false)]
 public sealed class ItemNameEnumerable(IReceivedItemsHelper helper) : IReadOnlyCollection<string>
 {
     /// <inheritdoc />
