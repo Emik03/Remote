@@ -457,7 +457,7 @@ public sealed partial class Preferences
         if (text is [var first, ..] && first.IsWhitespace())
         {
             ImGui.TextUnformatted([' ']);
-            ImGui.SameLine();
+            ImGui.SameLine(0, 0);
         }
 
         foreach (var w in text.SplitSpanWhitespace())
@@ -633,7 +633,9 @@ public sealed partial class Preferences
         if (!ImGui.BeginCombo(label, split[currentItem]))
             return false;
 
-        ImGui.SetWindowFontScale(UiScale);
+        if (applyUiScale)
+            ImGui.SetWindowFontScale(UiScale);
+
         var i = 0;
 
         foreach (var span in split)
