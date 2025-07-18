@@ -145,6 +145,7 @@ public sealed partial class Client
     static bool? InlineButtons(string first, string second)
     {
         bool? ret = null;
+        ImGui.SameLine();
 
         if (ImGui.Button(first))
             ret = true;
@@ -844,7 +845,6 @@ public sealed partial class Client
         Debug.Assert(_evaluator is not null);
         _ = ImGui.Checkbox("Show Out of Logic Locations", ref _showOutOfLogic);
         var setter = GetNextItemOpenSetter();
-        ImGui.SameLine();
         var newValue = InlineButtons("Tick all", "Untick all");
         ShowLocationSearch(preferences);
 
@@ -1028,7 +1028,7 @@ public sealed partial class Client
     /// <param name="preferences">The user preferences.</param>
     void ShowItemSearch(Preferences preferences)
     {
-        ImGui.SetNextItemWidth(preferences.Width(450));
+        ImGui.SetNextItemWidth(preferences.Width(0));
         _ = ImGuiRenderer.InputTextWithHint("##ItemSearch", "Search...", ref _itemSearch, ushort.MaxValue);
     }
 
@@ -1075,7 +1075,6 @@ public sealed partial class Client
         Debug.Assert(_evaluator is not null);
         _ = ImGui.Checkbox("Show pending items", ref _showYetToReceive);
         ShowItemSearch(preferences);
-        ImGui.SameLine();
         var setter = GetNextItemOpenSetter();
 
         if (_itemType is 0)
