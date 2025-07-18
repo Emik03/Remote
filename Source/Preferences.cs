@@ -1187,7 +1187,7 @@ public sealed partial class Preferences
         if (!ImGui.CollapsingHeader(label, ImGuiTreeNodeFlags.SpanTextWidth))
             return [];
 
-        ImGui.SameLine(0, 15);
+        ImGui.SameLine(0, (UiPadding is [var first, ..] ? first : 1) * 3);
         _ = ImGui.Checkbox($"Edit###Edit:|{x.Key}", ref state);
         var alias = x.Value.Alias;
         ImGui.SetNextItemWidth(Width(100));
