@@ -466,13 +466,6 @@ public sealed partial class Client(Yaml? yaml = null)
     static bool IsReleasable(KeyValuePair<string, CheckboxStatus> x) =>
         x.Value is (_, LocationStatus.Reachable or LocationStatus.ProbablyReachable or LocationStatus.OutOfLogic, true);
 
-    /// <summary>Determines whether the two sequences start with the same content but are still different.</summary>
-    /// <param name="user">The user input.</param>
-    /// <param name="match">The value to match against.</param>
-    /// <returns>Whether both the parameters <paramref name="user"/> and <paramref name="match"/> are equal.</returns>
-    static bool StrictStartsWith(ReadOnlySpan<char> user, string match) =>
-        match.Length != user.Length && match.StartsWith(user, StringComparison.Ordinal);
-
     /// <summary>Converts the exception to the <see cref="string"/> array.</summary>
     /// <param name="e">The exception to convert.</param>
     /// <param name="additions">The additional strings to add before-hand.</param>
@@ -610,9 +603,8 @@ public sealed partial class Client(Yaml? yaml = null)
                 _ when _evaluator.InLogic(location) is { } logic => (logic, LocationStatus.OutOfLogic),
                 _ => (null, LocationStatus.Reachable),
             };
-#pragma warning restore MA0002
         }
-
+#pragma warning restore MA0002
         Debug.Assert(_session is not null);
         Debug.Assert(_locationSearch is not null);
 
@@ -629,6 +621,7 @@ public sealed partial class Client(Yaml? yaml = null)
         }
 
         (_lastItems, var locationHelper) = (items, _session.Locations);
+        WaitForHints();
 
         _locationSuggestions =
         [
@@ -655,6 +648,15 @@ public sealed partial class Client(Yaml? yaml = null)
             foreach (var (_, locations) in _evaluator.CategoryToLocations)
                 foreach (var location in locations)
                     Update(location, locationHelper);
+    }
+
+    /// <summary>Waits for the hints to load.</summary>
+    void WaitForHints()
+    {
+        _ = LastHints;
+
+        for (var i = 0; i < 100 && !_hintTask.IsCompleted; i++)
+            Thread.Sleep(10);
     }
 
     /// <summary>Determines whether there is more of an item to be found.</summary>

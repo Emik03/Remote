@@ -654,26 +654,21 @@ public sealed partial class Client
     /// <param name="isChatTab">Whether this was called from the chat tab.</param>
     void ShowAutocomplete(Preferences preferences, ref readonly string message, bool isChatTab)
     {
+        static bool CaseInsensitive(char x, char y) => x.IsUpper() == y.IsUpper();
+
         Debug.Assert(_session is not null);
 
         if (preferences.Suggestions <= 0 || string.IsNullOrWhiteSpace(message))
             return;
 
-        var sum = 0;
         var suggestions = GetSuggestions(message, out var user);
 
-        foreach (var suggestion in suggestions)
-            if (StrictStartsWith(user, suggestion) && ++sum >= preferences.Suggestions)
-                goto HasAnythingToRender;
-
-        if (sum is 0)
+        if (suggestions.IsDefaultOrEmpty)
             return;
-
-    HasAnythingToRender:
 
         var pos = ImGui.GetCursorPos();
         var size = ImGui.CalcTextSize(message);
-        var length = preferences.Suggestions.Min(sum);
+        var length = preferences.Suggestions.Min(suggestions.Length);
         pos.X += !isChatTab && preferences.SideBySide ? ImGui.GetWindowSize().X : 0;
         pos.Y += size.Y * -length + (!isChatTab && !preferences.SideBySide ? ImGui.GetWindowSize().Y : 0);
         var (x, y) = (ImGui.GetContentRegionAvail().X, size.Y * (length + 1));
@@ -687,9 +682,10 @@ public sealed partial class Client
             return;
 
         ImGui.SetWindowFontScale(preferences.UiScale);
+        var copy = message;
 
-        foreach (var suggestion in suggestions)
-            if (StrictStartsWith(user, suggestion) && PasteIfClicked(user, suggestion, message.Nth(^1)))
+        foreach (var suggestion in suggestions.OrderByDescending(x => x.JaroEmik(copy, CaseInsensitive)))
+            if (PasteIfClicked(user, suggestion, message.Nth(^1)))
                 break;
 
         if (_hoverFrameCount > 0)
