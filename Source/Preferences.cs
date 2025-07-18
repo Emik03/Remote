@@ -354,6 +354,9 @@ public sealed partial class Preferences
         var active = color / ActiveTabDim;
         var inactive = color / InactiveTabDim;
         ImGui.PushStyleColor(ImGuiCol.TextSelectedBg, color);
+        ImGui.PushStyleColor(ImGuiCol.SeparatorHovered, active);
+        ImGui.PushStyleColor(ImGuiCol.SeparatorActive, active);
+        ImGui.PushStyleColor(ImGuiCol.Separator, inactive);
         ImGui.PushStyleColor(ImGuiCol.TabSelected, active);
         ImGui.PushStyleColor(ImGuiCol.TabHovered, active);
         ImGui.PushStyleColor(ImGuiCol.Tab, inactive);
