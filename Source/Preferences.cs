@@ -332,7 +332,8 @@ public sealed partial class Preferences
     /// <returns>The preferences.</returns>
     public static Preferences Load()
     {
-        if (File.Exists(FilePath) && Kvp.Deserialize<Preferences>(File.ReadAllText(FilePath)) is var fromDisk)
+        if (File.Exists(FilePath) &&
+            !Go(() => Kvp.Deserialize<Preferences>(File.ReadAllText(FilePath)), out _, out var fromDisk))
         {
             fromDisk.Sanitize();
             return fromDisk;
@@ -418,7 +419,7 @@ public sealed partial class Preferences
     /// <summary>Writes this instance to disk.</summary>
     public void Save()
     {
-        File.WriteAllText(FilePath, Kvp.Serialize(this));
+        _ = Go(x => File.WriteAllText(FilePath, Kvp.Serialize(x)), this, out _);
         HistoryServer.Save(_history);
     }
 

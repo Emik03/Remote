@@ -47,10 +47,15 @@ public sealed class HistoryServer
     }
 
     /// <summary>Writes this instance to disk.</summary>
+    /// <param name="servers">The servers to save.</param>
     public static void Save(OrderedDictionary<string, HistoryServer> servers) =>
-        File.WriteAllText(
-            FilePath,
-            JsonSerializer.Serialize(servers, RemoteJsonSerializerContext.Default.OrderedDictionaryStringHistoryServer)
+        _ = Go(
+            x => File.WriteAllText(
+                FilePath,
+                JsonSerializer.Serialize(x, RemoteJsonSerializerContext.Default.OrderedDictionaryStringHistoryServer)
+            ),
+            servers,
+            out _
         );
 
     /// <summary>Orders the connections.</summary>
