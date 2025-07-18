@@ -1054,6 +1054,8 @@ public sealed partial class Client
 
         foreach (var location in orderedLocations.Where(ShouldBeVisible))
             Checkbox(preferences, location, UserCategorized, overrideAll);
+
+        ImGui.Separator();
     }
 
     /// <summary>Shows non-manual items</summary>
