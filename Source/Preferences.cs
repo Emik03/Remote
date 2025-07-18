@@ -1,22 +1,11 @@
 // SPDX-License-Identifier: MPL-2.0
 namespace Remote;
 
-using ConnectionGroup = IGrouping<(string? Alias, string? Host, ushort Port), HistoryEntry>;
 using Vector2 = System.Numerics.Vector2;
 
 /// <summary>Contains the preferences that are stored persistently.</summary>
 public sealed partial class Preferences
 {
-    /// <summary>Contains the orderings for history.</summary>
-    public enum HistoryOrder
-    {
-        /// <summary>This value indicates to sort the history by date, newest to oldest.</summary>
-        Date,
-
-        /// <summary>This value indicates to sort the history alphabetically.</summary>
-        Name,
-    }
-
     /// <summary>Contains the font languages.</summary>
     public enum Language
     {
@@ -58,18 +47,13 @@ public sealed partial class Preferences
             """;
 
     /// <summary>Gets the languages.</summary>
-    static readonly string s_historyOrder = NamesSeparatedByZeros<HistoryOrder>(),
+    static readonly string s_historyOrder = NamesSeparatedByZeros<HistoryServer.Order>(),
         s_languages = NamesSeparatedByZeros<Language>();
 
     /// <summary>Gets the <see cref="ImGuiCol"/> set that represents background colors.</summary>
     static readonly FrozenSet<ImGuiCol> s_backgrounds = Enum.GetValues<ImGuiCol>()
        .Where(x => x.ToString() is [.., 'B' or 'b', 'G' or 'g'])
        .ToFrozenSet();
-
-    static readonly IEqualityComparer<(string? Alias, string? Host, ushort Port)> s_equality =
-        Equating<(string? Alias, string? Host, ushort Port)>(
-            (x, y) => x.Port == y.Port && FrozenSortedDictionary.Comparer.Equals(x.Host, y.Host)
-        );
 
     /// <summary>Determines whether a restart needs to be performed to apply changes.</summary>
     static bool s_requiresRestart;
@@ -78,7 +62,7 @@ public sealed partial class Preferences
     readonly Dictionary<string, bool> _editStates = new(FrozenSortedDictionary.Comparer);
 
     /// <summary>Contains the history.</summary>
-    readonly HistoryEntry.List _list = HistoryEntry.List.Load();
+    readonly OrderedDictionary<string, HistoryServer> _history = HistoryServer.Load();
 
     /// <summary>Contains boolean settings.</summary>
     bool _alwaysShowChat,
@@ -295,9 +279,9 @@ public sealed partial class Preferences
     }
 
     /// <summary>Gets or sets the value determining whether to sort the history by name or by last used.</summary>
-    public HistoryOrder SortHistoryBy
+    public HistoryServer.Order SortBy
     {
-        get => (HistoryOrder)_sortHistoryBy;
+        get => (HistoryServer.Order)_sortHistoryBy;
         [UsedImplicitly] private set => _sortHistoryBy = (int)value;
     }
 
@@ -362,11 +346,6 @@ public sealed partial class Preferences
         fromMemory.Save();
         return fromMemory;
     }
-
-    /// <summary>Prepends the element to the beginning of the history.</summary>
-    /// <param name="historyEntry">The connection to prepend.</param>
-    [CLSCompliant(false)]
-    public void Prepend(HistoryEntry historyEntry) => _list.History.Insert(0, historyEntry);
 
     /// <summary>Pushes the specific color into most widgets.</summary>
     /// <param name="color">The color.</param>
@@ -437,7 +416,7 @@ public sealed partial class Preferences
     public void Save()
     {
         File.WriteAllText(FilePath, Kvp.Serialize(this));
-        _list.Save();
+        HistoryServer.Save(_history);
     }
 
     /// <summary>Shows a help widget.</summary>
@@ -582,56 +561,6 @@ public sealed partial class Preferences
     public void ShowText(string text, ItemFlags? color, string? clipboard = null, string? tooltip = null) =>
         ShowText(text, this[color], clipboard, tooltip);
 
-    /// <summary>Synchronizes the connection with the one found within the internal collection.</summary>
-    /// <param name="historyEntry">The connection to synchronize.</param>
-    [CLSCompliant(false)]
-    public void Sync(ref HistoryEntry historyEntry)
-    {
-        string FindNextAvailableColor()
-        {
-            foreach (var color in TabColors)
-            {
-                var history = CollectionsMarshal.AsSpan(_list.History);
-
-                for (var i = 0; i < history.Length; i++)
-                {
-                    ref var current = ref history[i];
-
-                    if (!string.IsNullOrWhiteSpace(current.Color) && AppColor.Parse(current.Color) == color)
-                        goto Next;
-                }
-
-                return color.ToString();
-
-            Next: ;
-            }
-
-            return TabColors.PickRandom().ToString();
-        }
-
-        var history = CollectionsMarshal.AsSpan(_list.History);
-
-        for (var i = 0; i < history.Length; i++)
-        {
-            ref var next = ref history[i];
-
-            if (string.IsNullOrWhiteSpace(historyEntry.Color) && string.IsNullOrWhiteSpace(next.Color))
-                next = next with { Color = FindNextAvailableColor() };
-
-            if (!historyEntry.HostEquals(next))
-                continue;
-
-            if (!FrozenSortedDictionary.Comparer.Equals(historyEntry.Alias, next.Alias))
-                next = next with { Alias = historyEntry.Alias };
-
-            if (!FrozenSortedDictionary.Comparer.Equals(historyEntry.Name, next.Name))
-                continue;
-
-            historyEntry = new(historyEntry, next.GetLocationsOrEmpty(), next.Alias, next.Color);
-            next = historyEntry;
-        }
-    }
-
     /// <summary>Convenience function for displaying a tooltip with text scaled by the user preferences.</summary>
     /// <param name="text">The text to display.</param>
     /// <param name="colored">Whether to make the text colorful.</param>
@@ -709,23 +638,6 @@ public sealed partial class Preferences
         return true;
     }
 
-    /// <summary>Determines whether <see cref="HistoryEntry.HasDeathLink"/> should be enabled.</summary>
-    /// <param name="address">The address.</param>
-    /// <param name="port">The port.</param>
-    /// <param name="name">The name of the slot.</param>
-    /// <returns>Whether death link should be enabled.</returns>
-    [CLSCompliant(false)]
-    public bool HasDeathLink(string address, ushort port, string name)
-    {
-        for (var i = 0; _list.History.Nth(i) is { IsInvalid: false } connection; i++)
-            if (port == connection.Port &&
-                FrozenSortedDictionary.Comparer.Equals(address, connection.Host) &&
-                FrozenSortedDictionary.Comparer.Equals(name, connection.Name))
-                return connection.HasDeathLink;
-
-        return false;
-    }
-
     /// <summary>Shows the preferences window.</summary>
     /// <param name="gameTime">The time elapsed.</param>
     /// <param name="clients">The list of clients to show.</param>
@@ -774,6 +686,49 @@ public sealed partial class Preferences
     public string GetPythonPath() =>
         string.IsNullOrWhiteSpace(_python) ? "python" :
         System.IO.Directory.Exists(_python) ? Path.Join(Python, "python") : _python;
+
+    /// <summary>Gets the <see cref="HistorySlot"/>.</summary>
+    /// <param name="yaml">The slot information.</param>
+    /// <param name="address">The address of the server.</param>
+    /// <param name="port">The port of the server.</param>
+    /// <param name="password">The password.</param>
+    /// <returns></returns>
+    [CLSCompliant(false)]
+    public HistorySlot Get(Yaml yaml, string address, ushort port, string? password)
+    {
+        string FindNextAvailableColor()
+        {
+            foreach (var color in TabColors)
+            {
+                foreach (var (_, server) in _history)
+                    foreach (var (_, slot) in server.Slots)
+                        if (!string.IsNullOrWhiteSpace(slot.Color) && AppColor.Parse(slot.Color) == color)
+                            goto Next;
+
+                return color.ToString();
+
+            Next: ;
+            }
+
+            return TabColors.PickRandom().ToString();
+        }
+
+        var key = $"{address}:{port}";
+
+        if (!_history.TryGetValue(key, out var server))
+        {
+            _history[key] = server = new();
+            server.Password = password;
+        }
+
+        if (server.Slots.TryGetValue(yaml.Name, out var slot))
+            return slot;
+
+        server.Slots[yaml.Name] = slot = new();
+        slot.Color = FindNextAvailableColor();
+        slot.Game = yaml.Game;
+        return slot;
+    }
 
     /// <summary>Adds the current font.</summary>
     /// <returns>The created font, or <see langword="default"/> if the resource doesn't exist.</returns>
@@ -1140,45 +1095,21 @@ public sealed partial class Preferences
         ImGui.SetNextItemWidth(Width(100));
         _ = Combo("Sort", ref _sortHistoryBy, s_historyOrder, false);
 
-        var message = _list.History.Count is 0
+        var message = _history.Count is 0
             ? "Join a game for buttons to appear here!"
             : "Left click to join. Right click to delete.";
 
         ShowText(message, disabled: true);
         ShowHelp(UpdateHostOrPortMessage);
 
-        for (var i = 0; i < _list.History.Count && CollectionsMarshal.AsSpan(_list.History) is var history; i++)
-        {
-            ref var current = ref history[i];
-
-            if (current.IsInvalid || history[..i].Contains(current))
-                _list.History.RemoveAt(i--);
-        }
-
-        var query = _list.History.ToArray()
-           .Where(x => clients.TrueForAll(y => !y.Has(x)))
-           .GroupBy(x => (x.Alias, x.Host, x.Port), s_equality);
-
-        clientsToRegister = Order(query)
+        clientsToRegister = HistoryServer.OrderBy(_history, SortBy)
+           .Select(x => (x.Key, x.Value, x.Value.Slots.Where(x => !clients.Exists(y => y.Has(x.Value))).ToList()))
            .SelectMany(ShowHistoryHeader)
            .Filter()
 #pragma warning disable IDE0305
            .ToList();
 #pragma warning restore IDE0305
         ImGui.EndTabItem();
-        return ret;
-    }
-
-    /// <summary>Shows the connection.</summary>
-    /// <param name="historyEntry">The connection to show.</param>
-    /// <returns>Whether the button was clicked.</returns>
-    bool ShowHistoryButton(HistoryEntry historyEntry)
-    {
-        var ret = ImGui.Button($"{historyEntry.Name}###{historyEntry.Host}:|{historyEntry.Port}:|{historyEntry.Name}");
-
-        if (ImGui.IsItemClicked(ImGuiMouseButton.Middle) || ImGui.IsItemClicked(ImGuiMouseButton.Right))
-            _list.History.Remove(historyEntry);
-
         return ret;
     }
 
@@ -1203,75 +1134,61 @@ public sealed partial class Preferences
         return ret;
     }
 
-    /// <summary>Connects to the server using the <see cref="HistoryEntry"/> instance.</summary>
-    /// <param name="historyEntry">The connection to use.</param>
-    /// <returns>The <see cref="Client"/> created based on the parameter <paramref name="historyEntry"/>.</returns>
-    Client ConnectAndReturn(HistoryEntry historyEntry)
-    {
-        Client client = new(historyEntry);
-        client.Connect(this, historyEntry.Host ?? Address, historyEntry.Port, historyEntry.Password);
-        return client;
-    }
-
     /// <summary>Shows the group of history.</summary>
-    /// <param name="group">The group of history.</param>
+    /// <param name="x">The group of history.</param>
     /// <returns>The clients created.</returns>
-    IEnumerable<Client> ShowHistoryHeader(ConnectionGroup group)
+    IEnumerable<Client> ShowHistoryHeader(
+        (string Key, HistoryServer Value, List<KeyValuePair<string, HistorySlot>> Slots) x
+    )
     {
-        if (group.ToIList() is not [var f, ..] connection)
+        bool ShowHistoryButton(KeyValuePair<string, HistorySlot> historySlot)
+        {
+            var ret = ImGui.Button($"{historySlot.Key}###{x.Key}:|{historySlot.Key}");
+
+            if (ImGui.IsItemClicked(ImGuiMouseButton.Middle) || ImGui.IsItemClicked(ImGuiMouseButton.Right))
+                x.Value.Slots.Remove(historySlot.Key);
+
+            return ret;
+        }
+
+        Client ConnectAndReturn(KeyValuePair<string, HistorySlot> slot)
+        {
+            Client client = new(slot);
+            var e = x.Key.SplitSpanOn(':').GetReversedEnumerator();
+
+            if (e.MoveNext() && e.Current.TryInto<ushort>() is { } port)
+                client.Connect(this, e.Body.ToString(), port, x.Value.Password);
+
+            return client;
+        }
+
+        if (x.Slots is [])
             return [];
 
-        var count = $"{(connection.Count is 1 ? "" : $" ({connection.Count})")}";
-        var id = $"{f.Host}:{f.Port}";
+        var count = $"{(x.Slots.Count is 1 ? "" : $" ({x.Slots.Count})")}";
         ImGui.SetNextItemWidth(Width(100));
-        ref var state = ref CollectionsMarshal.GetValueRefOrAddDefault(_editStates, id, out _);
-        var label = $"{(string.IsNullOrWhiteSpace(f.Alias) ? id : f.Alias)}{count}###{id}";
+        ref var state = ref CollectionsMarshal.GetValueRefOrAddDefault(_editStates, x.Key, out _);
+        var label = $"{(string.IsNullOrWhiteSpace(x.Value.Alias) ? x.Key : x.Value.Alias)}{count}###{x.Key}";
 
         if (!ImGui.CollapsingHeader(label, ImGuiTreeNodeFlags.SpanTextWidth))
             return [];
 
         ImGui.SameLine(0, 15);
-        _ = ImGui.Checkbox($"Edit###Edit:|{id}", ref state);
-        var oldAlias = f.GetAliasOrEmpty();
-        var newAlias = oldAlias;
+        _ = ImGui.Checkbox($"Edit###Edit:|{x.Key}", ref state);
+        var alias = x.Value.Alias;
         ImGui.SetNextItemWidth(Width(100));
 
         if (state &&
             ImGuiRenderer.InputTextWithHint(
-                $"Alias###Alias:|{id}",
+                $"Alias###Alias:|{x.Key}",
                 "Type here to change the name, then hit enter to confirm...",
-                ref newAlias,
+                ref alias,
                 ushort.MaxValue,
                 TextFlags
             ) &&
-            !(state = false) &&
-            !FrozenSortedDictionary.Comparer.Equals(oldAlias, newAlias) &&
-            f with { Alias = newAlias } is var alias)
-            Sync(ref alias);
+            (state = false) is var _)
+            x.Value.Alias = alias;
 
-        return Order(connection).Where(ShowHistoryButton).Select(ConnectAndReturn);
+        return x.Slots.Where(ShowHistoryButton).Select(ConnectAndReturn);
     }
-
-    /// <summary>Orders the connections.</summary>
-    /// <param name="cs">The connections.</param>
-    /// <returns>The ordered enumerable of the parameter <paramref name="cs"/>.</returns>
-    IOrderedEnumerable<HistoryEntry> Order(IEnumerable<HistoryEntry> cs) =>
-        SortHistoryBy switch
-        {
-            HistoryOrder.Date => cs.OrderBy(_list.History.IndexOf),
-            HistoryOrder.Name => cs.OrderBy(x => x.Name, FrozenSortedDictionary.Comparer),
-            var x => throw new ArgumentOutOfRangeException(nameof(cs), x, null),
-        };
-
-    /// <summary>Orders the connection group.</summary>
-    /// <param name="cs">The connections.</param>
-    /// <returns>The ordered enumerable of the parameter <paramref name="cs"/>.</returns>
-    IEnumerable<ConnectionGroup> Order(IEnumerable<ConnectionGroup> cs) =>
-        SortHistoryBy switch
-        {
-            HistoryOrder.Date => cs.OrderBy(_list.Find),
-            HistoryOrder.Name =>
-                cs.OrderBy(x => x.Key.Alias ?? x.Key.Host, FrozenSortedDictionary.Comparer).ThenBy(x => x.Key.Port),
-            _ => [],
-        };
 }
