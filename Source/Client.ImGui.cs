@@ -66,7 +66,7 @@ public sealed partial class Client
     public bool Draw(GameTime gameTime, Preferences preferences, out bool selected)
     {
         const int Styles = 13;
-        var pushedColor = AppColor.TryParse(_info.Color, out var color);
+        var pushedColor = AppColor.TryParse(_slot.Color, out var color);
 
         if (pushedColor)
             preferences.PushStyling(color);
@@ -81,7 +81,7 @@ public sealed partial class Client
                     ImGui.PopStyleColor(Styles);
 
                 selected = false;
-                return Close(preferences, open);
+                return Close(open);
             }
         }
         else if (!ImGui.Begin(_windowName, ref open, WindowFlags) || !open)
@@ -91,7 +91,7 @@ public sealed partial class Client
 
             ImGui.End();
             selected = false;
-            return Close(preferences, open);
+            return Close(open);
         }
 
         ImGui.SetWindowFontScale(preferences.UiScale);
@@ -419,16 +419,16 @@ public sealed partial class Client
 
         if (ImGui.Button("Reconnect"))
         {
-            Close(preferences, false);
+            Close(false);
             Connect(preferences);
         }
 
         ImGui.SeparatorText("Theming");
-        var color = AppColor.Parse(_info.Color);
+        var color = AppColor.Parse(_slot.Color);
         var newColor = Preferences.ShowColorEdit("Color", color);
 
         if (newColor != color)
-            _info = _info with { Color = newColor.ToString() };
+            _slot.Color = newColor.ToString();
 
         ImGui.EndChild();
         ShowChat(preferences);
@@ -441,7 +441,7 @@ public sealed partial class Client
     {
         const ImGuiInputTextFlags Flags = Preferences.TextFlags | ImGuiInputTextFlags.AllowTabInput;
         ImGui.SeparatorText("DeathLink");
-        var hasDeathLink = _info.HasDeathLink;
+        var hasDeathLink = _slot.HasDeathLink;
         _ = ImGui.Checkbox($"Enable {nameof(DeathLink)}", ref hasDeathLink);
 
         if (hasDeathLink)
@@ -458,15 +458,12 @@ public sealed partial class Client
                 );
         }
 
-        if (hasDeathLink != _info.HasDeathLink)
+        if (hasDeathLink != _slot.HasDeathLink)
         {
-            if (hasDeathLink)
+            if (_slot.HasDeathLink = hasDeathLink)
                 _deathLink?.EnableDeathLink();
             else
                 _deathLink?.DisableDeathLink();
-
-            _info = _info with { HasDeathLink = hasDeathLink };
-            preferences.Sync(ref _info);
         }
 
         if (!hasDeathLink)
@@ -614,14 +611,7 @@ public sealed partial class Client
             ImGui.SameLine();
 
             if (ImGui.Button("Move in or out of user category"))
-            {
-                _info = _info with
-                {
-                    Tagged = _info.Tagged?.SymmetricExcept(_locations.Where(IsReleasable).Select(x => x.Key)),
-                };
-
-                preferences.Sync(ref _info);
-            }
+                _slot.TaggedLocations.SymmetricExceptWith(_locations.Where(IsReleasable).Select(x => x.Key));
         }
 
         if (isAnyReleasable && showStatus)
@@ -798,10 +788,9 @@ public sealed partial class Client
     }
 
     /// <summary>Handles closing the tab or window.</summary>
-    /// <param name="preferences">The user preferences.</param>
     /// <param name="open">Whether to keep the socket alive.</param>
     /// <returns>Not the parameter <paramref name="open"/>.</returns>
-    bool Close(Preferences preferences, bool open)
+    bool Close(bool open)
     {
         var session = _session;
 
@@ -810,7 +799,6 @@ public sealed partial class Client
 #pragma warning disable IDISP013
         _ = Task.Run(session.Socket.DisconnectAsync).ConfigureAwait(false);
 #pragma warning restore IDISP013
-        preferences.Sync(ref _info);
         _session = null;
         return !open;
     }
@@ -1053,7 +1041,7 @@ public sealed partial class Client
     {
         Debug.Assert(_session is not null);
 
-        if (_info.Tagged is not { Count: not 0 and var c } tagged)
+        if (_slot.TaggedLocations is not { Count: not 0 and var c } tagged)
             return;
 
         setter();
@@ -1076,10 +1064,9 @@ public sealed partial class Client
         const string Default = ManualReader.Uncategorized;
         ShowItemSearch(preferences);
 
-        if (GroupItems(Default, default)
-           .Where(x => x.IsMatch(_itemSearch) && x.IsMatch(_info, _showUsedItems))
-           .Aggregate(false, (a, n) => n.Show(preferences, ref _info) is true || a))
-            preferences.Sync(ref _info);
+        foreach (var item in GroupItems(Default, default)
+           .Where(x => x.IsMatch(_itemSearch) && x.IsMatch(_slot, _showUsedItems)))
+            _ = item.Show(preferences, ref _slot);
     }
 
     /// <summary>Shows manual items.</summary>
@@ -1111,7 +1098,7 @@ public sealed partial class Client
                 continue;
 
             IList<ReceivedItem> filtered =
-                [..GroupItems(category, items).Where(x => x.IsMatch(_itemSearch) && x.IsMatch(_info, _showUsedItems))];
+                [..GroupItems(category, items).Where(x => x.IsMatch(_itemSearch) && x.IsMatch(_slot, _showUsedItems))];
 
             if (filtered.Sum(x => x.Count) is var sum && sum is 0)
                 continue;
@@ -1121,8 +1108,8 @@ public sealed partial class Client
             if (!ImGui.CollapsingHeader($"{category} ({sum})###{category}:|ItemCategory"))
                 continue;
 
-            if (filtered.Aggregate(false, (a, n) => n.Show(preferences, ref _info) is true || a))
-                preferences.Sync(ref _info);
+            foreach (var item in filtered)
+                _ = item.Show(preferences, ref _slot);
         }
     }
 
@@ -1133,7 +1120,6 @@ public sealed partial class Client
     {
         Debug.Assert(_session is not null);
         Debug.Assert(_evaluator is not null);
-        var requiresSync = false;
 
         foreach (var (phantomItem, values) in _evaluator.PhantomToItems)
         {
@@ -1151,38 +1137,25 @@ public sealed partial class Client
             ReceivedItem received =
                 new(ItemFlags.None, phantomItem, sum, last, [..found.SelectMany(x => x.Item.Locations ?? [])]);
 
-            if (!received.IsMatch(_info, _showUsedItems))
+            if (!received.IsMatch(_slot, _showUsedItems))
                 continue;
 
             setter();
 
-            switch (received.Show(preferences, ref _info, true))
+            switch (received.Show(preferences, ref _slot, true))
             {
-                case true:
-                    requiresSync = true;
-                    break;
-                case null: goto Next;
+                case false: goto Next;
             }
 
             foreach (var (item, count) in found.Where(x => x.Item.Count is not 0))
             {
-                switch (item.Show(preferences, ref _info))
-                {
-                    case true:
-                        requiresSync = true;
-                        break;
-                    case null: goto Next;
-                }
-
+                _ = item.Show(preferences, ref _slot);
                 ImGui.SameLine();
                 preferences.ShowText($"= {item.Count * count}");
             }
 
         Next: ;
         }
-
-        if (requiresSync)
-            preferences.Sync(ref _info);
     }
 
     /// <summary>Convenience function for displaying a checkbox with a specific color.</summary>
