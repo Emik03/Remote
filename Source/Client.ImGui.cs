@@ -983,7 +983,6 @@ public sealed partial class Client
         for (; startIndex < _messages.Count && _messages[startIndex].Parts is var parts; startIndex++)
         {
             var first = true;
-            preferences.Pad(null, null);
             var message = parts.Conjoin("");
 
             foreach (var part in parts)

@@ -454,6 +454,12 @@ public sealed partial class Preferences
         else
             pushed = false;
 
+        if (text is [var first, ..] && first.IsWhitespace())
+        {
+            ImGui.TextUnformatted([' ']);
+            ImGui.SameLine();
+        }
+
         foreach (var w in text.SplitSpanWhitespace())
         {
             if ((pad ? ImGui.CalcTextSize(w).X + ImGui.CalcTextSize([' ']).X : ImGui.CalcTextSize(w).X) is var width &&
@@ -501,7 +507,11 @@ public sealed partial class Preferences
             pad = true;
         }
 
-        ImGui.TextUnformatted([' ']);
+        if (text is [.., var last] && last.IsWhitespace())
+            ImGui.TextUnformatted([' ']);
+        else
+            ImGui.NewLine();
+
         CopyIfClicked(copy);
         Tooltip(tooltip);
 
