@@ -227,7 +227,7 @@ public sealed partial class Client(Yaml? yaml = null)
     readonly List<string> _sortedKeys = [];
 
     /// <summary>Contains the logs of messages received.</summary>
-    readonly List<LogMessage> _messages = [];
+    readonly List<LogMessage?> _messages = [];
 
     /// <summary>Contains this player's <c>.yaml</c> file.</summary>
     readonly Yaml _yaml = yaml ?? new();

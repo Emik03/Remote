@@ -977,8 +977,18 @@ public sealed partial class Client
     /// <param name="startIndex">The index to start displaying messages from.</param>
     void ShowMessages(Preferences preferences, int startIndex)
     {
-        for (; startIndex < _messages.Count && _messages[startIndex].Parts is var parts; startIndex++)
+        for (; startIndex < _messages.Count; startIndex++)
         {
+            MessagePart[]? parts;
+
+            while ((parts = _messages[startIndex]?.Parts) is null)
+            {
+                _messages.RemoveAt(startIndex);
+
+                if (startIndex >= _messages.Count)
+                    return;
+            }
+
             var first = true;
             var message = parts.Conjoin("");
 
