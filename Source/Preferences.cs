@@ -7,6 +7,16 @@ using Vector2 = System.Numerics.Vector2;
 /// <summary>Contains the preferences that are stored persistently.</summary>
 public sealed partial class Preferences
 {
+    /// <summary>Contains the orderings for history.</summary>
+    public enum HistoryOrder
+    {
+        /// <summary>This value indicates to sort the history by date, newest to oldest.</summary>
+        Date,
+
+        /// <summary>This value indicates to sort the history alphabetically.</summary>
+        Name,
+    }
+
     /// <summary>Contains the font languages.</summary>
     public enum Language
     {
@@ -24,16 +34,6 @@ public sealed partial class Preferences
 
         /// <summary>The thai font.</summary>
         Thai,
-    }
-
-    /// <summary>Contains the orderings for history.</summary>
-    public enum HistoryOrder
-    {
-        /// <summary>This value indicates to sort the history by date, newest to oldest.</summary>
-        Date,
-
-        /// <summary>This value indicates to sort the history alphabetically.</summary>
-        Name,
     }
 
     /// <summary>The flags to use across any text field.</summary>
