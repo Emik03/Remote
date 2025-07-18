@@ -106,7 +106,7 @@ public sealed partial class Client(Yaml? yaml = null)
 
             var internalName = header ? $":|{Name}" : Name;
             var used = info.Items.GetValueOrDefault(internalName);
-            var text = $"{Name}{(used is 0 ? Count is 1 ? "" : $" ({Count})" : $"({Count - used}/{Count})")}";
+            var text = $"{Name}{(used is 0 ? Count is 1 ? "" : $" ({Count})" : $" ({Count - used}/{Count})")}";
             ImGui.SetNextItemWidth(0);
             ImGui.InputInt($"###{internalName}:|Input", ref used);
             ImGui.SameLine();
