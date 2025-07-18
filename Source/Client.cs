@@ -86,29 +86,26 @@ public sealed partial class Client(Yaml? yaml = null)
         public bool IsMatch(string search) => Name?.Contains(search, StringComparison.OrdinalIgnoreCase) is true;
 
         /// <summary>Determines whether this instance matches the preferences for showing used items.</summary>
-        /// <param name="historyEntry">The items that were used.</param>
+        /// <param name="historySlot">The items that were used.</param>
         /// <param name="showUsedItems">Whether to accept completely used items.</param>
         /// <returns>Whether this instance has any unused items, or has no used items.</returns>
         [MemberNotNullWhen(true, nameof(Name))]
-        public bool IsMatch(HistoryEntry historyEntry, bool showUsedItems) =>
+        public bool IsMatch(HistorySlot historySlot, bool showUsedItems) =>
             Name is not null &&
-            (showUsedItems ||
-                historyEntry.GetItemsOrEmpty().GetValueOrDefault(Name) is var used &&
-                used is 0 ||
-                used != Count);
+            (showUsedItems || historySlot.Items.GetValueOrDefault(Name) is var used && used is 0 || used != Count);
 
         /// <summary>Displays this instance as text with a tooltip.</summary>
         /// <param name="preferences">The user preferences.</param>
         /// <param name="info">The connection info to display and update the counter.</param>
         /// <param name="header">Whether to display this with <see cref="ImGui.CollapsingHeader(string)"/>.</param>
         /// <returns>Whether the parameter <paramref name="info"/> was updated.</returns>
-        public bool? Show(Preferences preferences, ref HistoryEntry info, bool header = false)
+        public bool Show(Preferences preferences, ref HistorySlot info, bool header = false)
         {
             if (Name is null)
                 return false;
 
             var internalName = header ? $":|{Name}" : Name;
-            var used = info.GetItemsOrEmpty().GetValueOrDefault(internalName);
+            var used = info.Items.GetValueOrDefault(internalName);
             var text = $"{Name}{(used is 0 ? Count is 1 ? "" : $" ({Count})" : $" ({Count - used}/{Count})")}";
             var v = used;
             ImGui.SetNextItemWidth(0);
@@ -116,7 +113,7 @@ public sealed partial class Client(Yaml? yaml = null)
             ImGui.SameLine();
 
             if ((v = v.Clamp(0, Count)) != used)
-                info = info with { Items = info.GetItemsOrEmpty().SetItem(internalName, v) };
+                info.Items[internalName] = v;
 
             var tooltip = Locations?.Select(ToString).Conjoin('\n');
 
@@ -127,7 +124,7 @@ public sealed partial class Client(Yaml? yaml = null)
                 else
                     preferences.ShowText(text, Flags, Name, tooltip);
 
-                return v != used;
+                return true;
             }
 
             if (used == Count)
@@ -138,8 +135,7 @@ public sealed partial class Client(Yaml? yaml = null)
             if (used == Count)
                 ImGui.PopStyleColor();
 
-            return v != used ? true :
-                expanded ? null : false;
+            return expanded;
         }
 
         /// <inheritdoc />
@@ -279,7 +275,7 @@ public sealed partial class Client(Yaml? yaml = null)
     ImmutableArray<string> _itemSuggestions = [], _locationSuggestions = [];
 
     /// <summary>Gets the last successful connection.</summary>
-    HistoryEntry _info;
+    HistorySlot _slot = new();
 
     /// <summary>The attempt to login.</summary>
     Task _connectingTask = Task.CompletedTask;
@@ -294,11 +290,11 @@ public sealed partial class Client(Yaml? yaml = null)
         _errors = errors;
 
     /// <summary>Initializes a new instance of the <see cref="Client"/> class.</summary>
-    /// <param name="historyEntry">The connection information.</param>
+    /// <param name="kvp">The connection information.</param>
     [CLSCompliant(false)]
-    internal Client(HistoryEntry historyEntry)
-        : this(historyEntry.ToYaml()) =>
-        _info = historyEntry;
+    public Client(KeyValuePair<string, HistorySlot> kvp)
+        : this(new Yaml { Name = kvp.Key, Game = kvp.Value.Game }) =>
+        _slot = kvp.Value;
 
     /// <summary>Gets or adds this location and retrieves the checkbox status of that location.</summary>
     /// <param name="key">The key to add or get.</param>
@@ -319,7 +315,7 @@ public sealed partial class Client(Yaml? yaml = null)
     }
 
     /// <summary>Gets the color.</summary>
-    public AppColor? Color => AppColor.TryParse(_info.Color, out var color) ? color : null;
+    public AppColor? Color => AppColor.TryParse(_slot.Color, out var color) ? color : null;
 
     /// <summary>Contains the last retrieved hints.</summary>
     HintMessage[]? LastHints
@@ -374,13 +370,12 @@ public sealed partial class Client(Yaml? yaml = null)
         {
             const ItemsHandlingFlags Flags = ItemsHandlingFlags.AllItems;
             await Task.Yield();
+            _yaml.EscapeName();
             var session = ArchipelagoSessionFactory.CreateSession(address, port);
             session.MessageLog.OnMessageReceived += OnMessageReceived;
-
             string[] tags = ["AP", nameof(Remote)];
             _connectionMessage = "Attempting new connection.\nConnecting... (1/6)";
             _ = await session.ConnectAsync();
-            _yaml.EscapeName();
             _connectionMessage = "Connected!\nLogging in... (2/6)";
             var login = await session.LoginAsync(_yaml.Game, _yaml.Name, Flags, tags: tags, password: password);
 
@@ -397,9 +392,9 @@ public sealed partial class Client(Yaml? yaml = null)
             _deathLink = session.CreateDeathLinkService();
             _deathLink.OnDeathLinkReceived += OnDeathLink;
             (_session = session).SetClientState(ArchipelagoClientState.ClientPlaying);
-            var hasDeathLink = preferences.HasDeathLink(address, port, _yaml.Name);
+            _slot = preferences.Get(_yaml, address, port, password);
 
-            if (hasDeathLink)
+            if (_slot.HasDeathLink)
                 _deathLink.EnableDeathLink();
             else
                 _deathLink.DisableDeathLink();
@@ -422,10 +417,7 @@ public sealed partial class Client(Yaml? yaml = null)
             );
 
             _connectionMessage = "APWorld has been read!\nSaving history in memory... (6/6)";
-            _info = new(_yaml, password, address, port, _info.Alias, _info.Color, hasDeathLink);
             _sessionCreatedTimestamp = DateTime.Now;
-            preferences.Prepend(_info);
-            preferences.Sync(ref _info);
             _connectionMessage = "";
 
             if (_evaluator is not null)
@@ -461,9 +453,10 @@ public sealed partial class Client(Yaml? yaml = null)
     /// <inheritdoc />
     public override bool Equals(object? obj) => obj is Client { _instance: var i } && i == _instance;
 
-    /// <inheritdoc cref="HistoryEntry.Equals(HistoryEntry)"/>
-    [CLSCompliant(false)]
-    public bool Has(HistoryEntry historyEntry) => _info.Equals(historyEntry);
+    /// <summary>Determines whether this client shares the same instance.</summary>
+    /// <param name="slot">The slot to check.</param>
+    /// <returns>Whether this client shares the same instance.</returns>
+    public bool Has(HistorySlot slot) => slot == _slot;
 
     /// <inheritdoc />
     public override int GetHashCode() => _instance;
@@ -488,7 +481,7 @@ public sealed partial class Client(Yaml? yaml = null)
     /// <param name="e">The exception to convert.</param>
     /// <param name="additions">The additional strings to add before-hand.</param>
     /// <returns>The messages.</returns>
-    static string[] ToMessages(Exception e, params ReadOnlySpan<string> additions) =>
+    static string[] ToMessages(Exception? e, params ReadOnlySpan<string> additions) =>
     [
         ..additions,
         ..e.FindPathToNull(x => x.InnerException)
@@ -500,7 +493,7 @@ public sealed partial class Client(Yaml? yaml = null)
     /// <param name="deathLink">The death link.</param>
     void OnDeathLink(DeathLink deathLink)
     {
-        if (!_info.HasDeathLink)
+        if (!_slot.HasDeathLink)
             return;
 
         File.WriteAllLines(
@@ -534,10 +527,16 @@ public sealed partial class Client(Yaml? yaml = null)
     /// <summary>Releases the locations whose checkboxes are ticked.</summary>
     void Release(Preferences preferences)
     {
-        void CompleteLocationChecks()
+        bool CompleteLocationChecks()
         {
             Debug.Assert(_session is not null);
-            _session.Locations.CompleteLocationChecks([.._locations.Where(x => x.Value.Checked).Select(ToId).Filter()]);
+            using CancellationTokenSource cts = new(TimeSpan.FromSeconds(5));
+            var task = Task.Run(CompleteLocationChecksAsync, cts.Token);
+
+            while (!task.IsCompleted)
+                Thread.Sleep(10);
+
+            return cts.Token.IsCancellationRequested;
         }
 
         bool NeedsToBeTrackedLocally(string location)
@@ -548,36 +547,36 @@ public sealed partial class Client(Yaml? yaml = null)
                 !_session.Locations.AllLocations.Contains(id);
         }
 
+        Task? CompleteLocationChecksAsync() =>
+            _session.Locations.CompleteLocationChecksAsync(
+                [.._locations.Where(x => x.Value.Checked).Select(ToId).Filter()]
+            );
+
         if (!IsReleasing || _isAttemptingToRelease is false or null)
             return;
 
         Debug.Assert(_session is not null);
         _releaseIndex = _messages.Count;
 
-        if (Go(CompleteLocationChecks, out _))
+        if (CompleteLocationChecks())
         {
-            Close(preferences, false);
+            Close(false);
             Connect(preferences);
 
-            if (Go(CompleteLocationChecks, out var ex))
+            if (CompleteLocationChecks())
             {
-                _errors = ToMessages(ex, "Unable to reestablish a connection to the server.");
-                Close(preferences, false);
+                _errors = ToMessages(null, "Unable to reestablish a connection to the server.");
+                Close(false);
                 return;
             }
         }
 
         IList<string> keys = [.._locations.Where(x => x.Value.Checked).Select(x => x.Key)];
+        _slot.CheckedLocations.UnionWith(keys.Where(NeedsToBeTrackedLocally));
         _isAttemptingToRelease = null;
 
         if (_canGoal is false && keys.Any(IsGoal))
             _canGoal = null;
-
-        var count = _info.GetLocationsOrEmpty().Count;
-        _info = new(_info, keys.Where(NeedsToBeTrackedLocally));
-
-        if (_info.GetLocationsOrEmpty().Count != count)
-            preferences.Sync(ref _info);
 
         foreach (var key in keys)
         {
@@ -605,16 +604,17 @@ public sealed partial class Client(Yaml? yaml = null)
         {
             ref var value = ref this[location];
             var id = helper.GetLocationIdFromName(_yaml.Game, location);
-
+#pragma warning disable MA0002
             (value.Logic, value.Status) = 0 switch
             {
                 _ when id is -1 && !IsGoal(location) => (null, LocationStatus.Hidden),
                 _ when helper.AllLocations.Contains(id) && !helper.AllMissingLocations.Contains(id) ||
-                    _info.GetLocationsOrEmpty().Contains(location) => (null, LocationStatus.Checked),
+                    _slot.CheckedLocations.Contains(location) => (null, LocationStatus.Checked),
                 _ when _evaluator is null => (null, LocationStatus.ProbablyReachable),
                 _ when _evaluator.InLogic(location) is { } logic => (logic, LocationStatus.OutOfLogic),
                 _ => (null, LocationStatus.Reachable),
             };
+#pragma warning restore MA0002
         }
 
         Debug.Assert(_session is not null);
