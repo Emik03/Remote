@@ -844,6 +844,7 @@ public sealed partial class Client
         Debug.Assert(_session is not null);
         Debug.Assert(_evaluator is not null);
         _ = ImGui.Checkbox("Show Out of Logic Locations", ref _showOutOfLogic);
+        ImGui.NewLine();
         var setter = GetNextItemOpenSetter();
         var newValue = InlineButtons("Tick all", "Untick all");
         ShowLocationSearch(preferences);
