@@ -444,8 +444,8 @@ public sealed partial class Preferences
         bool disabled = false
     )
     {
-        var (copy, pad, pushed) = (clipboard ?? text, false, true);
-        Pad(text, copy);
+        var (copy, space, pushed) = (clipboard ?? text, false, true);
+        Pad();
 
         if (disabled && ImGui.GetStyleColorVec4(ImGuiCol.TextDisabled) is not null and var ptr)
             ImGui.PushStyleColor(ImGuiCol.Text, *ptr);
@@ -462,18 +462,18 @@ public sealed partial class Preferences
 
         foreach (var w in text.SplitSpanWhitespace())
         {
-            if ((pad ? ImGui.CalcTextSize(w).X + ImGui.CalcTextSize([' ']).X : ImGui.CalcTextSize(w).X) is var width &&
+            if (ImGui.CalcTextSize(w).X + (space ? ImGui.CalcTextSize([' ']).X : 0) is var width &&
                 ImGui.GetContentRegionAvail().X is var available &&
                 available <= width)
             {
                 ImGui.NewLine();
-                Pad(text, copy);
-                (pad, width, available) = (false, ImGui.CalcTextSize(w).X, ImGui.GetContentRegionAvail().X);
+                Pad();
+                (space, width, available) = (false, ImGui.CalcTextSize(w).X, ImGui.GetContentRegionAvail().X);
             }
 
             if (w is var drain && available > width)
             {
-                if (pad)
+                if (space)
                 {
                     ImGui.TextUnformatted([' ']);
                     CopyIfClicked(copy);
@@ -485,7 +485,7 @@ public sealed partial class Preferences
                 CopyIfClicked(copy);
                 Tooltip(tooltip);
                 ImGui.SameLine(0, 0);
-                pad = true;
+                space = true;
                 continue;
             }
 
@@ -493,9 +493,9 @@ public sealed partial class Preferences
                 if (ImGui.GetContentRegionAvail().X <= ImGui.CalcTextSize(drain[..i]).X)
                 {
                     ImGui.TextUnformatted(drain[..(i - 1)]);
-                    Pad(text, copy);
                     CopyIfClicked(copy);
                     Tooltip(tooltip);
+                    Pad();
                     drain = drain[(i - 1)..];
                     i = 2;
                 }
@@ -504,7 +504,7 @@ public sealed partial class Preferences
             CopyIfClicked(copy);
             Tooltip(tooltip);
             ImGui.SameLine(0, 0);
-            pad = true;
+            space = true;
         }
 
         if (text is [.., var last] && last.IsWhitespace())
@@ -544,10 +544,9 @@ public sealed partial class Preferences
     }
 
     /// <summary>Adds padding.</summary>
-    public void Pad(string? text, string? copy)
+    public void Pad()
     {
-        if (copy is not null && !FrozenSortedDictionary.Comparer.Equals(text, copy) ||
-            UiPadding is not [var first, var second])
+        if (UiPadding is not [var first, var second])
             return;
 
         ImGui.Dummy(new(first, second));
