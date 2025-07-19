@@ -235,11 +235,11 @@
       },
       "MonoGame.Framework.DesktopGL": {
         "type": "Direct",
-        "requested": "[3.8.5-develop.1, )",
-        "resolved": "3.8.5-develop.1",
-        "contentHash": "4YXgErvl5NvOtJwUTSEKX9a2J1uQQ3I463xwWUSeXMTVbX68mhPOa+6hk0pTXguF8j2KF22eJWtfUlfldHkr4g==",
+        "requested": "[3.8.5-develop.3, )",
+        "resolved": "3.8.5-develop.3",
+        "contentHash": "zMOl/7OHUXn1eUHCNOBjdMeatK4ljLtz5TtmWB/n4hoRSJbY2cnpeg6EIf2sSlRnk0/yOwjMMjG+IDlkmf1qvQ==",
         "dependencies": {
-          "MonoGame.Library.OpenAL": "1.23.1.10",
+          "MonoGame.Library.OpenAL": "1.24.3.1",
           "MonoGame.Library.SDL": "2.32.2.1",
           "NVorbis": "0.10.4"
         }
@@ -354,8 +354,8 @@
       },
       "MonoGame.Library.OpenAL": {
         "type": "Transitive",
-        "resolved": "1.23.1.10",
-        "contentHash": "4/F4FFyt7OYhtEmgi/Qmv01eC6GfQ9dkIPsymgkwJ/tV7PewmWrHg/LvTKjd6R+5j/tlO8JkjsEb0Aje6bxfxw=="
+        "resolved": "1.24.3.1",
+        "contentHash": "EZI5R3WbrjGkdjeLUEDimdSTNX4K2wtLdgJ9RQqfq//BKC4/3fLq8vJ0Ji3kjvxpfZjMH1b3h/VPOJ42fTkhyw=="
       },
       "MonoGame.Library.SDL": {
         "type": "Transitive",
@@ -441,6 +441,24 @@
       },
       "remote.resources": {
         "type": "Project"
+      }
+    },
+    "net10.0/linux-x64": {
+      "ImGui.NET": {
+        "type": "Direct",
+        "requested": "[1.91.6.1, )",
+        "resolved": "1.91.6.1",
+        "contentHash": "Ph3j8pO6UM28PPJWP+5LEJSPVPkd8ivpVS8tRyY9b0IHn1HDIrMZ2o/FdiXaYW6YhNxMHmbevw6Jcfs+IDKi0Q=="
+      },
+      "MonoGame.Library.OpenAL": {
+        "type": "Transitive",
+        "resolved": "1.24.3.1",
+        "contentHash": "EZI5R3WbrjGkdjeLUEDimdSTNX4K2wtLdgJ9RQqfq//BKC4/3fLq8vJ0Ji3kjvxpfZjMH1b3h/VPOJ42fTkhyw=="
+      },
+      "MonoGame.Library.SDL": {
+        "type": "Transitive",
+        "resolved": "2.32.2.1",
+        "contentHash": "T4E2ppGlSTC2L9US1rxtdg3qTbarRzNId31xZoumUW9cf9Nq8nRQPMu9GzvZGrhfSySf0+UWPEj1rlicps+P/w=="
       }
     }
   }

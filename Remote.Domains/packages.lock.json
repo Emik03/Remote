@@ -351,6 +351,7 @@
           "System.Composition.Runtime": "8.0.0"
         }
       }
-    }
+    },
+    "net9.0/linux-x64": {}
   }
 }

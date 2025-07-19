@@ -1076,6 +1076,10 @@ public sealed partial class Preferences
     /// <returns>Whether to create a new <see cref="Client"/>.</returns>
     bool ShowConnectionTab(List<Client> clients, out IEnumerable<Client>? clientsToRegister)
     {
+        (string Key, HistoryServer Value,
+            List<KeyValuePair<string, HistorySlot>>) OrderedSlots(KeyValuePair<string, HistoryServer> kvp) =>
+            (kvp.Key, kvp.Value, kvp.Value.OrderBy(SortBy).Where(x => !clients.Exists(y => y.Has(x.Value))).ToList());
+
         clientsToRegister = null;
 
         if (!ImGui.BeginTabItem("Connection"))
@@ -1113,7 +1117,7 @@ public sealed partial class Preferences
         ShowHelp(UpdateHostOrPortMessage);
 
         clientsToRegister = HistoryServer.OrderBy(_history, SortBy)
-           .Select(x => (x.Key, x.Value, x.Value.Slots.Where(x => !clients.Exists(y => y.Has(x.Value))).ToList()))
+           .Select(OrderedSlots)
            .SelectMany(ShowHistoryHeader)
            .Filter()
 #pragma warning disable IDE0305
