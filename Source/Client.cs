@@ -451,7 +451,7 @@ public sealed partial class Client(ApYaml? yaml = null)
             {
                 await AttemptAsync(address, port, password);
             }
-#pragma warning disable CA1031
+#pragma warning disable CA1031, RCS1075
             catch (Exception e)
             {
                 try
@@ -465,7 +465,7 @@ public sealed partial class Client(ApYaml? yaml = null)
                     }
                 } // ReSharper disable once EmptyGeneralCatchClause
                 catch (Exception) { }
-#pragma warning restore CA1031
+#pragma warning restore CA1031, RCS1075
                 _errors = ToMessages(e, "Failed to connect. Is the server down, is the host and port correct?");
             }
         }

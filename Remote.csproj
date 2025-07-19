@@ -3,6 +3,7 @@
         <DebugType>full</DebugType>
         <FileVersion>1.5</FileVersion>
         <OutputType>WinExe</OutputType>
+        <NoWarn>$(NoWarn);CS0419</NoWarn>
         <PublishTrimmed>false</PublishTrimmed>
         <TargetFramework>net10.0</TargetFramework>
         <ApplicationManifest>app.manifest</ApplicationManifest>
