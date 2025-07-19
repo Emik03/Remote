@@ -882,8 +882,8 @@ public sealed partial class Client(ApYaml? yaml = null)
     /// <param name="message">The message to compare.</param>
     /// <param name="next">The next span to match against.</param>
     /// <returns>The suggestions.</returns>
-    ImmutableArray<string> GetSuggestions(string message, out ReadOnlySpan<char> next) =>
-        (message.SplitSpanWhitespace() is var (first, rest) ? first : "") switch
+    ImmutableArray<string> GetSuggestions(string message, out ReadOnlyMemory<char> next) =>
+        (message.SplitWhitespace() is var (first, rest) ? first : default).Span switch
         {
             "!getitem" or "!hint" when (next = rest.Body) is var _ => _itemSuggestions,
             "!hint_location" or "!missing" when (next = rest.Body) is var _ => _locationSuggestions,

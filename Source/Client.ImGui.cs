@@ -681,10 +681,9 @@ public sealed partial class Client
             return;
 
         ImGui.SetWindowFontScale(preferences.UiScale);
-        var copy = message;
 
-        foreach (var suggestion in suggestions.OrderByDescending(x => x.JaroEmik(copy, CaseInsensitive)))
-            if (PasteIfClicked(user, suggestion, message.Nth(^1)))
+        foreach (var suggestion in suggestions.OrderByDescending(x => x.JaroEmik(user.Span, CaseInsensitive)))
+            if (PasteIfClicked(suggestion, user.Length, message.Nth(^1)))
                 break;
 
         if (_hoverFrameCount > 0)
@@ -1205,10 +1204,10 @@ public sealed partial class Client
     }
 
     /// <summary>Adds the text provided if the selectable is clicked.</summary>
-    /// <param name="user">The user input.</param>
     /// <param name="match">The match.</param>
+    /// <param name="userLength">The length of the user input to clear before typing out the suggestion.</param>
     /// <param name="last">The last character from the user input.</param>
-    bool PasteIfClicked(ReadOnlySpan<char> user, string match, char? last)
+    bool PasteIfClicked(string match, int userLength, char? last)
     {
         const int Frames = 3;
         _ = ImGui.Selectable(match);
@@ -1228,7 +1227,7 @@ public sealed partial class Client
         if (last?.IsWhitespace() is false && !s_commands.Contains(match, FrozenSortedDictionary.Comparer))
             ImGui.GetIO().AddInputCharactersUTF8([' ']);
 
-        ImGui.GetIO().AddInputCharactersUTF8(match.AsSpan(user.Length));
+        ImGui.GetIO().AddInputCharactersUTF8(match.AsSpan(userLength));
 
         if (match is "!getitem" or "!hint" or "!hint_location" or "!missing")
             ImGui.GetIO().AddInputCharactersUTF8([' ']);
