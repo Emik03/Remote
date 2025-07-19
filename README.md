@@ -84,11 +84,11 @@ Thank you to the following projects that make this possible:
 
 ---
 
-- [Archipelago](https://archipelago.gg/)
+- [Archipelago](https://archipelago.gg)
 - [Archipelago.MultiClient.Net](https://github.com/ArchipelagoMW/Archipelago.MultiClient.Net)
 - [Archipelago.MultiClient.Net.Analyzers](https://github.com/BadMagic100/Archipelago.MultiClient.Net.Analyzers)
 - [cimgui](https://github.com/cimgui/cimgui)
-- [Fira Code](https://github.com/tonsky/FiraCode/) (go [sponsor Nikita Prokopov](https://github.com/sponsors/tonsky)!)
+- [Fira Code](https://github.com/tonsky/FiraCode) (go [sponsor Nikita Prokopov](https://github.com/sponsors/tonsky)!)
 - [imgui](https://github.com/ocornut/imgui) (go [sponsor them](https://github.com/ocornut/imgui/wiki/Funding)!)
 - [ImGui.NET](https://github.com/ImGuiNET/ImGui.NET)
 - [ManualForArchipelago](https://github.com/ManualForArchipelago/Manual)
@@ -107,4 +107,4 @@ Issues and pull requests are welcome to help this repository be the best it can 
 
 This repository largely falls under the [MPL-2 license](https://www.mozilla.org/en-US/MPL/2.0/).
 
-The `Fonts` directory is subject to a separate license, being a redistribution of [Fira Code]().
+The `Remote.Resources/Fonts` directory is subject to a [separate license](https://github.com/Emik03/Remote/blob/main/Remote.Resources/Fonts/LICENSE), being a redistribution of [Fira Code](https://github.com/tonsky/FiraCode).
