@@ -2,7 +2,7 @@
     <PropertyGroup>
         <FileVersion>1.5</FileVersion>
         <NoWarn>$(NoWarn);CS0419</NoWarn>
-        <TargetFramework>net9.0</TargetFramework>
+        <TargetFrameworks>net10.0;net9.0</TargetFrameworks>
         <Description>Standalone Archipelago client, with dedicated feature-rich support for manual apworlds.</Description>
         <PackageTags>Application MonoGame ImGui Archipelago MultiWorld MW MultiGame Multi Game Manual APWorld</PackageTags>
     </PropertyGroup>
