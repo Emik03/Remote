@@ -1,7 +1,7 @@
 {
   "version": 1,
   "dependencies": {
-    "net10.0": {
+    "net10.0-android36.0": {
       "Absence.Fody": {
         "type": "Direct",
         "requested": "[2.0.10, )",
@@ -233,15 +233,19 @@
         "resolved": "10.0.0-preview.25358.103",
         "contentHash": "yNUAHIaMZ3uxL2qiRAXOZ4nOXQ5Tzui+bIIYIwUgih4iAdmuCa+Byu2+1rdK6W3/F0vfwU5gyAQ6YhO49KMkPw=="
       },
-      "MonoGame.Framework.DesktopGL": {
+      "Microsoft.NET.ILLink.Tasks": {
         "type": "Direct",
-        "requested": "[3.8.5-develop.3, )",
-        "resolved": "3.8.5-develop.3",
-        "contentHash": "zMOl/7OHUXn1eUHCNOBjdMeatK4ljLtz5TtmWB/n4hoRSJbY2cnpeg6EIf2sSlRnk0/yOwjMMjG+IDlkmf1qvQ==",
+        "requested": "[10.0.0-preview.6.25358.103, )",
+        "resolved": "10.0.0-preview.6.25358.103",
+        "contentHash": "+3mK1T4Y/M+u0fIlw3nDoTgOQGvVt3jPqpI9S8TBXFYJ1WnjCTbvwv+yLML9NyqaXpBg4jWV7EgIH9JWCOpa9Q=="
+      },
+      "MonoGame.Framework.Android": {
+        "type": "Direct",
+        "requested": "[3.8.5-develop.4, )",
+        "resolved": "3.8.5-develop.4",
+        "contentHash": "iv91fiQOkADILvlgfsrlBeTLVH3MzXaIE/YFImj+32WHbmNmMKKBizxHoE6obXt7/VoQEI69w5ubrSPDqfrJiA==",
         "dependencies": {
-          "MonoGame.Library.OpenAL": "1.24.3.1",
-          "MonoGame.Library.SDL": "2.32.2.1",
-          "NVorbis": "0.10.4"
+          "MonoGame.Library.OpenAL": "1.24.3.1"
         }
       },
       "Nullable.Extended.Analyzer": {
@@ -357,11 +361,6 @@
         "resolved": "1.24.3.1",
         "contentHash": "EZI5R3WbrjGkdjeLUEDimdSTNX4K2wtLdgJ9RQqfq//BKC4/3fLq8vJ0Ji3kjvxpfZjMH1b3h/VPOJ42fTkhyw=="
       },
-      "MonoGame.Library.SDL": {
-        "type": "Transitive",
-        "resolved": "2.32.2.1",
-        "contentHash": "T4E2ppGlSTC2L9US1rxtdg3qTbarRzNId31xZoumUW9cf9Nq8nRQPMu9GzvZGrhfSySf0+UWPEj1rlicps+P/w=="
-      },
       "NETStandard.Library": {
         "type": "Transitive",
         "resolved": "1.6.1",
@@ -369,11 +368,6 @@
         "dependencies": {
           "Microsoft.NETCore.Platforms": "1.1.0"
         }
-      },
-      "NVorbis": {
-        "type": "Transitive",
-        "resolved": "0.10.4",
-        "contentHash": "WYnil3DhQHzjCY0dM9I2B3r1vWip90AOuQd25KE4NrjPQBg0tBJFluRLm5YPnO5ZLDmwrfosY8jCQGQRmWI/Pg=="
       },
       "Scifa.CheckedExceptions.Attributes": {
         "type": "Transitive",
@@ -443,7 +437,7 @@
         "type": "Project"
       }
     },
-    "net10.0/linux-x64": {
+    "net10.0-android36.0/android-arm64": {
       "ImGui.NET": {
         "type": "Direct",
         "requested": "[1.91.6.1, )",
@@ -454,11 +448,19 @@
         "type": "Transitive",
         "resolved": "1.24.3.1",
         "contentHash": "EZI5R3WbrjGkdjeLUEDimdSTNX4K2wtLdgJ9RQqfq//BKC4/3fLq8vJ0Ji3kjvxpfZjMH1b3h/VPOJ42fTkhyw=="
+      }
+    },
+    "net10.0-android36.0/android-x64": {
+      "ImGui.NET": {
+        "type": "Direct",
+        "requested": "[1.91.6.1, )",
+        "resolved": "1.91.6.1",
+        "contentHash": "Ph3j8pO6UM28PPJWP+5LEJSPVPkd8ivpVS8tRyY9b0IHn1HDIrMZ2o/FdiXaYW6YhNxMHmbevw6Jcfs+IDKi0Q=="
       },
-      "MonoGame.Library.SDL": {
+      "MonoGame.Library.OpenAL": {
         "type": "Transitive",
-        "resolved": "2.32.2.1",
-        "contentHash": "T4E2ppGlSTC2L9US1rxtdg3qTbarRzNId31xZoumUW9cf9Nq8nRQPMu9GzvZGrhfSySf0+UWPEj1rlicps+P/w=="
+        "resolved": "1.24.3.1",
+        "contentHash": "EZI5R3WbrjGkdjeLUEDimdSTNX4K2wtLdgJ9RQqfq//BKC4/3fLq8vJ0Ji3kjvxpfZjMH1b3h/VPOJ42fTkhyw=="
       }
     }
   }

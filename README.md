@@ -44,15 +44,21 @@ It also includes other quality-of-life features to minimize setup time:
 
 ## Screenshots
 
-[![Confirmation UI](Images/preview1.png)](https://raw.githubusercontent.com/Emik03/Remote/refs/heads/main/Images/preview1.png)
+[![Location UI](Images/preview1.png)](https://raw.githubusercontent.com/Emik03/Remote/refs/heads/main/Images/preview1.png)
 
-[![Locations UI](Images/preview2.png)](https://raw.githubusercontent.com/Emik03/Remote/refs/heads/main/Images/preview2.png)
+[![Confirmation UI](Images/preview2.png)](https://raw.githubusercontent.com/Emik03/Remote/refs/heads/main/Images/preview2.png)
 
-[![Items UI](Images/preview3.png)](https://raw.githubusercontent.com/Emik03/Remote/refs/heads/main/Images/preview3.png)
+[![Item UI](Images/preview3.png)](https://raw.githubusercontent.com/Emik03/Remote/refs/heads/main/Images/preview3.png)
 
 [![Chat UI](Images/preview4.png)](https://raw.githubusercontent.com/Emik03/Remote/refs/heads/main/Images/preview4.png)
 
-[![Configuration UI](Images/preview5.png)](https://raw.githubusercontent.com/Emik03/Remote/refs/heads/main/Images/preview5.png)
+[![DeathLink UI](Images/preview5.png)](https://raw.githubusercontent.com/Emik03/Remote/refs/heads/main/Images/preview5.png)
+
+[![Hint UI](Images/preview6.png)](https://raw.githubusercontent.com/Emik03/Remote/refs/heads/main/Images/preview6.png)
+
+[![Configuration UI](Images/preview7.png)](https://raw.githubusercontent.com/Emik03/Remote/refs/heads/main/Images/preview7.png)
+
+[![Connection UI](Images/preview8.png)](https://raw.githubusercontent.com/Emik03/Remote/refs/heads/main/Images/preview8.png)
 
 ## Android
 
