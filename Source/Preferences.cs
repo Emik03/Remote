@@ -717,14 +717,22 @@ public sealed partial class Preferences
 
         var key = $"{address}:{port}";
 
-        if (!_history.TryGetValue(key, out var server))
+        // Removing only to then add again is the simplest way of moving an element to the end of an
+        // OrderedDictionary. This needs to be done because these collections are sorted by the last
+        // time it was interacted with, since alphabetical ordering can be enumerated retroactively.
+        if (_history.Remove(key, out var server))
+            _history.Add(key, server);
+        else
         {
             _history[key] = server = new();
             server.Password = password;
         }
 
-        if (server.Slots.TryGetValue(yaml.Name, out var slot))
+        if (server.Slots.Remove(yaml.Name, out var slot))
+        {
+            server.Slots.Add(yaml.Name, slot);
             return slot;
+        }
 
         server.Slots[yaml.Name] = slot = new();
         slot.Color = FindNextAvailableColor();

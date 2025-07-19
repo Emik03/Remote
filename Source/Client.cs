@@ -490,10 +490,11 @@ public sealed partial class Client(ApYaml? yaml = null)
     public override string ToString() => _windowName;
 
     /// <summary>Whether this pair can be released.</summary>
-    /// <param name="x">The pair to deconstruct.</param>
-    /// <returns>Whether the parameter <paramref name="x"/> can be released.</returns>
-    static bool IsReleasable(KeyValuePair<string, CheckboxStatus> x) =>
-        x.Value is (_, LocationStatus.Reachable or LocationStatus.ProbablyReachable or LocationStatus.OutOfLogic, true);
+    /// <param name="kvp">The pair to deconstruct.</param>
+    /// <returns>Whether the parameter <paramref name="kvp"/> can be released.</returns>
+    static bool IsReleasable(KeyValuePair<string, CheckboxStatus> kvp) =>
+        kvp.Value is
+            (_, LocationStatus.Reachable or LocationStatus.ProbablyReachable or LocationStatus.OutOfLogic, true);
 
     /// <summary>Converts the exception to the <see cref="string"/> array.</summary>
     /// <param name="e">The exception to convert.</param>
