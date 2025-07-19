@@ -47,6 +47,8 @@ public static partial class DesktopNotification
         // Yes, I hate this just as much as you do. I mean, we're really in it now. I'm doing it like this because:
         // - Trying to reference DesktopNotifications.Windows causes runtime problems about failing to find assemblies.
         // - Trying to dynamically instantiate types from System.Drawing also causes the same runtime problems.
+        // - Trying to reference System.Windows.Forms is a bad idea because it's part of the BCL (Base Class Library),
+        //   which varies based on the exact runtime used, effectively locking the project into an exact runtime.
         // - Trying to reference Microsoft.Toolkit.Uwp.Notifications causes compiler errors about it being windows-only.
         // - Trying to reference Microsoft.Windows.SDK.NET would always end up failing to link during runtime.
         // Massive thanks to https://superuser.com/a/1523925 because I don't normally write powershell scripts!
