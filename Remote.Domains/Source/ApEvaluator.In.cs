@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MPL-2.0
-namespace Remote;
+namespace Remote.Domains;
 
-/// <inheritdoc cref="ManualEvaluator"/>
-public sealed partial record ManualEvaluator
+/// <inheritdoc cref="ApEvaluator"/>
+public sealed partial record ApEvaluator
 {
     /// <summary>Gets <see cref="ItemCount"/> with a <see cref="ReadOnlySpan{T}"/> lookup.</summary>
     public FrozenDictionary<string, int>.AlternateLookup<ReadOnlySpan<char>> ItemCountSpan =>
@@ -17,14 +17,14 @@ public sealed partial record ManualEvaluator
         Yaml.GetAlternateLookup<ReadOnlySpan<char>>();
 
     /// <summary>Gets <see cref="LocationsToLogic"/> with a <see cref="ReadOnlySpan{T}"/> lookup.</summary>
-    public FrozenDictionary<string, ManualLogic>.AlternateLookup<ReadOnlySpan<char>> LocationsToLogicSpan =>
+    public FrozenDictionary<string, ApLogic>.AlternateLookup<ReadOnlySpan<char>> LocationsToLogicSpan =>
         LocationsToLogic.GetAlternateLookup<ReadOnlySpan<char>>();
 #pragma warning disable MA0016
     /// <summary>Determines whether the logic is fulfilled.</summary>
     /// <param name="logic">The logic to check.</param>
     /// <param name="no">The locations that should not be expanded during <c>canReachLocation</c>.</param>
     /// <returns>Whether the parameter <paramref name="logic"/> is fulfilled.</returns>
-    public ManualLogic? In([NotNullWhen(false)] ManualLogic? logic, HashSet<string>? no = null) =>
+    public ApLogic? In([NotNullWhen(false)] ApLogic? logic, HashSet<string>? no = null) =>
         logic switch
         {
             null => null,
@@ -45,8 +45,8 @@ public sealed partial record ManualEvaluator
     /// <param name="location">The location to check.</param>
     /// <param name="no">The locations that should not be expanded during <c>canReachLocation</c>.</param>
     /// <returns>Whether the parameter <paramref name="location"/> is the name of a location that is in-logic.</returns>
-    public ManualLogic? InLogic(ReadOnlySpan<char> location, HashSet<string>? no = null) =>
-        LocationsToLogicSpan.TryGetValue(location, out var logic) ? In(logic) : null;
+    public ApLogic? InLogic(ReadOnlySpan<char> location, HashSet<string>? no = null) =>
+        LocationsToLogicSpan.TryGetValue(location, out var logic) ? In(logic, no) : null;
 
     /// <summary>Determines whether both spans of characters are equal in contents.</summary>
     /// <param name="next">The left-hand side.</param>
@@ -57,14 +57,14 @@ public sealed partial record ManualEvaluator
     /// <summary>Determines whether the <c>AND</c> condition is fulfilled.</summary>
     /// <param name="tuple">The tuple to deconstruct.</param>
     /// <returns>Whether the <c>AND</c> condition is fulfilled.</returns>
-    ManualLogic? OnAnd((ManualLogic Left, ManualLogic Right) tuple) => // Annulment Law
+    ApLogic? OnAnd((ApLogic Left, ApLogic Right) tuple) => // Annulment Law
         In(tuple.Left) is var left && left is { IsYamlFunction: true } ? left.Check(tuple, this) :
         In(tuple.Right) is var right && right is { IsYamlFunction: true } ? right.Check(left) : left & right;
 
     /// <summary>Determines whether the <c>OR</c> condition is fulfilled.</summary>
     /// <param name="tuple">The tuple to deconstruct.</param>
     /// <returns>Whether the <c>OR</c> condition is fulfilled.</returns>
-    ManualLogic? OnOr((ManualLogic Left, ManualLogic Right) tuple) => // Identity Law
+    ApLogic? OnOr((ApLogic Left, ApLogic Right) tuple) => // Identity Law
         In(tuple.Left) is var left && In(tuple.Right) is var right && left is { IsYamlFunction: true } ?
             right.Check(left) :
             right is { IsYamlFunction: true } ? left.Check(right) : left | right;
@@ -118,7 +118,11 @@ public sealed partial record ManualEvaluator
     /// <param name="tuple">The tuple to deconstruct.</param>
     /// <param name="no">The locations that should not be expanded during <c>canReachLocation</c>.</param>
     /// <returns>Whether the function returns <see langword="true"/>.</returns>
-    ManualLogic? OnFunction(ManualLogic? logic, (ReadOnlyMemory<char> Name, ReadOnlyMemory<char> Args) tuple, HashSet<string> no) =>
+    ApLogic? OnFunction(
+        ApLogic? logic,
+        (ReadOnlyMemory<char> Name, ReadOnlyMemory<char> Args) tuple,
+        HashSet<string> no
+    ) =>
         tuple.Name.Span.Trim() switch
         {
             "canReachLocation" => CanReachLocation(tuple.Args, no),
@@ -254,18 +258,18 @@ public sealed partial record ManualEvaluator
     /// <param name="location">The location to check.</param>
     /// <param name="seen">Locations that were previously processed.</param>
     /// <returns>Whether the parameter <paramref name="location"/> represents an unreachable location.</returns>
-    ManualLogic? CanReachLocation(ReadOnlyMemory<char> location, HashSet<string> seen) =>
+    ApLogic? CanReachLocation(ReadOnlyMemory<char> location, HashSet<string> seen) =>
         location.Span is var l && seen.GetAlternateLookup<ReadOnlySpan<char>>().Add(l) ? InLogic(l, seen) : null;
 
     /// <summary>Determines whether the item is disabled by yaml options, or the requirement itself is met.</summary>
     /// <param name="item">The item to check.</param>
     /// <returns>Whether the item is disabled by yaml options, or the requirement itself is met.</returns>
-    ManualLogic? OptOne(ReadOnlyMemory<char> item) =>
-        IsItemDisabled(item.SplitOn(':').First.Span) ? null : In(ManualLogic.TokenizeAndParse(item));
+    ApLogic? OptOne(ReadOnlyMemory<char> item) =>
+        IsItemDisabled(item.SplitOn(':').First.Span) ? null : In(ApLogic.TokenizeAndParse(item));
 
     /// <summary>Evaluates <see cref="In"/> but with <see cref="IsOptAll"/> enabled.</summary>
     /// <param name="memory">The string of characters to parse.</param>
     /// <returns>The returned value from <see cref="In"/>.</returns>
-    ManualLogic? OptAll(ReadOnlyMemory<char> memory) =>
-        (IsOptAll ? this : this with { IsOptAll = true }).In(ManualLogic.TokenizeAndParse(memory));
+    ApLogic? OptAll(ReadOnlyMemory<char> memory) =>
+        (IsOptAll ? this : this with { IsOptAll = true }).In(ApLogic.TokenizeAndParse(memory));
 }

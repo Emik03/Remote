@@ -14,12 +14,16 @@
         <PackageTags>Application MonoGame ImGui Archipelago MultiWorld MW MultiGame Multi Game Manual APWorld</PackageTags>
     </PropertyGroup>
     <ItemGroup>
-        <None Remove="Fonts/LICENSE"/>
-        <Compile Remove="Source/AssemblyMarker.cs"/>
+        <None Remove="Remote.Domains/**/*.cs"/>
+        <None Remove="Remote.Resources/**/*.cs"/>
+        <Compile Remove="Remote.Domains/**/*.cs"/>
+        <Compile Remove="Remote.Resources/**/*.cs"/>
         <PackageReference Include="TextCopy" Version="6.2.1"/>
         <PackageReference Include="YamlDotNet" Version="16.3.0"/>
         <PackageReference Include="ImGui.NET" Version="1.91.6.1"/>
         <PackageReference Include="DesktopNotifications" Version="1.3.1"/>
+        <ProjectReference Include="Remote.Domains/Remote.Domains.csproj"/>
+        <ProjectReference Include="Remote.Resources/Remote.Resources.csproj"/>
         <PackageReference Include="Archipelago.MultiClient.Net" Version="6.6.0"/>
         <EmbeddedResource Include="Resources/Drawable/Icon.256.bmp" Link="Icon.bmp"/>
         <PackageReference Include="DesktopNotifications.FreeDesktop" Version="1.3.1"/>

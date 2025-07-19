@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MPL-2.0
-namespace Remote;
+namespace Remote.Domains;
 
 /// <summary>The record for processing <see cref="OnAnd"/> and whether something is in logic.</summary>
 /// <param name="CurrentItems">The list of items received.</param>
@@ -16,10 +16,10 @@ namespace Remote;
 /// <param name="Yaml">The yaml options.</param>
 /// <param name="IsOptAll">Whether to clamp requirements based on <see cref="Yaml"/>.</param>
 [CLSCompliant(false)]
-public sealed partial record ManualEvaluator(
+public sealed partial record ApEvaluator(
     IReadOnlyCollection<string> CurrentItems,
     FrozenSet<string> HiddenCategories,
-    FrozenDictionary<string, ManualLogic> LocationsToLogic,
+    FrozenDictionary<string, ApLogic> LocationsToLogic,
     FrozenSortedDictionary CategoryToLocations,
     FrozenSortedDictionary CategoryToYaml,
     FrozenSortedDictionary CategoryToItems,
@@ -32,7 +32,7 @@ public sealed partial record ManualEvaluator(
     bool IsOptAll
 )
 {
-    /// <summary>Initializes a new instance of the <see cref="ManualEvaluator"/> record.</summary>
+    /// <summary>Initializes a new instance of the <see cref="ApEvaluator"/> record.</summary>
     /// <param name="currentItems">The list of items received.</param>
     /// <param name="hiddenCategories">The set of categories that shouldn't be visible to the user.</param>
     /// <param name="locationsToLogic">The conversion from locations to its <see cref="OnAnd"/> instances.</param>
@@ -42,10 +42,10 @@ public sealed partial record ManualEvaluator(
     /// <param name="itemCount">The conversion from items to the amount of that item.</param>
     /// <param name="itemToPhantoms">The conversion from items to its phantom items.</param>
     /// <param name="yaml">The yaml options.</param>
-    public ManualEvaluator(
+    public ApEvaluator(
         IReadOnlyCollection<string> currentItems,
         FrozenSet<string> hiddenCategories,
-        FrozenDictionary<string, ManualLogic> locationsToLogic,
+        FrozenDictionary<string, ApLogic> locationsToLogic,
         FrozenSortedDictionary categoryToLocations,
         FrozenSortedDictionary categoryToYaml,
         FrozenSortedDictionary itemToCategories,
@@ -78,27 +78,29 @@ public sealed partial record ManualEvaluator(
     /// <param name="goalGetter">The wrapper to get the goal data.</param>
     /// <param name="logger">The current status.</param>
     /// <returns>
-    /// The <see cref="ManualEvaluator"/> to evaluate <see cref="OnAnd"/>, or <see langword="null"/> if not a manual world,
+    /// The <see cref="ApEvaluator"/> to evaluate <see cref="OnAnd"/>, or <see langword="null"/> if not a manual world,
     /// parsing failed, or the <c>.apworld</c> doesn't exist.
     /// </returns>
-    public static ManualEvaluator? Read(
+    public static ApEvaluator? Read(
         IReadOnlyCollection<string> currentItems,
-        Yaml yaml,
+        ApYaml yaml,
         string directory,
         string? ap = null,
         string? python = "python",
-        Func<ManualReader.GoalData?>? goalGetter = null,
+        Func<GoalData?>? goalGetter = null,
         Action<string>? logger = null
     )
     {
-        if (ManualReader.Find(yaml.Game, directory, logger) is not { } path)
+        if (ApReader.Find(yaml.Game, directory, logger) is not { } path)
             return null;
 
         try
         {
             return ReadZip(currentItems, yaml, path, ap, python, goalGetter, logger);
         }
+#pragma warning disable CA1031
         catch (Exception e)
+#pragma warning restore CA1031
         {
             logger?.Invoke(e.Message);
             return null;
@@ -114,20 +116,20 @@ public sealed partial record ManualEvaluator(
     /// <param name="goalGetter">The wrapper to get the goal data.</param>
     /// <param name="logger">The current status.</param>
     /// <returns>
-    /// The <see cref="ManualEvaluator"/> to evaluate <see cref="OnAnd"/>, or <see langword="null"/> if not a manual world,
+    /// The <see cref="ApEvaluator"/> to evaluate <see cref="OnAnd"/>, or <see langword="null"/> if not a manual world,
     /// parsing failed, or the <c>.apworld</c> doesn't exist.
     /// </returns>
-    static ManualEvaluator? ReadZip(
+    static ApEvaluator? ReadZip(
         IReadOnlyCollection<string> currentItems,
-        Yaml yaml,
+        ApYaml yaml,
         string path,
         string? ap,
         string? python,
-        Func<ManualReader.GoalData?>? goalGetter,
+        Func<GoalData?>? goalGetter,
         Action<string>? logger
     )
     {
-        ManualReader reader = new(path, ap, python, logger);
+        ApReader reader = new(path, ap, python, logger);
         logger?.Invoke("Copying yaml options found .apworld...");
         yaml.CopyFrom(reader.Options);
 

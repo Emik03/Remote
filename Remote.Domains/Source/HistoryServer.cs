@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: MPL-2.0
-namespace Remote;
-
-using JsonSerializer = System.Text.Json.JsonSerializer;
+namespace Remote.Domains;
 
 /// <summary>Holds the previous connection infos.</summary>
 public sealed class HistoryServer
@@ -20,7 +18,7 @@ public sealed class HistoryServer
     const string HistoryFile = "history.json";
 
     /// <summary>Contains the path to the preferences file to read and write from.</summary>
-    public static string FilePath { get; } = Preferences.PathTo(HistoryFile, "REMOTE_HISTORY_PATH");
+    public static string FilePath { get; } = PathTo(HistoryFile, "REMOTE_HISTORY_PATH");
 
     /// <summary>Gets or sets the display name of this server.</summary>
     [NotNull]
@@ -57,6 +55,15 @@ public sealed class HistoryServer
             servers,
             out _
         );
+
+    /// <summary>Gets the full path to the file.</summary>
+    /// <param name="file">The file path to get.</param>
+    /// <param name="environment">The environment variable that allows users to override the return.</param>
+    /// <returns>The full path to the parameter <paramref name="file"/>.</returns>
+    public static string PathTo(string file, string environment) =>
+        Environment.GetEnvironmentVariable(environment) is { } variable
+            ? Directory.Exists(variable) ? Path.Join(variable, file) : variable
+            : Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), nameof(Remote), file);
 
     /// <summary>Orders the connections.</summary>
     /// <param name="history">The value to sort.</param>

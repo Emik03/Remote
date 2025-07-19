@@ -1,13 +1,11 @@
 // SPDX-License-Identifier: MPL-2.0
-namespace Remote;
-
-using DocumentStart = YamlDotNet.Core.Events.DocumentStart;
-using Parser = YamlDotNet.Core.Parser;
-using StreamStart = YamlDotNet.Core.Events.StreamStart;
+namespace Remote.Domains;
 
 /// <summary>Represents the yaml file in an Archipelago that contains exactly one player.</summary>
 [Serializable]
-public sealed class Yaml : IDictionary<string, object?>
+#pragma warning disable CA1710
+public sealed class ApYaml : IDictionary<string, object?>
+#pragma warning restore CA1710
 {
     /// <summary>The field name.</summary>
     const string DescriptionField = "description", GameField = "game", GoalField = "goal", NameField = "name";
@@ -48,9 +46,9 @@ public sealed class Yaml : IDictionary<string, object?>
                 _ when value is IDictionary<object, object> d => Add(d),
                 _ when value is int i && (_options[key] = i) is var _ => "",
                 _ when value is long l && (_options[key] = (int)l) is var _ => "",
-                _ when value is bool b && (_options[key] = b.ToByte()) is var _ => "",
+                _ when value is bool b && (_options[key] = b ? 1 : 0) is var _ => "",
                 _ when value is string s && int.TryParse(s, out var i) && (_options[key] = i) is var _ => s,
-                _ when value is string s && bool.TryParse(s, out var b) && (_options[key] = b.ToByte()) is var _ => s,
+                _ when value is string s && bool.TryParse(s, out var b) && (_options[key] = b ? 1 : 0) is var _ => s,
                 _ => "",
             };
     }
@@ -94,28 +92,6 @@ public sealed class Yaml : IDictionary<string, object?>
     /// <summary>Gets the enumerable for the string fields.</summary>
     IEnumerable<KeyValuePair<string, object?>> Keys =>
         [new(DescriptionField, Description), new(GameField, Game), new(GoalField, Goal), new(NameField, Name)];
-
-    /// <summary>
-    /// Deserializes the file into the sequence of <see cref="Yaml"/> instances, each representing a player.
-    /// </summary>
-    /// <param name="path">The path containing a yaml file to deserialize.</param>
-    /// <returns>The sequence of <see cref="Yaml"/> instances.</returns>
-    public static IEnumerable<Yaml> FromFile(string path)
-    {
-        Parser parser = new(new StreamReader(File.OpenRead(path)));
-        parser.Consume<StreamStart>();
-        Deserializer deserializer = new();
-        ICollection<Yaml> ret = [];
-
-        while (parser.Accept<DocumentStart>(out _))
-        {
-            var yaml = deserializer.Deserialize<Yaml>(parser);
-            yaml.Path = path;
-            ret.Add(yaml);
-        }
-
-        return ret;
-    }
 
     /// <inheritdoc />
     void IDictionary<string, object?>.Add(string key, object? value) =>

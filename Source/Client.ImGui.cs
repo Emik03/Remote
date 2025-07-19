@@ -66,7 +66,7 @@ public sealed partial class Client
     public bool Draw(GameTime gameTime, Preferences preferences, out bool selected)
     {
         const int Styles = 16;
-        var pushedColor = AppColor.TryParse(_slot.Color, out var color);
+        var pushedColor = RemoteColor.TryParse(_slot.Color, out var color);
 
         if (pushedColor)
             preferences.PushStyling(color);
@@ -181,7 +181,7 @@ public sealed partial class Client
         if (_errors is not null)
             foreach (var error in _errors.AsSpan())
                 if (!string.IsNullOrEmpty(error))
-                    preferences.ShowText(error, AppPalette.Trap);
+                    preferences.ShowText(error, RemotePalette.Trap);
 
         ImGui.SeparatorText("Create");
 
@@ -408,7 +408,7 @@ public sealed partial class Client
         ImGui.SeparatorText("Diagnostics");
 
         if (ImGui.Button("Open APWorld Directory") &&
-            ManualReader.Find(_yaml.Game, preferences.Directory, Set) is { } world)
+            ApReader.Find(_yaml.Game, preferences.Directory, Set) is { } world)
         {
             ProcessStartInfo startInfo = new()
                 { FileName = Path.GetDirectoryName(world), CreateNoWindow = true, UseShellExecute = true };
@@ -425,7 +425,7 @@ public sealed partial class Client
         }
 
         ImGui.SeparatorText("Theming");
-        var color = AppColor.Parse(_slot.Color);
+        var color = RemoteColor.Parse(_slot.Color);
         var newColor = Preferences.ShowColorEdit("Color", color);
 
         if (newColor != color)
@@ -569,7 +569,7 @@ public sealed partial class Client
 
         if (outOfLogic)
         {
-            ImGui.PushStyleColor(ImGuiCol.Text, preferences[AppPalette.ReleasingOutOfLogic]);
+            ImGui.PushStyleColor(ImGuiCol.Text, preferences[RemotePalette.ReleasingOutOfLogic]);
             ImGui.SeparatorText("WARNING: One or more locations are out of logic!");
             ImGui.PopStyleColor();
         }
@@ -621,10 +621,10 @@ public sealed partial class Client
         switch (stuck)
         {
             case null:
-                preferences.ShowText("BK", AppPalette.BK);
+                preferences.ShowText("BK", RemotePalette.BK);
                 break;
             case true:
-                preferences.ShowText("Done", AppPalette.Released);
+                preferences.ShowText("Done", RemotePalette.Released);
 
                 if (_canGoal is false)
                     _canGoal = null;
@@ -731,7 +731,7 @@ public sealed partial class Client
 
         var playerName = player.ToString();
         var isSelf = player.Slot == _session.Players.ActivePlayer.Slot;
-        var selfColor = preferences[isSelf ? AppPalette.Useful : AppPalette.Neutral];
+        var selfColor = preferences[isSelf ? RemotePalette.Useful : RemotePalette.Neutral];
         preferences.ShowText(playerName, selfColor);
 
         if (isSelf)
@@ -744,7 +744,7 @@ public sealed partial class Client
         if (!ImGui.TableNextColumn())
             return;
 
-        preferences.ShowText(gameName, isManual ? AppPalette.Progression : AppPalette.Neutral);
+        preferences.ShowText(gameName, isManual ? RemotePalette.Progression : RemotePalette.Neutral);
 
         if (isManual)
             preferences.Tooltip("Manual Game");
@@ -764,7 +764,7 @@ public sealed partial class Client
 
         var teamName = player.Team.ToString();
         var isTeammate = player.Team == _session.Players.ActivePlayer.Team;
-        preferences.ShowText(teamName, isTeammate ? AppPalette.Neutral : AppPalette.Checked);
+        preferences.ShowText(teamName, isTeammate ? RemotePalette.Neutral : RemotePalette.Checked);
     }
 
     /// <summary>Moves the index by an amount.</summary>
@@ -827,7 +827,7 @@ public sealed partial class Client
             : locations.Order().Select(GetLocationNameFromId);
 
         foreach (var location in orderedLocations.Where(ShouldBeVisible))
-            Checkbox(preferences, location, ManualReader.Uncategorized);
+            Checkbox(preferences, location, ApReader.Uncategorized);
 
         return locationHelper.AllMissingLocations.Count is 0;
     }
@@ -955,7 +955,7 @@ public sealed partial class Client
                 return;
             }
 
-            preferences.ShowText(ReleaseMessage(), AppPalette.Released);
+            preferences.ShowText(ReleaseMessage(), RemotePalette.Released);
             preferences.ShowText("Press left click to return to the previous screen", disabled: true);
             Release(preferences);
 
@@ -969,7 +969,7 @@ public sealed partial class Client
         }
 
         _confirmationTimer = preferences.HoldToConfirm ? _confirmationTimer - gameTime.ElapsedGameTime : new(-1);
-        preferences.ShowText(ReleasingMessage(), outOfLogic ? AppPalette.ReleasingOutOfLogic : AppPalette.Releasing);
+        preferences.ShowText(ReleasingMessage(), outOfLogic ? RemotePalette.ReleasingOutOfLogic : RemotePalette.Releasing);
     }
 
     /// <summary>Displays all messages starting from the index provided.</summary>
@@ -996,19 +996,19 @@ public sealed partial class Client
             {
                 var priority = part.PaletteColor switch
                 {
-                    PaletteColor.SlateBlue => AppPalette.Useful,
-                    PaletteColor.Salmon => AppPalette.Trap,
-                    PaletteColor.Plum => AppPalette.Progression,
-                    _ => AppPalette.Neutral,
+                    PaletteColor.SlateBlue => RemotePalette.Useful,
+                    PaletteColor.Salmon => RemotePalette.Trap,
+                    PaletteColor.Plum => RemotePalette.Progression,
+                    _ => RemotePalette.Neutral,
                 };
 
                 var palette = priority switch
                 {
-                    not AppPalette.Neutral => priority,
-                    _ when _session is null => AppPalette.Neutral,
-                    _ when _yaml.Name == part.Text => AppPalette.Useful,
-                    _ when _session.Players.AllPlayers.Any(x => x.Name == part.Text) => AppPalette.Progression,
-                    _ => AppPalette.Neutral,
+                    not RemotePalette.Neutral => priority,
+                    _ when _session is null => RemotePalette.Neutral,
+                    _ when _yaml.Name == part.Text => RemotePalette.Useful,
+                    _ when _session.Players.AllPlayers.Any(x => x.Name == part.Text) => RemotePalette.Progression,
+                    _ => RemotePalette.Neutral,
                 };
 
                 if (!first)
@@ -1017,7 +1017,7 @@ public sealed partial class Client
                 first = false;
                 preferences.ShowText(part.Text, palette, message);
 
-                if (priority is not AppPalette.Neutral)
+                if (priority is not RemotePalette.Neutral)
                     preferences.Tooltip($"Item Class: {priority}");
             }
         }
@@ -1069,10 +1069,9 @@ public sealed partial class Client
     /// <param name="preferences">The user preferences.</param>
     void ShowNonManualItems(Preferences preferences)
     {
-        const string Default = ManualReader.Uncategorized;
         ShowItemSearch(preferences);
 
-        foreach (var item in GroupItems(Default, default)
+        foreach (var item in GroupItems(ApReader.Uncategorized, default)
            .Where(x => x.IsMatch(_itemSearch) && x.IsMatch(_slot, _showUsedItems)))
             _ = item.Show(preferences, ref _slot);
     }
@@ -1249,16 +1248,13 @@ public sealed partial class Client
     /// <summary>Converts the key-value pair into the tuple containing the name and id.</summary>
     /// <param name="kvp">The key-value pair to deconstruct.</param>
     /// <returns>The names and ids.</returns>
-    (string Category, (string Name, long Id)[] Location) OrderById(
-        KeyValuePair<string, FrozenSortedDictionary.Element> kvp
-    )
+    (string Category, (string Name, long Id)[] Location) OrderById(KeyValuePair<string, FrozenSortedSet> kvp)
     {
         Debug.Assert(_session is not null);
 
         return (kvp.Key, Location:
         [
-            ..kvp.Value
-               .Select(x => (Key: x, Value: _session.Locations.GetLocationIdFromName(_yaml.Game, x)))
+            ..kvp.Value.Select(x => (Key: x, Value: _session.Locations.GetLocationIdFromName(_yaml.Game, x)))
                .OrderBy(x => x.Value),
         ]);
     }

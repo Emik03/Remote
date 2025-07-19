@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MPL-2.0
-namespace Remote;
+namespace Remote.Domains;
 
 /// <summary>Contains the context used for JSON serialization.</summary>
 [JsonSerializable(typeof(JsonNode)), JsonSerializable(typeof(OrderedDictionary<string, HistoryServer>)),

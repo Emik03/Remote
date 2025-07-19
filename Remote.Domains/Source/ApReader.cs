@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: MPL-2.0
-namespace Remote;
-
-using JsonSerializer = System.Text.Json.JsonSerializer;
+namespace Remote.Domains;
 
 /// <summary>Handles reading <c>.apworld</c>.</summary>
 /// <param name="Game">The game.</param>
@@ -10,7 +8,7 @@ using JsonSerializer = System.Text.Json.JsonSerializer;
 /// <param name="Locations">The locations.</param>
 /// <param name="Options">The options.</param>
 /// <param name="Regions">The regions.</param>
-public sealed record ManualReader(
+public sealed record ApReader(
     JsonObject? Game,
     JsonObject? Categories,
     JsonArray? Items,
@@ -19,23 +17,18 @@ public sealed record ManualReader(
     JsonObject? Regions
 )
 {
-    /// <summary>Contains the goal index.</summary>
-    /// <param name="Goal">The index.</param>
-    [Serializable] // ReSharper disable once ClassNeverInstantiated.Local
-    public sealed record GoalData(int Goal);
-
     /// <summary>The default category name.</summary>
     public const string Uncategorized = "(No Category)";
 
     /// <summary>Contains the python script that runs <c>Data.py</c>.</summary>
     static readonly string? s_script = Script();
 
-    /// <summary>Initializes a new instance of the <see cref="ManualReader"/> class.</summary>
+    /// <summary>Initializes a new instance of the <see cref="ApReader"/> class.</summary>
     /// <param name="path">The path to read.</param>
     /// <param name="ap">The path to the archipelago repository.</param>
     /// <param name="python">The path to the python binary to execute python.</param>
     /// <param name="logger">The logger.</param>
-    public ManualReader(string path, string? ap = null, string? python = "python", Action<string>? logger = null)
+    public ApReader(string path, string? ap = null, string? python = "python", Action<string>? logger = null)
         : this(Read(path, ap, python, logger, out var c, out var i, out var l, out var o, out var r), c, i, l, o, r) { }
 
     /// <summary>Attempts to find the <c>.apworld</c>.</summary>
@@ -84,8 +77,8 @@ public sealed record ManualReader(
     /// <param name="logger">The logger.</param>
     /// <returns>The locations.</returns>
     [CLSCompliant(false)]
-    public (FrozenDictionary<string, ManualLogic>, FrozenSortedDictionary)
-        ExtractLocations(Yaml yaml, Func<GoalData?>? goalGetter, Action<string>? logger)
+    public (FrozenDictionary<string, ApLogic>, FrozenSortedDictionary)
+        ExtractLocations(ApYaml yaml, Func<GoalData?>? goalGetter, Action<string>? logger)
     {
         if (Locations is null)
             return default;
@@ -93,7 +86,7 @@ public sealed record ManualReader(
         if (GetGoal(goalGetter) is { } goal)
             yaml.Goal = goal;
 
-        Dictionary<string, ManualLogic> locationsToLogic = new(FrozenSortedDictionary.Comparer);
+        Dictionary<string, ApLogic> locationsToLogic = new(FrozenSortedDictionary.Comparer);
         Dictionary<string, HashSet<string>> categoriesToLogic = new(FrozenSortedDictionary.Comparer);
 
         foreach (var location in Locations)
@@ -105,7 +98,7 @@ public sealed record ManualReader(
 
             if (o.TryGetPropertyValue("requires", out var requires) &&
                 requires?.GetValueKind() is JsonValueKind.String &&
-                ManualLogic.TokenizeAndParse(requires.ToString()) is { } logic)
+                ApLogic.TokenizeAndParse(requires.ToString()) is { } logic)
                 locationsToLogic[name] = logic;
 
             if (Regions is not null &&
@@ -196,7 +189,7 @@ public sealed record ManualReader(
 
     /// <summary>Whether it contains a <c>hidden</c> property that is true.</summary>
     /// <param name="kvp">The pair to check.</param>
-    /// <returns>Whether to include this in <see cref="ManualEvaluator.HiddenCategories"/>.</returns>
+    /// <returns>Whether to include this in <see cref="ApEvaluator.HiddenCategories"/>.</returns>
     static bool IsHiddenTrue(KeyValuePair<string, JsonNode?> kvp) =>
         kvp.Value is JsonObject obj &&
         obj.TryGetPropertyValue("hidden", out var hidden) &&
@@ -214,9 +207,8 @@ public sealed record ManualReader(
     /// <returns>The python script that runs <c>Data.py</c>.</returns>
     static string? Script()
     {
-        using var stream = typeof(AssemblyMarker).Assembly.GetManifestResourceStream(
-            $"{nameof(Remote)}.{nameof(Resources)}.Resources.Values.Extractor.py"
-        );
+        const string Extractor = $"{nameof(Remote)}.{nameof(Domains)}.Resources.Values.Extractor.py";
+        using var stream = typeof(ApReader).Assembly.GetManifestResourceStream(Extractor);
 
         if (stream is null)
             return null;
@@ -238,13 +230,13 @@ public sealed record ManualReader(
     /// <param name="target">The region to find.</param>
     /// <param name="regions">The root of the <c>regions.json</c> node.</param>
     /// <param name="regionToLogic">
-    /// Maps the region name to the already parsed <see cref="ManualLogic"/> for caching purposes.
+    /// Maps the region name to the already parsed <see cref="ApLogic"/> for caching purposes.
     /// </param>
     /// <param name="g">The logger.</param>
-    /// <returns>The resulting <see cref="ManualLogic"/> to get to the parameter <paramref name="target"/>.</returns>
-    static ManualLogic? Find(string target, JsonObject regions, Dictionary<string, ManualLogic> regionToLogic, Action<string>? g)
+    /// <returns>The resulting <see cref="ApLogic"/> to get to the parameter <paramref name="target"/>.</returns>
+    static ApLogic? Find(string target, JsonObject regions, Dictionary<string, ApLogic> regionToLogic, Action<string>? g)
     {
-        ManualLogic? path = null;
+        ApLogic? path = null;
 
         foreach (var (name, value) in regions)
         {
@@ -274,16 +266,16 @@ public sealed record ManualReader(
     /// <param name="target">The target region.</param>
     /// <param name="regions">The root of the <c>regions.json</c> node.</param>
     /// <param name="regionToLogic">
-    /// Maps the region name to the already parsed <see cref="ManualLogic"/> for caching purposes.
+    /// Maps the region name to the already parsed <see cref="ApLogic"/> for caching purposes.
     /// </param>
     /// <param name="visited">The regions that have already been visited, so as to remove unnecessary branching.</param>
     /// <param name="foundTarget">Whether the target has been found successfully.</param>
-    /// <returns>The resulting <see cref="ManualLogic"/> to get to the parameter <paramref name="target"/>.</returns>
-    static ManualLogic? Find(
+    /// <returns>The resulting <see cref="ApLogic"/> to get to the parameter <paramref name="target"/>.</returns>
+    static ApLogic? Find(
         string current,
         string target,
         JsonNode regions,
-        Dictionary<string, ManualLogic> regionToLogic, // ReSharper disable once SuggestBaseTypeForParameter
+        Dictionary<string, ApLogic> regionToLogic, // ReSharper disable once SuggestBaseTypeForParameter
         HashSet<string> visited,
         ref bool foundTarget
     )
@@ -305,7 +297,7 @@ public sealed record ManualReader(
         if (!obj.TryGetPropertyValue("connects_to", out var connectsTo) || connectsTo is not JsonArray array)
             return null;
 
-        ManualLogic? path = null;
+        ApLogic? path = null;
         var exitRequires = obj.TryGetPropertyValue("exit_requires", out var ex) && ex is JsonObject ox ? ox : null;
 
         foreach (var connection in array)
@@ -341,9 +333,9 @@ public sealed record ManualReader(
 
     /// <summary>Tokenizes and parses the <see cref="JsonNode"/>.</summary>
     /// <param name="requires">The requires string to parse.</param>
-    /// <returns>The <see cref="ManualLogic"/> of the parameter <paramref name="requires"/>.</returns>
-    static ManualLogic? TokenizeAndParse(JsonNode? requires) =>
-        requires?.GetValueKind() is JsonValueKind.String ? ManualLogic.TokenizeAndParse(requires.ToString()) : null;
+    /// <returns>The <see cref="ApLogic"/> of the parameter <paramref name="requires"/>.</returns>
+    static ApLogic? TokenizeAndParse(JsonNode? requires) =>
+        requires?.GetValueKind() is JsonValueKind.String ? ApLogic.TokenizeAndParse(requires.ToString()) : null;
 
     /// <summary>Converts the <see cref="JsonArray"/> into the <see cref="HashSet{T}"/>.</summary>
     /// <param name="array">The array to convert.</param>

@@ -4,8 +4,19 @@ namespace Remote;
 /// <summary>Gets the exception for a death link.</summary>
 sealed class DeathLinkException : Exception
 {
-    /// <summary>Initializes a new instance of the <see cref="DeathLink"/> class.</summary>
-    /// <param name="deathLink">The death link to store.</param>
+    /// <inheritdoc />
+    public DeathLinkException() { }
+
+    /// <inheritdoc />
+    public DeathLinkException(string message)
+        : base(message) { }
+
+    /// <inheritdoc />
+    public DeathLinkException(string message, Exception innerException)
+        : base(message, innerException) { }
+
+    /// <summary>Initializes a new instance of the <see cref="DeathLinkException"/> class.</summary>
+    /// <param name="deathLink">The death link to display.</param>
     public DeathLinkException(DeathLink deathLink)
         : base($"It's not a bug, it's a feature! {MessageOf(deathLink)}") =>
         Data[nameof(DeathLink)] = deathLink;

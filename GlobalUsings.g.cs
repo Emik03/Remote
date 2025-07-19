@@ -449,6 +449,7 @@ global using global::Newtonsoft.Json.Utilities;
 global using global::NullGuard;
 global using global::NullGuard.CodeAnalysis;
 global using global::Remote;
+global using global::Remote.Domains;
 global using global::Remote.Resources;
 global using global::Roslyn;
 global using global::Roslyn.Utilities;
@@ -1384,6 +1385,8 @@ namespace NullGuard { }
 namespace NullGuard.CodeAnalysis { }
 
 namespace Remote { }
+
+namespace Remote.Domains { }
 
 namespace Remote.Resources { }
 

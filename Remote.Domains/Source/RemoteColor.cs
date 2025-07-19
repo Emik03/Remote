@@ -1,74 +1,71 @@
 // SPDX-License-Identifier: MPL-2.0
-namespace Remote;
-
-using Color = System.Drawing.Color;
-using Vector4 = System.Numerics.Vector4;
+namespace Remote.Domains;
 
 /// <summary>Represents the <see cref="Vector4"/> that can be parsed as a hex color.</summary>
 /// <param name="Vector">The color as <see cref="Vector4"/>.</param>
 [StructLayout(LayoutKind.Auto)] // ReSharper disable once StructCanBeMadeReadOnly
-public record struct AppColor(Vector4 Vector) : ISpanParsable<AppColor>
+public record struct RemoteColor(Vector4 Vector) : ISpanParsable<RemoteColor>
 {
     /// <inheritdoc cref="byte.MaxValue"/>
     const float Max = byte.MaxValue;
 
-    /// <summary>Initializes a new instances of the <see cref="AppColor"/> struct.</summary>
+    /// <summary>Initializes a new instances of the <see cref="RemoteColor"/> struct.</summary>
     /// <param name="color">The color to convert.</param>
-    public AppColor(Color color)
+    public RemoteColor(Color color)
         : this(new Vector4(color.R / Max, color.G / Max, color.B / Max, color.A / Max)) { }
 
     /// <summary>Gets the value for the default black.</summary>
-    public static AppColor Black => new(Color.FromArgb(unchecked((int)0xFF191A21)));
+    public static RemoteColor Black => new(Color.FromArgb(unchecked((int)0xFF191A21)));
 
     /// <summary>Gets the value for the default background.</summary>
-    public static AppColor Background => new(Color.FromArgb(unchecked((int)0xFF282A36)));
+    public static RemoteColor Background => new(Color.FromArgb(unchecked((int)0xFF282A36)));
 
     /// <summary>Gets the value for the default current line.</summary>
-    public static AppColor CurrentLine => new(Color.FromArgb(unchecked((int)0xFF44475A)));
+    public static RemoteColor CurrentLine => new(Color.FromArgb(unchecked((int)0xFF44475A)));
 
     /// <summary>Gets the value for the default foreground.</summary>
-    public static AppColor Foreground => new(Color.FromArgb(unchecked((int)0xFFF8F8F2)));
+    public static RemoteColor Foreground => new(Color.FromArgb(unchecked((int)0xFFF8F8F2)));
 
     /// <summary>Gets the value for the default comment.</summary>
-    public static AppColor Comment => new(Color.FromArgb(unchecked((int)0xFF6272A4)));
+    public static RemoteColor Comment => new(Color.FromArgb(unchecked((int)0xFF6272A4)));
 
     /// <summary>Gets the value for the default cyan.</summary>
-    public static AppColor Cyan => new(Color.FromArgb(unchecked((int)0xFF8BE9FD)));
+    public static RemoteColor Cyan => new(Color.FromArgb(unchecked((int)0xFF8BE9FD)));
 
     /// <summary>Gets the value for the default green.</summary>
-    public static AppColor Green => new(Color.FromArgb(unchecked((int)0xFF50FA7B)));
+    public static RemoteColor Green => new(Color.FromArgb(unchecked((int)0xFF50FA7B)));
 
     /// <summary>Gets the value for the default orange.</summary>
-    public static AppColor Orange => new(Color.FromArgb(unchecked((int)0xFFFFB86C)));
+    public static RemoteColor Orange => new(Color.FromArgb(unchecked((int)0xFFFFB86C)));
 
     /// <summary>Gets the value for the default pink.</summary>
-    public static AppColor Pink => new(Color.FromArgb(unchecked((int)0xFFFF79C6)));
+    public static RemoteColor Pink => new(Color.FromArgb(unchecked((int)0xFFFF79C6)));
 
     /// <summary>Gets the value for the default purple.</summary>
-    public static AppColor Purple => new(Color.FromArgb(unchecked((int)0xFFBD93F9)));
+    public static RemoteColor Purple => new(Color.FromArgb(unchecked((int)0xFFBD93F9)));
 
     /// <summary>Gets the value for the default red.</summary>
-    public static AppColor Red => new(Color.FromArgb(unchecked((int)0xFFFF5555)));
+    public static RemoteColor Red => new(Color.FromArgb(unchecked((int)0xFFFF5555)));
 
     /// <summary>Gets the value for the default yellow.</summary>
-    public static AppColor Yellow => new(Color.FromArgb(unchecked((int)0xFFF1FA8C)));
+    public static RemoteColor Yellow => new(Color.FromArgb(unchecked((int)0xFFF1FA8C)));
 
-    /// <summary>Implicitly creates <seealso cref="AppColor"/> from <see cref="uint"/>.</summary>
+    /// <summary>Implicitly creates <seealso cref="RemoteColor"/> from <see cref="uint"/>.</summary>
     /// <param name="color">The color to get.</param>
-    /// <returns>The <see cref="AppColor"/> from <see cref="uint"/>.</returns>
+    /// <returns>The <see cref="RemoteColor"/> from <see cref="uint"/>.</returns>
     [CLSCompliant(false)]
-    public static implicit operator AppColor(uint color) => new(FromU32(color));
+    public static implicit operator RemoteColor(uint color) => new(FromU32(color));
 
     /// <summary>Implicitly gets <see cref="Vector"/>.</summary>
     /// <param name="color">The color to get.</param>
     /// <returns>The <see cref="Vector4"/> from <see cref="Vector"/>.</returns>
-    public static implicit operator Vector4(AppColor color) => color.Vector;
+    public static implicit operator Vector4(RemoteColor color) => color.Vector;
 
     /// <summary>Divides the color.</summary>
     /// <param name="color">The color.</param>
     /// <param name="divisor">The number to divide with.</param>
     /// <returns>The divided color.</returns>
-    public static AppColor operator /(AppColor color, float divisor) =>
+    public static RemoteColor operator /(RemoteColor color, float divisor) =>
         new(
             new Vector4(
                 color.Vector.X / divisor,
@@ -78,16 +75,16 @@ public record struct AppColor(Vector4 Vector) : ISpanParsable<AppColor>
             )
         );
 
-    /// <inheritdoc cref="TryParse(string, IFormatProvider, out AppColor)"/>
-    public static bool TryParse([NotNullWhen(true)] string? s, out AppColor result) =>
+    /// <inheritdoc cref="TryParse(string, IFormatProvider, out RemoteColor)"/>
+    public static bool TryParse([NotNullWhen(true)] string? s, out RemoteColor result) =>
         TryParse(s.AsSpan(), CultureInfo.InvariantCulture, out result);
 
     /// <inheritdoc />
-    public static bool TryParse([NotNullWhen(true)] string? s, IFormatProvider? provider, out AppColor result) =>
+    public static bool TryParse([NotNullWhen(true)] string? s, IFormatProvider? provider, out RemoteColor result) =>
         TryParse(s.AsSpan(), provider, out result);
 
     /// <inheritdoc />
-    public static bool TryParse(ReadOnlySpan<char> s, IFormatProvider? provider, out AppColor result)
+    public static bool TryParse(ReadOnlySpan<char> s, IFormatProvider? provider, out RemoteColor result)
     {
         var ret = uint.TryParse(RemoveHeader(s), NumberStyles.HexNumber, provider, out var u);
         result = new(FromU32(u));
@@ -95,13 +92,13 @@ public record struct AppColor(Vector4 Vector) : ISpanParsable<AppColor>
     }
 
     /// <inheritdoc cref="Parse(string, IFormatProvider)"/>
-    public static AppColor Parse(string? s) => Parse(s.AsSpan(), CultureInfo.InvariantCulture);
+    public static RemoteColor Parse(string? s) => Parse(s.AsSpan(), CultureInfo.InvariantCulture);
 
     /// <inheritdoc />
-    public static AppColor Parse(string? s, IFormatProvider? provider) => Parse(s.AsSpan(), provider);
+    public static RemoteColor Parse(string? s, IFormatProvider? provider) => Parse(s.AsSpan(), provider);
 
     /// <inheritdoc />
-    public static AppColor Parse(ReadOnlySpan<char> s, IFormatProvider? provider) =>
+    public static RemoteColor Parse(ReadOnlySpan<char> s, IFormatProvider? provider) =>
         new(FromU32(uint.Parse(RemoveHeader(s), NumberStyles.HexNumber, provider)));
 
     /// <inheritdoc />

@@ -5,7 +5,7 @@ static Assembly? LoadFile(string name, ResolveEventArgs args) =>
         ? Assembly.LoadFile(Path.Join(Path.GetDirectoryName(typeof(RemoteGame).Assembly.Location), $"{name}.dll"))
         : null;
 
-AppDomain.CurrentDomain.AssemblyResolve += (_, a) => LoadFile("Remote.Resources", a);
+AppDomain.CurrentDomain.AssemblyResolve += (_, a) => LoadFile("Remote.Domains", a) ?? LoadFile("Remote.Resources", a);
 
 AppDomain.CurrentDomain.UnhandledException += (_, e) => File.WriteAllText(
     Path.Join(Path.GetTempPath(), $"{nameof(Remote)}.{DateTime.Now.ToString("s").Replace(':', '_')}.crash.txt"),

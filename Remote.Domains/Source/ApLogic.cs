@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: MPL-2.0
-namespace Remote;
+namespace Remote.Domains;
 #pragma warning disable CS9113
 /// <summary>
 /// Represents the set of requirements in order for a location or region to be considered reachable.
-/// Traversal to determine whether this instance is fulfilled can be seen in <see cref="ManualEvaluator"/>.
+/// Traversal to determine whether this instance is fulfilled can be seen in <see cref="ApEvaluator"/>.
 /// </summary>
 [Choice] // ReSharper disable once ClassNeverInstantiated.Global
-public sealed partial class ManualLogic(
-    ManualLogic? grouping,
-    (ManualLogic Left, ManualLogic Right) and,
-    (ManualLogic Left, ManualLogic Right) or,
+public sealed partial class ApLogic(
+    ApLogic? grouping,
+    (ApLogic Left, ApLogic Right) and,
+    (ApLogic Left, ApLogic Right) or,
     ReadOnlyMemory<char> item,
     ReadOnlyMemory<char> category,
     (ReadOnlyMemory<char> Item, ReadOnlyMemory<char> Count) itemCount,
@@ -21,27 +21,27 @@ public sealed partial class ManualLogic(
 {
     /// <summary>Encapsulates the rented array from <see cref="ArrayPool{Token}.Shared"/>.</summary>
     /// <param name="tokens">The rented array.</param>
-    struct RentedTokenArray(ManualToken[] tokens) : ICollection<ManualToken>, IDisposable, IReadOnlyList<ManualToken>
+    struct RentedTokenArray(ApToken[] tokens) : ICollection<ApToken>, IDisposable, IReadOnlyList<ApToken>
     {
         /// <summary>Initializes a new instance of the <see cref="RentedTokenArray"/> struct.</summary>
         /// <param name="capacity">The minimum length of the array.</param>
         public RentedTokenArray(int capacity)
-            : this(ArrayPool<ManualToken>.Shared.Rent(capacity)) { }
+            : this(ArrayPool<ApToken>.Shared.Rent(capacity)) { }
 
         /// <inheritdoc />
-        public readonly ManualToken this[int index] => tokens[index];
+        public readonly ApToken this[int index] => tokens[index];
 
         /// <summary>Gets the segment of what was written.</summary>
-        public readonly ArraySegment<ManualToken> Segment => new(tokens, 0, Count);
+        public readonly ArraySegment<ApToken> Segment => new(tokens, 0, Count);
 
         /// <inheritdoc />
-        readonly bool ICollection<ManualToken>.IsReadOnly => false;
+        readonly bool ICollection<ApToken>.IsReadOnly => false;
 
         /// <inheritdoc cref="IReadOnlyCollection{Token}.Count"/>
         public int Count { get; private set; }
 
         /// <inheritdoc />
-        public void Add(ManualToken item)
+        public void Add(ApToken item)
         {
             if (Count < tokens.Length)
                 tokens[Count++] = item;
@@ -51,16 +51,17 @@ public sealed partial class ManualLogic(
         public void Clear() => Count = 0;
 
         /// <inheritdoc />
-        public readonly void CopyTo(ManualToken[] array, int arrayIndex) => tokens.AsSpan().CopyTo(array.AsSpan(arrayIndex));
+        public readonly void CopyTo(ApToken[] array, int arrayIndex) =>
+            tokens.AsSpan().CopyTo(array.AsSpan(arrayIndex));
 
         /// <inheritdoc />
-        public readonly void Dispose() => ArrayPool<ManualToken>.Shared.Return(tokens);
+        public readonly void Dispose() => ArrayPool<ApToken>.Shared.Return(tokens);
 
         /// <inheritdoc />
-        public readonly bool Contains(ManualToken item) => tokens.Contains(item);
+        public readonly bool Contains(ApToken item) => tokens.Contains(item);
 
         /// <inheritdoc />
-        public bool Remove(ManualToken item)
+        public bool Remove(ApToken item)
         {
             var i = tokens.IndexOf(item);
 
@@ -75,12 +76,16 @@ public sealed partial class ManualLogic(
         readonly IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
         /// <inheritdoc />
-        public readonly IEnumerator<ManualToken> GetEnumerator() => tokens.AsEnumerable().GetEnumerator();
+        public readonly IEnumerator<ApToken> GetEnumerator() => tokens.AsEnumerable().GetEnumerator();
     }
 
-    /// <summary>Whether to show errors in <see cref="MessageBox.Show"/>.</summary>
+    /// <summary>Whether to show errors.</summary>
     static bool s_displayErrors = true;
 
+    /// <summary>Invoked when a parse error occurs.</summary>
+#pragma warning disable CA1003
+    public static event Func<string, string, IEnumerable<string>, Task<int>>? OnError;
+#pragma warning restore CA1003
     /// <summary>Determines whether this node is optimized.</summary>
     public bool IsOptimized { get; internal set; }
 
@@ -88,18 +93,18 @@ public sealed partial class ManualLogic(
     public bool IsYamlFunction =>
         Function.Name.Span is "YamlCompare" or "YamlDisabled" or "YamlEnabled" || Grouping?.IsYamlFunction is true;
 
-    /// <summary>Gets the number of <see cref="ManualLogic"/> instances, including itself.</summary>
+    /// <summary>Gets the number of <see cref="ApLogic"/> instances, including itself.</summary>
     // ReSharper disable ConditionalAccessQualifierIsNonNullableAccordingToAPIContract
     public int Count => (_grouping?.Count ?? 0) + (_and.Left?.Count ?? 0) + (_and.Right?.Count ?? 0) + 1;
 
     /// <summary>Makes a requirement that either of the instances should be fulfilled.</summary>
     /// <param name="l">The left-hand side.</param>
     /// <param name="r">The right-hand side.</param>
-    /// <returns>The new <see cref="ManualLogic"/> instance.</returns>
+    /// <returns>The new <see cref="ApLogic"/> instance.</returns>
     // ReSharper restore ConditionalAccessQualifierIsNonNullableAccordingToAPIContract
     [return: NotNullIfNotNull(nameof(l)), NotNullIfNotNull(nameof(r))]
     [Pure] // ReSharper disable once ReturnTypeCanBeNotNullable
-    public static ManualLogic? operator |(ManualLogic? l, ManualLogic? r) =>
+    public static ApLogic? operator |(ApLogic? l, ApLogic? r) =>
         l is null ? l.Check(r) : // Identity Law
         r is null ? r.Check(l) :
         l.StructuralEquals(r) ? l.Check(r) : // Idempotent Law
@@ -126,10 +131,10 @@ public sealed partial class ManualLogic(
     /// <summary>Makes a requirement that both of the instances should be fulfilled.</summary>
     /// <param name="l">The left-hand side.</param>
     /// <param name="r">The right-hand side.</param>
-    /// <returns>The new <see cref="ManualLogic"/> instance.</returns>
+    /// <returns>The new <see cref="ApLogic"/> instance.</returns>
     [return: NotNullIfNotNull(nameof(l)), NotNullIfNotNull(nameof(r))]
     [Pure] // ReSharper disable once ReturnTypeCanBeNotNullable
-    public static ManualLogic? operator &(ManualLogic? l, ManualLogic? r) =>
+    public static ApLogic? operator &(ApLogic? l, ApLogic? r) =>
         l is null ? r.Check(l) : // Annulment Law
         r is null ? l.Check(r) :
         l.StructuralEquals(r) ? l.Check(r) : // Idempotent Law
@@ -155,32 +160,32 @@ public sealed partial class ManualLogic(
         // We cannot optimize this.
         OfAnd(l, r);
 
-    /// <summary>Parses the sequence of tokens into the <see cref="ManualLogic"/> object.</summary>
+    /// <summary>Parses the sequence of tokens into the <see cref="ApLogic"/> object.</summary>
     /// <typeparam name="T">The type of list of tokens.</typeparam>
     /// <param name="tokens">The list of tokens.</param>
-    /// <returns>The <see cref="ManualLogic"/> object if parsing was successful, otherwise <see langword="null"/>.</returns>
-    public static ManualLogic? Parse<T>(T tokens)
-        where T : IReadOnlyList<ManualToken>
+    /// <returns>The <see cref="ApLogic"/> object if parsing was successful, otherwise <see langword="null"/>.</returns>
+    public static ApLogic? Parse<T>(T tokens)
+        where T : IReadOnlyList<ApToken>
     {
         var i = 0;
         var ret = Binary(tokens, ref i);
         return i + 1 == tokens.Count && tokens[i].IsEOL ? ret : Error(tokens, i, false);
     }
 
-    /// <summary>Parses the <see cref="ReadOnlyMemory{T}"/> directly to the <see cref="ManualLogic"/> object.</summary>
+    /// <summary>Parses the <see cref="ReadOnlyMemory{T}"/> directly to the <see cref="ApLogic"/> object.</summary>
     /// <param name="str">The sequences of characters to parse.</param>
-    /// <returns>The <see cref="ManualLogic"/> object if parsing was successful, otherwise <see langword="null"/>.</returns>
-    public static ManualLogic? TokenizeAndParse(string str) => TokenizeAndParse(str.AsMemory());
+    /// <returns>The <see cref="ApLogic"/> object if parsing was successful, otherwise <see langword="null"/>.</returns>
+    public static ApLogic? TokenizeAndParse(string str) => TokenizeAndParse(str.AsMemory());
 
-    /// <summary>Parses the <see cref="ReadOnlyMemory{T}"/> directly to the <see cref="ManualLogic"/> object.</summary>
+    /// <summary>Parses the <see cref="ReadOnlyMemory{T}"/> directly to the <see cref="ApLogic"/> object.</summary>
     /// <param name="memory">The sequences of characters to parse.</param>
-    /// <returns>The <see cref="ManualLogic"/> object if parsing was successful, otherwise <see langword="null"/>.</returns>
-    public static ManualLogic? TokenizeAndParse(ReadOnlyMemory<char> memory)
+    /// <returns>The <see cref="ApLogic"/> object if parsing was successful, otherwise <see langword="null"/>.</returns>
+    public static ApLogic? TokenizeAndParse(ReadOnlyMemory<char> memory)
     {
         // Most compact valid logic possible is a repeated sequence of '|a:1%|OR|a:1%|OR|a:1%|OR|a:1%|…'.
         const int MinimumValidLogic = 8;
         RentedTokenArray array = new(memory.Length - (memory.Length + 1) / MinimumValidLogic);
-        ManualToken.Tokenize(memory, ref array);
+        ApToken.Tokenize(memory, ref array);
         var ret = Parse(array.Segment);
 #pragma warning disable IDISP017
         array.Dispose();
@@ -191,7 +196,7 @@ public sealed partial class ManualLogic(
     /// <summary>Determines whether logic contains structurally the same data.</summary>
     /// <param name="other">The logic to compare to.</param>
     /// <returns>Whether both instances are equal.</returns>
-    public bool StructuralEquals(ManualLogic other) =>
+    public bool StructuralEquals(ApLogic other) =>
         other._grouping is { } otherGrouping // ReSharper disable once TailRecursiveCall
             ? StructuralEquals(otherGrouping)
             : _grouping?.StructuralEquals(other) ??
@@ -205,10 +210,10 @@ public sealed partial class ManualLogic(
 
     /// <summary>Converts this instance back into the <see cref="string"/> representation.</summary>
     /// <param name="and">
-    /// The string to insert between two <see cref="ManualLogic"/> instances to indicate an <c>AND</c> operation.
+    /// The string to insert between two <see cref="ApLogic"/> instances to indicate an <c>AND</c> operation.
     /// </param>
     /// <param name="or">
-    /// The string to insert between two <see cref="ManualLogic"/> instances to indicate an <c>OR</c> operation.
+    /// The string to insert between two <see cref="ApLogic"/> instances to indicate an <c>OR</c> operation.
     /// </param>
     /// <returns>The <see cref="string"/> representation that can be used to reconstruct this instance.</returns>
     public string ToBooleanAlgebra(string and, string or) => ToBooleanAlgebra(and, or, []);
@@ -237,9 +242,9 @@ public sealed partial class ManualLogic(
     /// <typeparam name="T">The type of list of tokens.</typeparam>
     /// <param name="tokens">The list of tokens.</param>
     /// <param name="i">The current index.</param>
-    /// <returns>The <see cref="ManualLogic"/> object if parsing was successful, otherwise <see langword="null"/>.</returns>
-    static ManualLogic? Binary<T>(T tokens, ref int i)
-        where T : IReadOnlyList<ManualToken>
+    /// <returns>The <see cref="ApLogic"/> object if parsing was successful, otherwise <see langword="null"/>.</returns>
+    static ApLogic? Binary<T>(T tokens, ref int i)
+        where T : IReadOnlyList<ApToken>
     {
         if (Unary(tokens, ref i) is not { } left)
             return Error(tokens, i, false);
@@ -259,10 +264,10 @@ public sealed partial class ManualLogic(
     /// <typeparam name="T">The type of list of tokens.</typeparam>
     /// <param name="tokens">The list of tokens.</param>
     /// <param name="i">The current index.</param>
-    /// <returns>The <see cref="ManualLogic"/> object if parsing was successful, otherwise <see langword="null"/>.</returns>
+    /// <returns>The <see cref="ApLogic"/> object if parsing was successful, otherwise <see langword="null"/>.</returns>
     // ReSharper disable DuplicatedSequentialIfBodies
-    static ManualLogic? Unary<T>(T tokens, ref int i)
-        where T : IReadOnlyList<ManualToken>
+    static ApLogic? Unary<T>(T tokens, ref int i)
+        where T : IReadOnlyList<ApToken>
     {
         if (tokens[i].IsPipe)
             return Pipe(tokens, ref i);
@@ -283,9 +288,9 @@ public sealed partial class ManualLogic(
     /// <typeparam name="T">The type of list of tokens.</typeparam>
     /// <param name="tokens">The list of tokens.</param>
     /// <param name="i">The current index.</param>
-    /// <returns>The <see cref="ManualLogic"/> object if parsing was successful, otherwise <see langword="null"/>.</returns>
-    static ManualLogic? Pipe<T>(T tokens, ref int i)
-        where T : IReadOnlyList<ManualToken>
+    /// <returns>The <see cref="ApLogic"/> object if parsing was successful, otherwise <see langword="null"/>.</returns>
+    static ApLogic? Pipe<T>(T tokens, ref int i)
+        where T : IReadOnlyList<ApToken>
     {
         var isCategory = tokens[++i].IsAt && i++ is var _;
 
@@ -335,9 +340,9 @@ public sealed partial class ManualLogic(
     /// <typeparam name="T">The type of list of tokens.</typeparam>
     /// <param name="tokens">The list of tokens.</param>
     /// <param name="i">The current index.</param>
-    /// <returns>The <see cref="ManualLogic"/> object if parsing was successful, otherwise <see langword="null"/>.</returns>
-    static ManualLogic? Curly<T>(T tokens, ref int i)
-        where T : IReadOnlyList<ManualToken>
+    /// <returns>The <see cref="ApLogic"/> object if parsing was successful, otherwise <see langword="null"/>.</returns>
+    static ApLogic? Curly<T>(T tokens, ref int i)
+        where T : IReadOnlyList<ApToken>
     {
         if (tokens[++i] is not { IsIdent: true, Ident: var name })
             return Error(tokens, i);
@@ -366,12 +371,15 @@ public sealed partial class ManualLogic(
     /// Whether the mismatched token was consumed, in which case the previous token should be highlighted.
     /// </param>
     /// <param name="line">The line number to show where the error occured from.</param>
-    /// <returns>The <see cref="ManualLogic"/> object if parsing was successful, otherwise <see langword="null"/>.</returns>
-    static ManualLogic? Error<T>(T tokens, int i, bool hasConsumedToken = true, [CallerLineNumber] int line = 0)
-        where T : IReadOnlyList<ManualToken>
+    /// <returns>The <see cref="ApLogic"/> object if parsing was successful, otherwise <see langword="null"/>.</returns>
+    static ApLogic? Error<T>(T tokens, int i, bool hasConsumedToken = true, [CallerLineNumber] int line = 0)
+        where T : IReadOnlyList<ApToken>
     {
         async Task? DisplayErrorAsync()
         {
+            if (OnError is not { } onError)
+                return;
+
             const int Lookaround = 3;
             const string Title = "Logic Parse Error";
             IEnumerable<string> buttons = ["Dismiss all", "Step to next error"];
@@ -387,11 +395,11 @@ public sealed partial class ManualLogic(
                    .Conjoin('\n')
                 }\n";
 
-            if (await MessageBox.Show(Title, description, buttons) is not 1)
+            if (await onError(Title, description, buttons) is not 1)
                 s_displayErrors = false;
         }
 
-        if (s_displayErrors)
+        if (s_displayErrors || OnError is null)
             return null;
 #pragma warning disable MA0134
         _ = Task.Run(DisplayErrorAsync).ConfigureAwait(false);
@@ -401,14 +409,14 @@ public sealed partial class ManualLogic(
 
     /// <summary>Converts this instance back into the <see cref="string"/> representation.</summary>
     /// <param name="and">
-    /// The string to insert between two <see cref="ManualLogic"/> instances to indicate an <c>AND</c> operation.
+    /// The string to insert between two <see cref="ApLogic"/> instances to indicate an <c>AND</c> operation.
     /// </param>
     /// <param name="or">
-    /// The string to insert between two <see cref="ManualLogic"/> instances to indicate an <c>OR</c> operation.
+    /// The string to insert between two <see cref="ApLogic"/> instances to indicate an <c>OR</c> operation.
     /// </param>
     /// <param name="list">The assignments for variables.</param>
     /// <returns>The <see cref="string"/> representation that can be used to reconstruct this instance.</returns>
-    string ToBooleanAlgebra(string and, string or, List<ManualLogic> list)
+    string ToBooleanAlgebra(string and, string or, List<ApLogic> list)
     {
         if (Grouping is { } g)
             return g.ToBooleanAlgebra(and, or, list);

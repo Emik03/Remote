@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MPL-2.0
-namespace Remote;
+namespace Remote.Domains;
 
 /// <summary>Contains the main colors the application uses.</summary>
-public enum AppPalette
+public enum RemotePalette
 {
     /// <summary>The background color.</summary>
     Background,

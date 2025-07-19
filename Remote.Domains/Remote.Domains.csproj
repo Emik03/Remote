@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <FileVersion>1.5</FileVersion>
+        <TargetFramework>net9.0</TargetFramework>
+        <Description>Standalone Archipelago client, with dedicated feature-rich support for manual apworlds.</Description>
+        <PackageTags>Application MonoGame ImGui Archipelago MultiWorld MW MultiGame Multi Game Manual APWorld</PackageTags>
+    </PropertyGroup>
+    <ItemGroup>
+        <Compile Include="../GlobalUsings.g.cs"/>
+        <EmbeddedResource Include="../Resources/Values/Extractor.py" Link="Resources/Values/Extractor.py" CopyToOutputDirectory="Never" CopyToPublishDirectory="Never"/>
+    </ItemGroup>
+</Project>

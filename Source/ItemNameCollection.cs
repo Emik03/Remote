@@ -6,7 +6,7 @@ namespace Remote;
 /// </summary>
 /// <param name="helper">The received items.</param>
 [CLSCompliant(false)]
-public sealed class ItemNameEnumerable(IReceivedItemsHelper helper) : IReadOnlyCollection<string>
+public sealed class ItemNameCollection(IReceivedItemsHelper helper) : IReadOnlyCollection<string>
 {
     /// <inheritdoc />
     public int Count => helper.AllItemsReceived.Count;

@@ -6,8 +6,7 @@
         <PackageTags>Application MonoGame ImGui Archipelago MultiWorld MW MultiGame Multi Game Manual APWorld</PackageTags>
     </PropertyGroup>
     <ItemGroup>
-        <Compile Remove="Source/**/*.cs"/>
-        <Compile Include="Source/AssemblyMarker.cs" />
+        <Compile Include="../GlobalUsings.g.cs"/>
         <Compile Remove="$(Morsels)/Compile/Source/References/**/*.cs"/>
         <EmbeddedResource Include="Fonts/alt.ttf" Link="Fonts/alt.ttf" CopyToOutputDirectory="Never" CopyToPublishDirectory="Never"/>
         <EmbeddedResource Include="Fonts/main.ttf" Link="Fonts/main.ttf" CopyToOutputDirectory="Never" CopyToPublishDirectory="Never"/>
@@ -17,6 +16,5 @@
         <EmbeddedResource Include="Fonts/japanese.ttf" Link="Fonts/japanese.ttf" CopyToOutputDirectory="Never" CopyToPublishDirectory="Never"/>
         <Compile Include="$(Morsels)/Compile/Source/References/AssemblyLevelAttributes.cs" Link="Source/References/AssemblyLevelAttributes.cs"/>
         <Compile Include="$(Morsels)/Compile/Source/References/System/Diagnostics/Attributes.cs" Link="Source/References/System/Diagnostics/Attributes.cs"/>
-        <EmbeddedResource Include="Resources/Values/Extractor.py" Link="Resources/Values/Extractor.py" CopyToOutputDirectory="Never" CopyToPublishDirectory="Never"/>
     </ItemGroup>
 </Project>

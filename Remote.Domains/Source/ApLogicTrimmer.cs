@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MPL-2.0
-namespace Remote;
+namespace Remote.Domains;
 
 /// <summary>
 /// Provides methods to inspect values before one gets returned.
 /// This is not a member method in order to allow <see keyword="null"/>.
 /// </summary>
-static class ManualLogicTrimmer
+static class ApLogicTrimmer
 {
 #if LOGIC_TRIM_CONSOLE_WRITE
     /// <summary>The maximum number of variables for assertions.</summary>
@@ -24,8 +24,8 @@ static class ManualLogicTrimmer
     /// <param name="lookup">The collection for logic.</param>
     /// <param name="inputs">The inputs.</param>
     /// <returns>Whether this logic is fulfilled by the set of inputs.</returns>
-    public static bool Test<T>([NotNullWhen(false)] this ManualLogic? that, T lookup, ReadOnlySpan<bool> inputs)
-        where T : IList<ManualLogic> =>
+    public static bool Test<T>([NotNullWhen(false)] this ApLogic? that, T lookup, ReadOnlySpan<bool> inputs)
+        where T : IList<ApLogic> =>
         that switch
         {
             null => true,
@@ -45,7 +45,7 @@ static class ManualLogicTrimmer
 #endif
     [return: NotNullIfNotNull(nameof(left))]
 #pragma warning disable MA0051
-    public static ManualLogic? Check(this ManualLogic? left, [UsedImplicitly] ManualLogic? right, [CallerLineNumber] int line = 0)
+    public static ApLogic? Check(this ApLogic? left, [UsedImplicitly] ApLogic? right, [CallerLineNumber] int line = 0)
 #pragma warning restore MA0051
 #if LOGIC_TRIM_CONSOLE_WRITE
     {
@@ -136,10 +136,10 @@ static class ManualLogicTrimmer
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
 #endif
     [return: NotNullIfNotNull(nameof(left))]
-    public static ManualLogic? Check(
-        this ManualLogic? left,
-        [UsedImplicitly] in (ManualLogic Left, ManualLogic Right) tuple,
-        [UsedImplicitly] ManualEvaluator evaluator,
+    public static ApLogic? Check(
+        this ApLogic? left,
+        [UsedImplicitly] in (ApLogic Left, ApLogic Right) tuple,
+        [UsedImplicitly] ApEvaluator evaluator,
         [CallerLineNumber] int line = 0
     )
 #if LOGIC_TRIM_CONSOLE_WRITE // ReSharper disable once ExplicitCallerInfoArgument
@@ -153,8 +153,8 @@ static class ManualLogicTrimmer
 #endif
 
     /// <inheritdoc cref="Test{T}"/>
-    static bool TestUnary<T>(this ManualLogic that, T lookup, ReadOnlySpan<bool> inputs)
-        where T : IList<ManualLogic>
+    static bool TestUnary<T>(this ApLogic that, T lookup, ReadOnlySpan<bool> inputs)
+        where T : IList<ApLogic>
     {
         static bool Index(ReadOnlySpan<bool> inputs, int i) => (uint)i < (uint)inputs.Length && inputs[i];
 

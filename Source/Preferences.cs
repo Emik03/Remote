@@ -92,37 +92,37 @@ public sealed partial class Preferences
         _repo = "",
         _yamlFilePath = "";
 
-    /// <summary>Gets the color of the <see cref="AppPalette"/></summary>
+    /// <summary>Gets the color of the <see cref="RemotePalette"/></summary>
     /// <param name="color">The color to get the preference's color of.</param>
-    public AppColor this[AppPalette color] => Colors[(int)color];
+    public RemoteColor this[RemotePalette color] => Colors[(int)color];
 
     /// <summary>Gets the color of the <see cref="Client.LocationStatus"/></summary>
     /// <param name="status">The status to get the color of.</param>
     /// <exception cref="ArgumentOutOfRangeException">
     /// The parameter <paramref name="status"/> is a value that isn't explicitly defined by the enum.
     /// </exception>
-    public AppColor this[Client.LocationStatus status] =>
+    public RemoteColor this[Client.LocationStatus status] =>
         status switch
         {
             Client.LocationStatus.Hidden => default,
-            Client.LocationStatus.Checked => this[AppPalette.Checked],
-            Client.LocationStatus.Reachable => this[AppPalette.Reachable],
-            Client.LocationStatus.OutOfLogic => this[AppPalette.OutOfLogic],
-            Client.LocationStatus.ProbablyReachable => this[AppPalette.Neutral],
+            Client.LocationStatus.Checked => this[RemotePalette.Checked],
+            Client.LocationStatus.Reachable => this[RemotePalette.Reachable],
+            Client.LocationStatus.OutOfLogic => this[RemotePalette.OutOfLogic],
+            Client.LocationStatus.ProbablyReachable => this[RemotePalette.Neutral],
             _ => throw new ArgumentOutOfRangeException(nameof(status), status, null),
         };
 
     /// <summary>Gets the color of the <see cref="ItemFlags"/>.</summary>
     /// <param name="flags">The flags to get the color of.</param>
     [CLSCompliant(false)]
-    public AppColor this[ItemFlags? flags] =>
+    public RemoteColor this[ItemFlags? flags] =>
         flags switch
         {
-            ItemFlags.None => this[AppPalette.Neutral],
-            { } f when f.Has(ItemFlags.Advancement) => this[AppPalette.Progression],
-            { } f when f.Has(ItemFlags.NeverExclude) => this[AppPalette.Useful],
-            { } f when f.Has(ItemFlags.Trap) => this[AppPalette.Trap],
-            _ => this[AppPalette.PendingItem],
+            ItemFlags.None => this[RemotePalette.Neutral],
+            { } f when f.Has(ItemFlags.Advancement) => this[RemotePalette.Progression],
+            { } f when f.Has(ItemFlags.NeverExclude) => this[RemotePalette.Useful],
+            { } f when f.Has(ItemFlags.Trap) => this[RemotePalette.Trap],
+            _ => this[RemotePalette.PendingItem],
         };
 
     /// <summary>Gets the default installation path of Archipelago.</summary>
@@ -139,7 +139,7 @@ public sealed partial class Preferences
     public static bool ShownTooltip { get; set; }
 
     /// <summary>Contains the path to the preferences file to read and write from.</summary>
-    public static string FilePath { get; } = PathTo(PreferencesFile, "REMOTE_PREFERENCES_PATH");
+    public static string FilePath { get; } = HistoryServer.PathTo(PreferencesFile, "REMOTE_PREFERENCES_PATH");
 
     /// <summary>Gets or sets the value determining whether to always show the chat.</summary>
     public bool AlwaysShowChat
@@ -294,7 +294,7 @@ public sealed partial class Preferences
 
     /// <summary>Gets or sets the UI padding.</summary>
 #pragma warning disable MA0016
-    public List<float> UiPadding { get; [UsedImplicitly] private set; } = [5, 5];
+    public Collection<float> UiPadding { get; [UsedImplicitly] private set; } = [5, 5];
 #pragma warning restore MA0016
     /// <summary>Gets the child process to wait for before disposing.</summary>
 #pragma warning disable IDISP006
@@ -304,7 +304,7 @@ public sealed partial class Preferences
     /// <param name="name">The displayed text.</param>
     /// <param name="color">The color that will change.</param>
     /// <returns>The new color.</returns>
-    public static AppColor ShowColorEdit(string name, AppColor color)
+    public static RemoteColor ShowColorEdit(string name, RemoteColor color)
     {
         var v = color.Vector;
         ImGui.ColorEdit4(name, ref v, ImGuiColorEditFlags.DisplayHex);
@@ -313,21 +313,8 @@ public sealed partial class Preferences
 
     /// <summary>Gets the list of colors.</summary>
 #pragma warning disable MA0016
-    public List<AppColor> Colors { get; private set; } = [];
+    public Collection<RemoteColor> Colors { get; private set; } = [];
 #pragma warning restore MA0016
-    /// <summary>Gets the full path to the file.</summary>
-    /// <param name="file">The file path to get.</param>
-    /// <param name="environment">The environment variable that allows users to override the return.</param>
-    /// <returns>The full path to the parameter <paramref name="file"/>.</returns>
-    public static string PathTo(string file, string environment) =>
-        Environment.GetEnvironmentVariable(environment) is { } preferences
-            ? System.IO.Directory.Exists(preferences) ? Path.Join(preferences, file) : preferences
-            : Path.Join(
-                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                typeof(Preferences).Assembly.GetName().Name,
-                file
-            );
-
     /// <summary>Loads the preferences from disk.</summary>
     /// <returns>The preferences.</returns>
     public static Preferences Load()
@@ -350,7 +337,7 @@ public sealed partial class Preferences
 
     /// <summary>Pushes the specific color into most widgets.</summary>
     /// <param name="color">The color.</param>
-    public void PushStyling(AppColor color)
+    public void PushStyling(RemoteColor color)
     {
         var active = color / ActiveTabDim;
         var inactive = color / InactiveTabDim;
@@ -379,7 +366,7 @@ public sealed partial class Preferences
         ImGui.PushStyleVar(ImGuiStyleVar.WindowMinSize, new Vector2(_uiScale * 600));
         ImGui.PushStyleVar(ImGuiStyleVar.WindowBorderSize, _useTabs ? 0 : 5);
 
-        for (var i = (int)AppPalette.Count; i < Colors.Count && (ImGuiCol)(i - AppPalette.Count) is var color; i++)
+        for (var i = (int)RemotePalette.Count; i < Colors.Count && (ImGuiCol)(i - RemotePalette.Count) is var color; i++)
             ImGui.PushStyleColor(
                 color,
                 s_backgrounds.Contains(color) && active?.Color is { } c ? c / _windowDim : Colors[i]
@@ -410,7 +397,7 @@ public sealed partial class Preferences
     /// <summary>Pops all colors and styling variables.</summary>
     public void PopStyling()
     {
-        if (Colors.Count - (int)AppPalette.Count is > 0 and var count)
+        if (Colors.Count - (int)RemotePalette.Count is > 0 and var count)
             ImGui.PopStyleColor(count);
 
         ImGui.PopStyleVar(16);
@@ -442,7 +429,7 @@ public sealed partial class Preferences
     public unsafe void ShowText(
 #pragma warning restore MA0051
         string text,
-        AppColor? color = null,
+        RemoteColor? color = null,
         string? clipboard = null,
         string? tooltip = null,
         bool disabled = false
@@ -534,7 +521,7 @@ public sealed partial class Preferences
 
         if (ImGui.IsMouseDown(button))
         {
-            ImGui.PushStyleColor(ImGuiCol.Text, this[AppPalette.Reachable]);
+            ImGui.PushStyleColor(ImGuiCol.Text, this[RemotePalette.Reachable]);
             Tooltip("Copied!");
             ImGui.PopStyleColor();
         }
@@ -562,14 +549,14 @@ public sealed partial class Preferences
     /// <param name="color">The color of the text.</param>
     /// <param name="clipboard">The text to copy when this is clicked.</param>
     /// <param name="tooltip">The tooltip to display when hovered over.</param>
-    public void ShowText(string text, AppPalette color, string? clipboard = null, string? tooltip = null) =>
+    public void ShowText(string text, RemotePalette color, string? clipboard = null, string? tooltip = null) =>
         ShowText(text, this[color], clipboard, tooltip);
 
-    /// <inheritdoc cref="ShowText(string, AppPalette, string, string)"/>
+    /// <inheritdoc cref="ShowText(string, RemotePalette, string, string)"/>
     public void ShowText(string text, Client.LocationStatus color, string? clipboard = null, string? tooltip = null) =>
         ShowText(text, this[color], clipboard, tooltip);
 
-    /// <inheritdoc cref="ShowText(string, AppPalette, string, string)"/>
+    /// <inheritdoc cref="ShowText(string, RemotePalette, string, string)"/>
     [CLSCompliant(false)]
     public void ShowText(string text, ItemFlags? color, string? clipboard = null, string? tooltip = null) =>
         ShowText(text, this[color], clipboard, tooltip);
@@ -582,7 +569,7 @@ public sealed partial class Preferences
         if (text is null || !ImGui.IsItemHovered())
             return;
 
-        ImGui.PushStyleColor(ImGuiCol.PopupBg, this[AppPalette.Count + (int)ImGuiCol.PopupBg]);
+        ImGui.PushStyleColor(ImGuiCol.PopupBg, this[RemotePalette.Count + (int)ImGuiCol.PopupBg]);
 
         if (!ImGui.BeginTooltip())
         {
@@ -660,9 +647,9 @@ public sealed partial class Preferences
     /// <param name="clientsToRegister">The clients created from history, or <see langword="null"/>.</param>
     /// <returns>Whether to create a new instance of <see cref="Client"/>.</returns>
     [CLSCompliant(false)]
-#pragma warning disable MA0016
+#pragma warning disable CA1002, MA0016
     public bool Show(GameTime gameTime, List<Client> clients, out int? tab, out IEnumerable<Client>? clientsToRegister)
-#pragma warning restore MA0016
+#pragma warning restore CA1002, MA0016
     {
         clientsToRegister = null;
         var useTabs = _useTabs;
@@ -709,7 +696,7 @@ public sealed partial class Preferences
     /// <param name="password">The password.</param>
     /// <returns></returns>
     [CLSCompliant(false)]
-    public HistorySlot Get(Yaml yaml, string address, ushort port, string? password)
+    public HistorySlot Get(ApYaml yaml, string address, ushort port, string? password)
     {
         string FindNextAvailableColor()
         {
@@ -717,7 +704,7 @@ public sealed partial class Preferences
             {
                 foreach (var (_, server) in _history)
                     foreach (var (_, slot) in server.Slots)
-                        if (!string.IsNullOrWhiteSpace(slot.Color) && AppColor.Parse(slot.Color) == color)
+                        if (!string.IsNullOrWhiteSpace(slot.Color) && RemoteColor.Parse(slot.Color) == color)
                             goto Next;
 
                 return color.ToString();
@@ -967,13 +954,13 @@ public sealed partial class Preferences
         ShowText("Press on the color for more options!", disabled: true);
 
         if (ImGui.CollapsingHeader("Theme"))
-            for (var i = 0; i < Colors.Count.Min((int)AppPalette.Count); i++)
+            for (var i = 0; i < Colors.Count.Min((int)RemotePalette.Count); i++)
                 ShowColor(i);
 
         if (!ImGui.CollapsingHeader("Theme (Advanced)"))
             return;
 
-        for (var i = (int)AppPalette.Count; i < Colors.Count; i++)
+        for (var i = (int)RemotePalette.Count; i < Colors.Count; i++)
             ShowColor(i);
     }
 
@@ -1068,9 +1055,9 @@ public sealed partial class Preferences
     {
         ImGui.Separator();
 
-        var name = i < (int)AppPalette.Count
-            ? ((AppPalette)i).ToString()
-            : ((ImGuiCol)(i - (int)AppPalette.Count)).ToString();
+        var name = i < (int)RemotePalette.Count
+            ? ((RemotePalette)i).ToString()
+            : ((ImGuiCol)(i - (int)RemotePalette.Count)).ToString();
 
         Colors[i] = ShowColorEdit(name, Colors[i]);
     }
@@ -1180,8 +1167,8 @@ public sealed partial class Preferences
         if (x.Slots is [])
             return [];
 
-        var count = $"{(x.Slots.Count is 1 ? "" : $" ({x.Slots.Count})")}";
         ImGui.SetNextItemWidth(Width(100));
+        var count = $"{(x.Slots.Count is 1 ? "" : $" ({x.Slots.Count})")}";
         ref var state = ref CollectionsMarshal.GetValueRefOrAddDefault(_editStates, x.Key, out _);
         var label = $"{(string.IsNullOrWhiteSpace(x.Value.Alias) ? x.Key : x.Value.Alias)}{count}###{x.Key}";
 

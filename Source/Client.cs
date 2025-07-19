@@ -1,14 +1,17 @@
 // SPDX-License-Identifier: MPL-2.0
 namespace Remote;
 
-using CheckboxStatus = (ManualLogic? Logic, Client.LocationStatus Status, bool Checked);
+using CheckboxStatus = (ApLogic? Logic, Client.LocationStatus Status, bool Checked);
+using DocumentStart = YamlDotNet.Core.Events.DocumentStart;
 using HintMessage = (Hint Hint, string Message);
+using Parser = YamlDotNet.Core.Parser;
+using StreamStart = YamlDotNet.Core.Events.StreamStart;
 
 /// <summary>
 /// Responsible for rendering the <see cref="ImGui"/> window to display its state of <see cref="ArchipelagoSession"/>.
 /// </summary>
 /// <param name="yaml">The yaml file used to generate the world.</param>
-public sealed partial class Client(Yaml? yaml = null)
+public sealed partial class Client(ApYaml? yaml = null)
 {
     /// <summary>Indicates the status of the location.</summary>
     public enum LocationStatus
@@ -230,7 +233,7 @@ public sealed partial class Client(Yaml? yaml = null)
     readonly List<LogMessage?> _messages = [];
 
     /// <summary>Contains this player's <c>.yaml</c> file.</summary>
-    readonly Yaml _yaml = yaml ?? new();
+    readonly ApYaml _yaml = yaml ?? new();
 
     /// <summary>Whether to send push notifications for receiving new items.</summary>
     bool _crashOnDeathLink, _pushNotifs;
@@ -265,7 +268,7 @@ public sealed partial class Client(Yaml? yaml = null)
     Dictionary<string, int> _lastItems = [];
 
     /// <summary>The logic evaluator.</summary>
-    ManualEvaluator? _evaluator;
+    ApEvaluator? _evaluator;
 
     /// <summary>Contains suggestions for autocomplete.</summary>
     ImmutableArray<string> _itemSuggestions = [], _locationSuggestions = [];
@@ -289,7 +292,7 @@ public sealed partial class Client(Yaml? yaml = null)
     /// <param name="kvp">The connection information.</param>
     [CLSCompliant(false)]
     public Client(KeyValuePair<string, HistorySlot> kvp)
-        : this(new Yaml { Name = kvp.Key, Game = kvp.Value.Game }) =>
+        : this(new ApYaml { Name = kvp.Key, Game = kvp.Value.Game }) =>
         _slot = kvp.Value;
 
     /// <summary>Gets or adds this location and retrieves the checkbox status of that location.</summary>
@@ -311,7 +314,7 @@ public sealed partial class Client(Yaml? yaml = null)
     }
 
     /// <summary>Gets the color.</summary>
-    public AppColor? Color => AppColor.TryParse(_slot.Color, out var color) ? color : null;
+    public RemoteColor? Color => RemoteColor.TryParse(_slot.Color, out var color) ? color : null;
 
     /// <summary>Contains the last retrieved hints.</summary>
     HintMessage[]? LastHints
@@ -335,9 +338,31 @@ public sealed partial class Client(Yaml? yaml = null)
     /// <param name="preferences">The user preferences.</param>
     /// <returns>The components representing each player in the parameter <paramref name="path"/>.</returns>
     public static IEnumerable<Client> FromFile(string path, Preferences preferences) =>
-        Go(Yaml.FromFile, path, out var error, out var yaml)
+        Go(FromFile, path, out var error, out var yaml)
             ? [new(ToMessages(error, Fail, path))]
             : yaml.Select(x => new Client(x)).Lazily(x => x.Connect(preferences));
+
+    /// <summary>
+    /// Deserializes the file into the sequence of <see cref="ApYaml"/> instances, each representing a player.
+    /// </summary>
+    /// <param name="path">The path containing a yaml file to deserialize.</param>
+    /// <returns>The sequence of <see cref="ApYaml"/> instances.</returns>
+    public static IEnumerable<ApYaml> FromFile(string path)
+    {
+        Parser parser = new(new StreamReader(File.OpenRead(path)));
+        parser.Consume<StreamStart>();
+        Deserializer deserializer = new();
+        ICollection<ApYaml> ret = [];
+
+        while (parser.Accept<DocumentStart>(out _))
+        {
+            var yaml = deserializer.Deserialize<ApYaml>(parser);
+            yaml.Path = path;
+            ret.Add(yaml);
+        }
+
+        return ret;
+    }
 
     /// <summary>Connects to the archipelago server.</summary>
     /// <param name="preferences">The user preferences.</param>
@@ -402,8 +427,8 @@ public sealed partial class Client(Yaml? yaml = null)
 
             _connectionMessage = "Slot data has been read!\nReading APWorld... (5/6)";
 
-            _evaluator = ManualEvaluator.Read(
-                new ItemNameEnumerable(session.Items),
+            _evaluator = ApEvaluator.Read(
+                new ItemNameCollection(session.Items),
                 _yaml,
                 preferences.Directory,
                 preferences.Repo,
@@ -426,6 +451,7 @@ public sealed partial class Client(Yaml? yaml = null)
             {
                 await AttemptAsync(address, port, password);
             }
+#pragma warning disable CA1031
             catch (Exception e)
             {
                 try
@@ -436,6 +462,7 @@ public sealed partial class Client(Yaml? yaml = null)
                         await AttemptAsync(preferences.Address, preferences.Port, preferences.Password);
                 }
                 catch (Exception)
+#pragma warning restore CA1031
                 {
                     _errors = ToMessages(e, "Failed to connect. Is the server down, is the host and port correct?");
                 }
@@ -745,7 +772,7 @@ public sealed partial class Client(Yaml? yaml = null)
 
     /// <summary>Gets the goal data.</summary>
     /// <returns>The goal data.</returns>
-    ManualReader.GoalData? GoalGetter() => _session?.DataStorage.GetSlotData<ManualReader.GoalData>();
+    GoalData? GoalGetter() => _session?.DataStorage.GetSlotData<GoalData>();
 
     /// <summary>Gets the message for the hint.</summary>
     /// <param name="hint">The hint to get the message of.</param>
@@ -793,9 +820,9 @@ public sealed partial class Client(Yaml? yaml = null)
 
     /// <summary>Groups all items into sorted items with count.</summary>
     /// <param name="category">The category that the returned items must be under.</param>
-    /// <param name="lookup">The lookup table.</param>
+    /// <param name="set">The lookup table.</param>
     /// <returns>The sorted items with count.</returns>
-    IEnumerable<ReceivedItem> GroupItems(string category, FrozenSortedDictionary.Element lookup)
+    IEnumerable<ReceivedItem> GroupItems(string category, FrozenSortedSet set)
     {
         static ReceivedItem ConsCount<T>(IGrouping<T, (int Index, ItemInfo Item)> x)
         {
@@ -804,16 +831,16 @@ public sealed partial class Client(Yaml? yaml = null)
             return new([..items]);
         }
 
-        bool Contains(FrozenSortedDictionary.Element lookup, ItemInfo info) =>
+        bool Contains(FrozenSortedSet set, ItemInfo info) =>
 #pragma warning disable MA0002
-            info.ItemName.Contains(_itemSearch, StringComparison.OrdinalIgnoreCase) && lookup.Contains(info.ItemName);
+            info.ItemName.Contains(_itemSearch, StringComparison.OrdinalIgnoreCase) && set.Contains(info.ItemName);
 #pragma warning restore MA0002
         Debug.Assert(_session is not null);
         Debug.Assert(_itemSearch is not null);
 
         var query = _session.Items.AllItemsReceived
            .Index()
-           .Where(x => Contains(lookup, x.Item))
+           .Where(x => Contains(set, x.Item))
            .GroupBy(x => x.Item.ItemId)
            .Select(ConsCount);
 
