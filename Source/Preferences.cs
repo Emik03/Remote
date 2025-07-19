@@ -435,7 +435,7 @@ public sealed partial class Preferences
         bool disabled = false
     )
     {
-        var (copy, space, pushed) = (clipboard ?? text, false, true);
+        var (copy, pushed, space) = (clipboard ?? text, true, false);
         Pad();
 
         if (disabled && ImGui.GetStyleColorVec4(ImGuiCol.TextDisabled) is not null and var ptr)
