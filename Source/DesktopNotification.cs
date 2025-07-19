@@ -62,7 +62,7 @@ public static partial class DesktopNotification
              $objNotifyIcon.ShowBalloonTip(10000)
              """;
 
-        using var process = Process.Start("powershell", script);
+        using var process = Process.Start("powershell", ["-NoNewWindow", script]);
         await process.WaitForExitAsync().ConfigureAwait(false);
     }
 
