@@ -453,19 +453,21 @@ public sealed partial class Client(ApYaml? yaml = null)
             }
 #pragma warning disable CA1031
             catch (Exception e)
+#pragma warning restore CA1031
             {
                 try
                 {
                     if (port != preferences.Port ||
                         !FrozenSortedDictionary.Comparer.Equals(address, preferences.Address) ||
                         !FrozenSortedDictionary.Comparer.Equals(password, preferences.Password))
+                    {
                         await AttemptAsync(preferences.Address, preferences.Port, preferences.Password);
-                }
-                catch (Exception)
-#pragma warning restore CA1031
-                {
-                    _errors = ToMessages(e, "Failed to connect. Is the server down, is the host and port correct?");
-                }
+                        return;
+                    }
+                } // ReSharper disable once EmptyGeneralCatchClause
+                catch (Exception) { }
+
+                _errors = ToMessages(e, "Failed to connect. Is the server down, is the host and port correct?");
             }
         }
 

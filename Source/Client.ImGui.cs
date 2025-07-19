@@ -178,10 +178,9 @@ public sealed partial class Client
         ImGui.SetNextItemWidth(preferences.Width(100));
         var enter = ImGuiRenderer.InputText("Name", ref _yaml.Name, 16, Preferences.TextFlags);
 
-        if (_errors is not null)
-            foreach (var error in _errors.AsSpan())
-                if (!string.IsNullOrEmpty(error))
-                    preferences.ShowText(error, RemotePalette.Trap);
+        foreach (var error in _errors.AsSpan())
+            if (!string.IsNullOrEmpty(error))
+                preferences.ShowText(error, RemotePalette.Trap);
 
         ImGui.SeparatorText("Create");
 
