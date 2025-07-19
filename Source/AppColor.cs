@@ -3,7 +3,6 @@ namespace Remote;
 
 using Color = System.Drawing.Color;
 using Vector4 = System.Numerics.Vector4;
-using XnaColor = Color;
 
 /// <summary>Represents the <see cref="Vector4"/> that can be parsed as a hex color.</summary>
 /// <param name="Vector">The color as <see cref="Vector4"/>.</param>
@@ -53,18 +52,6 @@ public record struct AppColor(Vector4 Vector) : ISpanParsable<AppColor>
 
     /// <summary>Gets the value for the default yellow.</summary>
     public static AppColor Yellow => new(Color.FromArgb(unchecked((int)0xFFF1FA8C)));
-
-    /// <summary>Gets the unsigned integer representation of this instance.</summary>
-    [CLSCompliant(false)]
-    public readonly uint UInt32 =>
-        (uint)((byte)(Vector.X * Max) << 24 |
-            (byte)(Vector.Y * Max) << 16 |
-            (byte)(Vector.Z * Max) << 8 |
-            (byte)(Vector.W * Max) << 0);
-
-    /// <summary>Gets itself as <see cref="XnaColor"/>.</summary>
-    [CLSCompliant(false)]
-    public readonly XnaColor XnaColor => new(Vector.X, Vector.Y, Vector.Z, Vector.W);
 
     /// <summary>Implicitly creates <seealso cref="AppColor"/> from <see cref="uint"/>.</summary>
     /// <param name="color">The color to get.</param>

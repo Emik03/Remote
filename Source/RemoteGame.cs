@@ -88,7 +88,8 @@ public sealed class RemoteGame : Game
         if (_renderer.IsDisposed)
             return;
 
-        GraphicsDevice.Clear(_preferences[AppPalette.Background].XnaColor);
+        var color = _preferences[AppPalette.Background];
+        GraphicsDevice.Clear(new(color.Vector.X, color.Vector.Y, color.Vector.Z, color.Vector.W));
         _renderer.BeforeLayout(gameTime);
         _preferences.PushStyling(_tab is { } t ? _clients[t] : null);
 
