@@ -1078,7 +1078,7 @@ public sealed partial class Preferences
     {
         (string Key, HistoryServer Value,
             List<KeyValuePair<string, HistorySlot>>) OrderedSlots(KeyValuePair<string, HistoryServer> kvp) =>
-            (kvp.Key, kvp.Value, kvp.Value.OrderBy(SortBy).Where(x => !clients.Exists(y => y.Has(x.Value))).ToList());
+            (kvp.Key, kvp.Value, [..kvp.Value.OrderBy(SortBy).Where(x => !clients.Exists(y => y.Has(x.Value)))]);
 
         clientsToRegister = null;
 

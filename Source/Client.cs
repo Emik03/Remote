@@ -453,7 +453,6 @@ public sealed partial class Client(ApYaml? yaml = null)
             }
 #pragma warning disable CA1031
             catch (Exception e)
-#pragma warning restore CA1031
             {
                 try
                 {
@@ -466,7 +465,7 @@ public sealed partial class Client(ApYaml? yaml = null)
                     }
                 } // ReSharper disable once EmptyGeneralCatchClause
                 catch (Exception) { }
-
+#pragma warning restore CA1031
                 _errors = ToMessages(e, "Failed to connect. Is the server down, is the host and port correct?");
             }
         }
