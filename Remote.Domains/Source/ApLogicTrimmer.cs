@@ -53,7 +53,7 @@ static class ApLogicTrimmer
         const string OrSymbol = "+", AndSymbol = "*", TrueSymbol = "{True}";
         left?.IsOptimized = true;
 
-        static string Display(Logic? logic) => logic?.BooleanAlgebra(AndSymbol, OrSymbol) ?? TrueSymbol;
+        static string Display(ApLogic? logic) => logic?.ToBooleanAlgebra(AndSymbol, OrSymbol) ?? TrueSymbol;
 
         Dictionary<int, string> dictionary = new()
         {
@@ -86,8 +86,8 @@ static class ApLogicTrimmer
 
         var key = $"""
                    Found optimization: {value}
-                   Preserving: {left?.DeparseExplicit() ?? TrueSymbol}
-                   Discarding: {right?.DeparseExplicit() ?? TrueSymbol}
+                   Preserving: {left?.ToString() ?? TrueSymbol}
+                   Discarding: {right?.ToString() ?? TrueSymbol}
                    In boolean algebra…
                    Preserving: {Display(left)}
                    Discarding: {Display(right)}
@@ -102,8 +102,8 @@ static class ApLogicTrimmer
         if (left is null || right is null || line < Or)
             return left;
 
-        IList<Logic> list = [];
-        var combined = line >= And ? Logic.OfAnd(left, right) : Logic.OfOr(left, right);
+        IList<ApLogic> list = [];
+        var combined = line >= And ? ApLogic.OfAnd(left, right) : ApLogic.OfOr(left, right);
         _ = combined.Test(list, []);
         var originalCount = list.Count;
         _ = left.Test(list, []);
