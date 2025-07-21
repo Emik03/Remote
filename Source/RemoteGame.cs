@@ -91,7 +91,7 @@ public sealed class RemoteGame : Game
         var color = _preferences[RemotePalette.Background];
         GraphicsDevice.Clear(new(color.Vector.X, color.Vector.Y, color.Vector.Z, color.Vector.W));
         _renderer.BeforeLayout(gameTime);
-        _preferences.PushStyling(_tab is { } t ? _clients[t] : null);
+        _preferences.PushStyling(_tab is { } t && (uint)t < (uint)_clients.Count ? _clients[t] : null);
 
         const ImGuiWindowFlags OnTab = ImGuiWindowFlags.NoTitleBar |
             ImGuiWindowFlags.NoResize |
