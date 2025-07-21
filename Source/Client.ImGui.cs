@@ -201,8 +201,8 @@ public sealed partial class Client
             _lastItemCount < itemCount ||
             _lastLocationCount > locationCount)
         {
-            _lastItemCount = _lastLocationCount;
             _lastLocationCount = locationCount;
+            _lastItemCount = itemCount;
             UpdateStatus();
         }
 
