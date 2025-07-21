@@ -448,6 +448,8 @@ public sealed partial class Preferences
         if (text is [var first, ..] && first.IsWhitespace())
         {
             ImGui.TextUnformatted([' ']);
+            CopyIfClicked(copy);
+            Tooltip(tooltip);
             ImGui.SameLine(0, 0);
         }
 
@@ -499,12 +501,13 @@ public sealed partial class Preferences
         }
 
         if (text is [.., var last] && last.IsWhitespace())
+        {
             ImGui.TextUnformatted([' ']);
+            CopyIfClicked(copy);
+            Tooltip(tooltip);
+        }
         else
             ImGui.NewLine();
-
-        CopyIfClicked(copy);
-        Tooltip(tooltip);
 
         if (pushed)
             ImGui.PopStyleColor();
