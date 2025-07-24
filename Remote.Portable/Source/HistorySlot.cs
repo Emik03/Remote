@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MPL-2.0
-namespace Remote.Domains;
+namespace Remote.Portable;
 #pragma warning disable MA0016
 /// <summary>Holds the previous connection info.</summary>
 public sealed class HistorySlot

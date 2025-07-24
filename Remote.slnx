@@ -1,6 +1,6 @@
 ﻿<Solution>
   <Project Path="Remote.Android.csproj" Type="Classic C#" />
   <Project Path="Remote.csproj" Type="Classic C#" />
-  <Project Path="Remote.Domains/Remote.Domains.csproj" Type="Classic C#" />
+  <Project Path="Remote.Portable/Remote.Portable.csproj" Type="Classic C#" />
   <Project Path="Remote.Resources/Remote.Resources.csproj" Type="Classic C#" />
 </Solution>

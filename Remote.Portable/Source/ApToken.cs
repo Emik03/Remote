@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MPL-2.0
-namespace Remote.Domains;
+namespace Remote.Portable;
 
 /// <summary>Represents the token from a larger <c>requires</c> strings.</summary>
 [Choice.EOL.And.Or.LeftParen.RightParen.Pipe.At.Colon.All.Half.Percent.LeftCurly.RightCurly.Ident<ReadOnlyMemory<char>>]

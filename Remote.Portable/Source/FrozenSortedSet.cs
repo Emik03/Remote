@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MPL-2.0
-namespace Remote.Domains;
+namespace Remote.Portable;
 
 /// <summary>
 /// Represents the value in each entry within <see cref="FrozenSortedDictionary"/>,

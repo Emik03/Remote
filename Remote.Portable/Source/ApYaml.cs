@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MPL-2.0
-namespace Remote.Domains;
+namespace Remote.Portable;
 
 /// <summary>Represents the yaml file in an Archipelago that contains exactly one player.</summary>
 [Serializable]

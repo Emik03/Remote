@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MPL-2.0
-namespace Remote.Domains;
+namespace Remote.Portable;
 
 /// <summary>Handles reading <c>.apworld</c>.</summary>
 /// <param name="Game">The game.</param>
@@ -207,7 +207,7 @@ public sealed record ApReader(
     /// <returns>The python script that runs <c>Data.py</c>.</returns>
     static string? Script()
     {
-        const string Extractor = $"{nameof(Remote)}.{nameof(Domains)}.Resources.Values.Extractor.py";
+        const string Extractor = $"{nameof(Remote)}.{nameof(Portable)}.Resources.Values.Extractor.py";
         using var stream = typeof(ApReader).Assembly.GetManifestResourceStream(Extractor);
 
         if (stream is null)

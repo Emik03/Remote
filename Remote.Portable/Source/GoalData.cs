@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MPL-2.0
-namespace Remote.Domains;
+namespace Remote.Portable;
 
 /// <summary>Contains the goal index.</summary>
 /// <param name="Goal">The index.</param>

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MPL-2.0
-namespace Remote.Domains;
+namespace Remote.Portable;
 
 /// <summary>Represents the <see cref="Vector4"/> that can be parsed as a hex color.</summary>
 /// <param name="Vector">The color as <see cref="Vector4"/>.</param>

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MPL-2.0
-namespace Remote.Domains;
+namespace Remote.Portable;
 #pragma warning disable CS9113
 /// <summary>
 /// Represents the set of requirements in order for a location or region to be considered reachable.

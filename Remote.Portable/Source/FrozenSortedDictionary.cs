@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MPL-2.0
-namespace Remote.Domains;
+namespace Remote.Portable;
 
 /// <summary>Encapsulates a dictionary for fast lookup, and ordered array for sorted enumeration.</summary>
 /// <param name="Dictionary">The dictionary.</param>

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MPL-2.0
-namespace Remote.Domains;
+namespace Remote.Portable;
 
 /// <inheritdoc cref="ApEvaluator"/>
 public sealed partial record ApEvaluator

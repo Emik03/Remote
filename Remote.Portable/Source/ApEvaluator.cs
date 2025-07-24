@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MPL-2.0
-namespace Remote.Domains;
+namespace Remote.Portable;
 
 /// <summary>The record for processing <see cref="OnAnd"/> and whether something is in logic.</summary>
 /// <param name="CurrentItems">The list of items received.</param>

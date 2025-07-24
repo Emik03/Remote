@@ -430,7 +430,7 @@
         "resolved": "0.9.1",
         "contentHash": "I/zQvdQ9gc16Pm+k9VmJHGuUeXagMP97x+czdEFqMJzPJiqULJ76MQaz2JYEZYucI3qIF81BEI3wXb4vtpcWHg=="
       },
-      "remote.domains": {
+      "remote.portable": {
         "type": "Project",
         "dependencies": {
           "CommunityToolkit.Common": "[8.4.0, )",
