@@ -57,14 +57,14 @@ public sealed partial record ApEvaluator
     /// <summary>Determines whether the <c>AND</c> condition is fulfilled.</summary>
     /// <param name="tuple">The tuple to deconstruct.</param>
     /// <returns>Whether the <c>AND</c> condition is fulfilled.</returns>
-    ApLogic? OnAnd((ApLogic Left, ApLogic Right) tuple) => // Annulment Law
+    ApLogic? OnAnd((ApLogic? Left, ApLogic? Right) tuple) => // Annulment Law
         In(tuple.Left) is var left && left is { IsYamlFunction: true } ? left.Check(tuple, this) :
         In(tuple.Right) is var right && right is { IsYamlFunction: true } ? right.Check(left) : left & right;
 
     /// <summary>Determines whether the <c>OR</c> condition is fulfilled.</summary>
     /// <param name="tuple">The tuple to deconstruct.</param>
     /// <returns>Whether the <c>OR</c> condition is fulfilled.</returns>
-    ApLogic? OnOr((ApLogic Left, ApLogic Right) tuple) => // Identity Law
+    ApLogic? OnOr((ApLogic? Left, ApLogic? Right) tuple) => // Identity Law
         In(tuple.Left) is var left && In(tuple.Right) is var right && left is { IsYamlFunction: true } ?
             right.Check(left) :
             right is { IsYamlFunction: true } ? left.Check(right) : left | right;
@@ -72,21 +72,19 @@ public sealed partial record ApEvaluator
     /// <summary>Determines whether any of an item is obtained.</summary>
     /// <param name="item">The item to check.</param>
     /// <returns>Whether the item is obtained.</returns>
-    bool OnItem(ReadOnlyMemory<char> item) =>
-        IsOptAll && IsItemDisabled(item.Span) || CurrentItems.Any(x => Eq(x, item));
+    bool OnItem(ReadOnlyMemory<char> item) => IsOpt && IsItemDisabled(item.Span) || CurrentItems.Any(x => Eq(x, item));
 
     /// <summary>Determines whether any of a category is obtained.</summary>
     /// <param name="category">The category to check.</param>
     /// <returns>Whether any of a category is obtained.</returns>
     bool OnCategory(ReadOnlyMemory<char> category) =>
-        IsOptAll && IsCategoryDisabled(category.Span) is true ||
-        CurrentItems.Any(IsItemInCategory(category));
+        IsOpt && IsCategoryDisabled(category.Span) is true || CurrentItems.Any(IsItemInCategory(category));
 
     /// <summary>Determines whether the specific quantity of an item is obtained.</summary>
     /// <param name="tuple">The tuple to deconstruct.</param>
     /// <returns>Whether the specific quantity of an item is obtained.</returns>
     bool OnItemCount((ReadOnlyMemory<char> Item, ReadOnlyMemory<char> Count) tuple) =>
-        IsOptAll && IsItemDisabled(tuple.Item.Span) ||
+        IsOpt && IsItemDisabled(tuple.Item.Span) ||
         tuple.Count.Span.Into<int>() is var i &&
         (i is 0 || CurrentItems.Where(x => Eq(x, tuple.Item)).Skip(i - 1).Any());
 
@@ -101,7 +99,7 @@ public sealed partial record ApEvaluator
     /// <param name="tuple">The tuple to deconstruct.</param>
     /// <returns>Whether the specific percentage of an item is obtained.</returns>
     bool OnItemPercent((ReadOnlyMemory<char> Item, ReadOnlyMemory<char> Percent) tuple) =>
-        IsOptAll && IsItemDisabled(tuple.Item.Span) ||
+        IsOpt && IsItemDisabled(tuple.Item.Span) ||
         tuple.Percent.Span.Into<int>() / 100d <=
         CurrentItems.Count(x => Eq(x, tuple.Item)) / (double)ItemCountSpan[tuple.Item.Span];
 
@@ -127,8 +125,7 @@ public sealed partial record ApEvaluator
         {
             "canReachLocation" => CanReachLocation(tuple.Args, no),
             nameof(ItemValue) => ItemValue(tuple.Args) ? null : logic,
-            nameof(OptAll) => OptAll(tuple.Args),
-            nameof(OptOne) => OptOne(tuple.Args),
+            "OptAll" or "OptOne" => Opt(logic, no),
             nameof(YamlCompare) => YamlCompare(tuple.Args) ? null : logic,
             nameof(YamlEnabled) => YamlEnabled(tuple.Args) ? null : logic,
             nameof(YamlDisabled) => YamlDisabled(tuple.Args) ? null : logic,
@@ -223,7 +220,7 @@ public sealed partial record ApEvaluator
     /// <returns>The number of items enabled in <paramref name="category"/>.</returns>
     int OptCategoryCount(ReadOnlyMemory<char> category)
     {
-        if (!IsOptAll || !CategoryToItems.TryGetValue(category, out var items))
+        if (!IsOpt || !CategoryToItems.TryGetValue(category, out var items))
             return int.MaxValue;
 
         var sum = 0;
@@ -261,15 +258,10 @@ public sealed partial record ApEvaluator
     ApLogic? CanReachLocation(ReadOnlyMemory<char> location, HashSet<string> seen) =>
         location.Span is var l && seen.GetAlternateLookup<ReadOnlySpan<char>>().Add(l) ? InLogic(l, seen) : null;
 
-    /// <summary>Determines whether the item is disabled by yaml options, or the requirement itself is met.</summary>
-    /// <param name="item">The item to check.</param>
-    /// <returns>Whether the item is disabled by yaml options, or the requirement itself is met.</returns>
-    ApLogic? OptOne(ReadOnlyMemory<char> item) =>
-        IsItemDisabled(item.SplitOn(':').First.Span) ? null : In(ApLogic.TokenizeAndParse(item));
-
-    /// <summary>Evaluates <see cref="In"/> but with <see cref="IsOptAll"/> enabled.</summary>
-    /// <param name="memory">The string of characters to parse.</param>
+    /// <summary>Evaluates <see cref="In"/> but with <see cref="IsOpt"/> enabled.</summary>
+    /// <param name="logic">The string of characters to parse.</param>
+    /// <param name="no">The locations that should not be expanded during <c>canReachLocation</c>.</param>
     /// <returns>The returned value from <see cref="In"/>.</returns>
-    ApLogic? OptAll(ReadOnlyMemory<char> memory) =>
-        (IsOptAll ? this : this with { IsOptAll = true }).In(ApLogic.TokenizeAndParse(memory));
+    ApLogic? Opt(ApLogic? logic, HashSet<string> no) =>
+        (IsOpt ? this : this with { IsOpt = true }).In(logic?.SingleOrDefault(), no);
 }

@@ -4,7 +4,8 @@ namespace Remote.Domains;
 /// <summary>Represents the <see cref="Vector4"/> that can be parsed as a hex color.</summary>
 /// <param name="Vector">The color as <see cref="Vector4"/>.</param>
 [StructLayout(LayoutKind.Auto)] // ReSharper disable once StructCanBeMadeReadOnly
-public record struct RemoteColor(Vector4 Vector) : ISpanParsable<RemoteColor>
+public record struct RemoteColor(Vector4 Vector)
+    : IEqualityOperators<RemoteColor, RemoteColor, bool>, ISpanParsable<RemoteColor>
 {
     /// <inheritdoc cref="byte.MaxValue"/>
     const float Max = byte.MaxValue;

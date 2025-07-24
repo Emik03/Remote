@@ -5,7 +5,7 @@ namespace Remote.Domains;
 /// Provides methods to inspect values before one gets returned.
 /// This is not a member method in order to allow <see keyword="null"/>.
 /// </summary>
-static class ApLogicTrimmer
+public static class ApLogicTrimmer
 {
 #if LOGIC_TRIM_CONSOLE_WRITE
     /// <summary>The maximum number of variables for assertions.</summary>
@@ -45,7 +45,7 @@ static class ApLogicTrimmer
 #endif
     [return: NotNullIfNotNull(nameof(left))]
 #pragma warning disable MA0051
-    public static ApLogic? Check(this ApLogic? left, [UsedImplicitly] ApLogic? right, [CallerLineNumber] int line = 0)
+    internal static ApLogic? Check(this ApLogic? left, [UsedImplicitly] ApLogic? right, [CallerLineNumber] int line = 0)
 #pragma warning restore MA0051
 #if LOGIC_TRIM_CONSOLE_WRITE
     {
@@ -136,9 +136,9 @@ static class ApLogicTrimmer
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
 #endif
     [return: NotNullIfNotNull(nameof(left))]
-    public static ApLogic? Check(
+    internal static ApLogic? Check(
         this ApLogic? left,
-        [UsedImplicitly] in (ApLogic Left, ApLogic Right) tuple,
+        [UsedImplicitly] in (ApLogic? Left, ApLogic? Right) tuple,
         [UsedImplicitly] ApEvaluator evaluator,
         [CallerLineNumber] int line = 0
     )
@@ -161,7 +161,7 @@ static class ApLogicTrimmer
         var i = 0;
 
         for (; i < lookup.Count && lookup[i] is var logic; i++)
-            if (that.StructuralEquals(logic))
+            if (that == logic)
                 return Index(inputs, i);
 
         lookup.Add(that);

@@ -7,7 +7,7 @@ namespace Remote.Domains;
 public readonly record struct FrozenSortedDictionary(
     FrozenDictionary<string, FrozenSortedSet> Dictionary,
     ImmutableArray<KeyValuePair<string, FrozenSortedSet>> Array
-)
+) : IEqualityOperators<FrozenSortedDictionary, FrozenSortedDictionary, bool>
 {
     /// <summary>Gets the main comparer used.</summary>
     public static StringComparer Comparer { get; } =

@@ -5,11 +5,11 @@ namespace Remote.Domains;
 /// Represents the set of requirements in order for a location or region to be considered reachable.
 /// Traversal to determine whether this instance is fulfilled can be seen in <see cref="ApEvaluator"/>.
 /// </summary>
-[Choice] // ReSharper disable once ClassNeverInstantiated.Global
+[Choice(false)] // ReSharper disable once ClassNeverInstantiated.Global
 public sealed partial class ApLogic(
     ApLogic? grouping,
-    (ApLogic Left, ApLogic Right) and,
-    (ApLogic Left, ApLogic Right) or,
+    (ApLogic? Left, ApLogic? Right) and,
+    (ApLogic? Left, ApLogic? Right) or,
     ReadOnlyMemory<char> item,
     ReadOnlyMemory<char> category,
     (ReadOnlyMemory<char> Item, ReadOnlyMemory<char> Count) itemCount,
@@ -89,76 +89,86 @@ public sealed partial class ApLogic(
     /// <summary>Determines whether this node is optimized.</summary>
     public bool IsOptimized { get; internal set; }
 
-    /// <summary>Gets the value determines whether this instance is a yaml function.</summary>
+    /// <summary>Gets the value determining whether this instance is a yaml function.</summary>
     public bool IsYamlFunction =>
-        Function.Name.Span is "YamlCompare" or "YamlDisabled" or "YamlEnabled" || Grouping?.IsYamlFunction is true;
+        this is { Function.Name.Span: "YamlCompare" or "YamlDisabled" or "YamlEnabled" } or
+            { Grouping.IsYamlFunction: true };
 
     /// <summary>Gets the number of <see cref="ApLogic"/> instances, including itself.</summary>
     // ReSharper disable ConditionalAccessQualifierIsNonNullableAccordingToAPIContract
-    public int Count => (_grouping?.Count ?? 0) + (_and.Left?.Count ?? 0) + (_and.Right?.Count ?? 0) + 1;
+    public int Count => (_and.Left?.Count ?? 0) + (_and.Right?.Count ?? 0) + 1;
+
+    /// <inheritdoc />
+    public static bool operator ==(ApLogic? l, ApLogic? r) =>
+        ReferenceEquals(l, r) ||
+        (l is null
+            ? r is null
+            : r is not null &&
+            l._itemCount.Item.Span.Equals(r._itemCount.Item.Span, StringComparison.Ordinal) &&
+            l._itemCount.Count.Span.Equals(r._itemCount.Count.Span, StringComparison.Ordinal) &&
+            (l._and.Left == r._and.Left && l._and.Right == r._and.Right || // Commutative Law
+                l._and.Left == r._and.Right && l._and.Right == r._and.Left));
 
     /// <summary>Makes a requirement that either of the instances should be fulfilled.</summary>
-    /// <param name="l">The left-hand side.</param>
-    /// <param name="r">The right-hand side.</param>
+    /// <param name="left">The left-hand side.</param>
+    /// <param name="right">The right-hand side.</param>
     /// <returns>The new <see cref="ApLogic"/> instance.</returns>
     // ReSharper restore ConditionalAccessQualifierIsNonNullableAccordingToAPIContract
-    [return: NotNullIfNotNull(nameof(l)), NotNullIfNotNull(nameof(r))]
+    [return: NotNullIfNotNull(nameof(left)), NotNullIfNotNull(nameof(right))]
     [Pure] // ReSharper disable once ReturnTypeCanBeNotNullable
-    public static ApLogic? operator |(ApLogic? l, ApLogic? r) =>
-        l is null ? l.Check(r) : // Identity Law
-        r is null ? r.Check(l) :
-        l.StructuralEquals(r) ? l.Check(r) : // Idempotent Law
+    public static ApLogic? operator |(ApLogic? left, ApLogic? right) =>
+        left is null ? left.Check(right) : // Identity Law
+        right is null ? right.Check(left) :
+        left == right ? left.Check(right) : // Idempotent Law
         //    Input  -> Commutative Law -> Idempotent Law
         // A + B + A ->    A + A + B    ->     A + B
-        l is { IsOr: true, Or: var (oll, olr) } && (oll.StructuralEquals(r) || olr.StructuralEquals(r)) ? l.Check(r) :
+        left is { IsOr: true, Or: var (oll, olr) } && (oll == right || olr == right) ? left.Check(right) :
         //    Input  -> Idempotent Law
         // A + A + B ->     A + B
-        r is { IsOr: true, Or: var (orl, orr) } && (orl.StructuralEquals(r) || orr.StructuralEquals(r)) ? r.Check(l) :
+        right is { IsOr: true, Or: var (orl, orr) } && (orl == right || orr == right) ? right.Check(left) :
         //    Input    ->  Commutative Law  -> Absorption Law
         // (A * B) + A ->    A + (A * B)    ->       A
-        l is { IsAnd: true, And: var (all, alr) } && (all.StructuralEquals(r) || alr.StructuralEquals(r)) ? r.Check(l) :
+        left is { IsAnd: true, And: var (all, alr) } && (all == right || alr == right) ? right.Check(left) :
         //    Input    -> Absorption Law
         // A + (A * B) ->       A
-        r is { IsAnd: true, And: var (arl, arr) } && (arl.StructuralEquals(r) || arr.StructuralEquals(r)) ? l.Check(r) :
+        right is { IsAnd: true, And: var (arl, arr) } && (arl == right || arr == right) ? left.Check(right) :
         // This code was never in the bible.
-        l is { IsOr: true, Or: var (olll, olrl) } && (olrl | r) is { IsOptimized: true } ll ? OfOr(ll, olll) :
-        l is { IsOr: true, Or: var (ollr, olrr) } && (ollr | r) is { IsOptimized: true } rl ? OfOr(rl, olrr) :
-        r is { IsOr: true, Or: var (orll, orrl) } && (l | orrl) is { IsOptimized: true } lr ? OfOr(orll, lr) :
-        r is { IsOr: true, Or: var (orlr, orrr) } && (l | orlr) is { IsOptimized: true } rr ? OfOr(orrr, rr) :
+        left is { IsOr: true, Or: var (olll, olrl) } && (olrl | right) is { IsOptimized: true } ll ? OfOr(ll, olll) :
+        left is { IsOr: true, Or: var (ollr, olrr) } && (ollr | right) is { IsOptimized: true } rl ? OfOr(rl, olrr) :
+        right is { IsOr: true, Or: var (orll, orrl) } && (left | orrl) is { IsOptimized: true } lr ? OfOr(orll, lr) :
+        right is { IsOr: true, Or: var (orlr, orrr) } && (left | orlr) is { IsOptimized: true } rr ? OfOr(orrr, rr) :
         // We cannot optimize this.
-        OfOr(l, r);
+        OfOr(left, right);
 
     /// <summary>Makes a requirement that both of the instances should be fulfilled.</summary>
-    /// <param name="l">The left-hand side.</param>
-    /// <param name="r">The right-hand side.</param>
+    /// <param name="left">The left-hand side.</param>
+    /// <param name="right">The right-hand side.</param>
     /// <returns>The new <see cref="ApLogic"/> instance.</returns>
-    [return: NotNullIfNotNull(nameof(l)), NotNullIfNotNull(nameof(r))]
+    [return: NotNullIfNotNull(nameof(left)), NotNullIfNotNull(nameof(right))]
     [Pure] // ReSharper disable once ReturnTypeCanBeNotNullable
-    public static ApLogic? operator &(ApLogic? l, ApLogic? r) =>
-        l is null ? r.Check(l) : // Annulment Law
-        r is null ? l.Check(r) :
-        l.StructuralEquals(r) ? l.Check(r) : // Idempotent Law
+    public static ApLogic? operator &(ApLogic? left, ApLogic? right) =>
+        left is null ? right.Check(left) : // Annulment Law
+        right is null ? left.Check(right) :
+        left == right ? left.Check(right) : // Idempotent Law
         //    Input    ->  Commutative Law -> Absorption Law
         // (A + B) * A ->    A * (A + B)   ->       A
-        l is { IsOr: true, Or: var (oll, olr) } &&
-        (oll.StructuralEquals(r) || olr.StructuralEquals(r)) ? r.Check(l) :
+        left is { IsOr: true, Or: var (oll, olr) } && (oll == right || olr == right) ? right.Check(left) :
         //    Input    ->  Absorption Law
         // A * (A + B) ->        A
-        r is { IsOr: true, Or: var (orl, orr) } &&
-        (orl.StructuralEquals(r) || orr.StructuralEquals(r)) ? l.Check(r) :
+        right is { IsOr: true, Or: var (orl, orr) } && (orl == right || orr == right) ? left.Check(right) :
         //   Input   -> Commutative Law -> Idempotent Law
         // A * B * A ->    A * A * B    ->     A * B
-        l is { IsAnd: true, And: var (all, alr) } && (all.StructuralEquals(r) || alr.StructuralEquals(r)) ? l.Check(r) :
+        left is { IsAnd: true, And: var (all, alr) } && (all == right || alr == right) ? left.Check(right) :
         //   Input   -> Idempotent Law
         // A * A * B ->     A * B
-        r is { IsAnd: true, And: var (arl, arr) } && (arl.StructuralEquals(r) || arr.StructuralEquals(r)) ? r.Check(l) :
+        right is { IsAnd: true, And: var (arl, arr) } && (arl == right || arr == right) ? right.Check(left) :
         // This code was never in the bible.
-        l is { IsAnd: true, And: var (alll, alrl) } && (alll & r) is { IsOptimized: true } ll ? OfAnd(ll, alrl) :
-        l is { IsAnd: true, And: var (allr, alrr) } && (allr & r) is { IsOptimized: true } rl ? OfAnd(rl, alrr) :
-        r is { IsAnd: true, And: var (arll, arrl) } && (l & arll) is { IsOptimized: true } lr ? OfAnd(arrl, lr) :
-        r is { IsAnd: true, And: var (arlr, arrr) } && (l & arlr) is { IsOptimized: true } rr ? OfAnd(arrr, rr) :
+        left is { IsAnd: true, And: var (alll, alrl) } && (alll & right) is { IsOptimized: true } ll ? OfAnd(ll, alrl) :
+        left is { IsAnd: true, And: var (allr, alrr) } && (allr & right) is { IsOptimized: true } rl ? OfAnd(rl, alrr) :
+        right is { IsAnd: true, And: var (arll, arrl) } && (left & arll) is { IsOptimized: true } lr ? OfAnd(arrl, lr) :
+        right is { IsAnd: true, And: var (arlr, arrr) } && (left & arlr) is { IsOptimized: true } rr ? OfAnd(arrr, rr) :
         // We cannot optimize this.
-        OfAnd(l, r);
+        OfAnd(left, right);
 
     /// <summary>Parses the sequence of tokens into the <see cref="ApLogic"/> object.</summary>
     /// <typeparam name="T">The type of list of tokens.</typeparam>
@@ -193,21 +203,6 @@ public sealed partial class ApLogic(
         return ret;
     }
 
-    /// <summary>Determines whether logic contains structurally the same data.</summary>
-    /// <param name="other">The logic to compare to.</param>
-    /// <returns>Whether both instances are equal.</returns>
-    public bool StructuralEquals(ApLogic other) =>
-        other._grouping is { } otherGrouping // ReSharper disable once TailRecursiveCall
-            ? StructuralEquals(otherGrouping)
-            : _grouping?.StructuralEquals(other) ??
-            _discriminator == other._discriminator &&
-            (_and is not ({ } left, { } right) || // Commutative Law
-                left.StructuralEquals(other._and.Left) && right.StructuralEquals(other._and.Right) ||
-                left.StructuralEquals(other._and.Right) && right.StructuralEquals(other._and.Left)) &&
-            _item.Span.Equals(other._item.Span, StringComparison.Ordinal) &&
-            _itemCount.Item.Span.Equals(other._itemCount.Item.Span, StringComparison.Ordinal) &&
-            _itemCount.Count.Span.Equals(other._itemCount.Count.Span, StringComparison.Ordinal);
-
     /// <summary>Converts this instance back into the <see cref="string"/> representation.</summary>
     /// <param name="and">
     /// The string to insert between two <see cref="ApLogic"/> instances to indicate an <c>AND</c> operation.
@@ -237,6 +232,14 @@ public sealed partial class ApLogic(
             x => $"|@{x.Category}:{x.Percent}%|",
             x => $"{{{x.Name}({x.Args})}}"
         );
+
+    /// <summary>Gets the single node inside this <see cref="ApLogic"/> if exactly one exists.</summary>
+    /// <returns>
+    /// The resulting <see cref="ApLogic"/> object after parsing inside <c>OptOne</c>
+    /// or <c>OptAll</c>, or <see cref="Grouping"/>, or <see langword="null"/>.
+    /// </returns>
+    public ApLogic? SingleOrDefault() =>
+        Function is ({ Span: "OptOne" or "OptAll" }, var args) ? _and.Left ??= TokenizeAndParse(args) : Grouping;
 
     /// <summary>Consumes tokens for binary operations.</summary>
     /// <typeparam name="T">The type of list of tokens.</typeparam>
@@ -423,12 +426,12 @@ public sealed partial class ApLogic(
             return g.ToBooleanAlgebra(and, or, list);
 
         if (IsAnd)
-            return $"({_and.Left.ToBooleanAlgebra(and, or, list)}{and}{_and.Right.ToBooleanAlgebra(and, or, list)})";
+            return $"({_and.Left?.ToBooleanAlgebra(and, or, list)}{and}{_and.Right?.ToBooleanAlgebra(and, or, list)})";
 
         if (IsOr)
-            return $"({_and.Left.ToBooleanAlgebra(and, or, list)}{or}{_and.Right.ToBooleanAlgebra(and, or, list)})";
+            return $"({_and.Left?.ToBooleanAlgebra(and, or, list)}{or}{_and.Right?.ToBooleanAlgebra(and, or, list)})";
 
-        var index = list.FindIndex(StructuralEquals) is not -1 and var variable ? variable : list.Count;
+        var index = list.FindIndex(Equals) is not -1 and var variable ? variable : list.Count;
 
         if (index == list.Count)
             list.Add(this);
@@ -444,11 +447,11 @@ public sealed partial class ApLogic(
         {
             { IsGrouping: true, Grouping: var x } => x.ToMinimalString(state),
             { IsAnd: true, And: var (al, ar) } => state is false
-                ? $"({al.ToMinimalString(true)} AND {ar.ToMinimalString(true)})"
-                : $"{al.ToMinimalString(true)} AND {ar.ToMinimalString(true)}",
+                ? $"({al?.ToMinimalString(true)} AND {ar?.ToMinimalString(true)})"
+                : $"{al?.ToMinimalString(true)} AND {ar?.ToMinimalString(true)}",
             { IsOr: true, Or: var (ol, or) } => state is true
-                ? $"({ol.ToMinimalString(false)} OR {or.ToMinimalString(false)})"
-                : $"{ol.ToMinimalString(false)} OR {or.ToMinimalString(false)}",
+                ? $"({ol?.ToMinimalString(false)} OR {or?.ToMinimalString(false)})"
+                : $"{ol?.ToMinimalString(false)} OR {or?.ToMinimalString(false)}",
             _ => ToString(),
         };
 }

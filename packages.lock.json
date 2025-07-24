@@ -10,9 +10,9 @@
       },
       "Archipelago.MultiClient.Net": {
         "type": "Direct",
-        "requested": "[6.6.0, )",
-        "resolved": "6.6.0",
-        "contentHash": "ZUNmgZg1zsMwoRaTFz0rqm9UwpUcqCkAsW6GAgLwE749dRmonPLimhYU/AryA4BagTGblL5ce9euwWU4Oj1YSw=="
+        "requested": "[6.6.1, )",
+        "resolved": "6.6.1",
+        "contentHash": "CvojDLce6/ZkDTa/JNeCX4fM7X0gDdVAI5oIOKOtZjsOk4xJ9kTBix6ajnV2tIABEgpKzmMQm21Oz93Bu0m7IA=="
       },
       "Archipelago.MultiClient.Net.Analyzers": {
         "type": "Direct",
@@ -114,9 +114,9 @@
       },
       "Emik.SourceGenerators.Choices": {
         "type": "Direct",
-        "requested": "[1.4.14, )",
-        "resolved": "1.4.14",
-        "contentHash": "YaQkxkVFGK+A6a3sQThB3y3bTZe5q9T1BAi+sNBcbWCsppe2kMMRfooy2jw+qgV06FFLr7pIYZNa8g/jaEYN8Q=="
+        "requested": "[1.4.16, )",
+        "resolved": "1.4.16",
+        "contentHash": "NaVwiCfMYmLf5mUqDhgS08YtOShR2kYvRyPQOs5xlZsTrvDDrJc2OzUHRIrEVzUOa2AoPBHxmtUX9PWy72Nwlw=="
       },
       "Emik.SourceGenerators.Implicit": {
         "type": "Direct",
@@ -431,10 +431,20 @@
         "contentHash": "I/zQvdQ9gc16Pm+k9VmJHGuUeXagMP97x+czdEFqMJzPJiqULJ76MQaz2JYEZYucI3qIF81BEI3wXb4vtpcWHg=="
       },
       "remote.domains": {
-        "type": "Project"
+        "type": "Project",
+        "dependencies": {
+          "CommunityToolkit.Common": "[8.4.0, )",
+          "CommunityToolkit.Diagnostics": "[8.4.0, )",
+          "CommunityToolkit.HighPerformance": "[8.4.0, )"
+        }
       },
       "remote.resources": {
-        "type": "Project"
+        "type": "Project",
+        "dependencies": {
+          "CommunityToolkit.Common": "[8.4.0, )",
+          "CommunityToolkit.Diagnostics": "[8.4.0, )",
+          "CommunityToolkit.HighPerformance": "[8.4.0, )"
+        }
       }
     },
     "net10.0-android36.0/android-arm64": {

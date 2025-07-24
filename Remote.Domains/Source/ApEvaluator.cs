@@ -14,7 +14,7 @@ namespace Remote.Domains;
 /// <param name="ItemToPhantoms">The conversion from items to its phantom items.</param>
 /// <param name="PhantomToItems">The conversion from phantom items to its items.</param>
 /// <param name="Yaml">The yaml options.</param>
-/// <param name="IsOptAll">Whether to clamp requirements based on <see cref="Yaml"/>.</param>
+/// <param name="IsOpt">Whether to clamp requirements based on <see cref="Yaml"/>.</param>
 [CLSCompliant(false)]
 public sealed partial record ApEvaluator(
     IReadOnlyCollection<string> CurrentItems,
@@ -29,8 +29,8 @@ public sealed partial record ApEvaluator(
     FrozenDictionary<string, ImmutableArray<(string PhantomItem, int Count)>> ItemToPhantoms,
     FrozenDictionary<string, ImmutableArray<(string Item, int Count)>> PhantomToItems,
     FrozenDictionary<string, int> Yaml,
-    bool IsOptAll
-)
+    bool IsOpt
+) : IEqualityOperators<ApEvaluator, ApEvaluator, bool>
 {
     /// <summary>Initializes a new instance of the <see cref="ApEvaluator"/> record.</summary>
     /// <param name="currentItems">The list of items received.</param>

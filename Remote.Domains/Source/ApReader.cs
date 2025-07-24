@@ -15,7 +15,7 @@ public sealed record ApReader(
     JsonArray? Locations,
     JsonObject? Options,
     JsonObject? Regions
-)
+) : IEqualityOperators<ApReader, ApReader, bool>
 {
     /// <summary>The default category name.</summary>
     public const string Uncategorized = "(No Category)";

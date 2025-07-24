@@ -7,7 +7,8 @@ namespace Remote.Domains;
 /// </summary>
 /// <param name="Set">The set.</param>
 /// <param name="Array">The array.</param>
-public readonly record struct FrozenSortedSet(FrozenSet<string> Set, ImmutableArray<string> Array) : IReadOnlySet<string>
+public readonly record struct FrozenSortedSet(FrozenSet<string> Set, ImmutableArray<string> Array)
+    : IReadOnlySet<string>, IEqualityOperators<FrozenSortedSet, FrozenSortedSet, bool>
 {
     /// <inheritdoc />
     int IReadOnlyCollection<string>.Count => Array.Length;
