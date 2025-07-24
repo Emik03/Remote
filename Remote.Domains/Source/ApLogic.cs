@@ -119,6 +119,8 @@ public sealed partial class ApLogic(
     public static ApLogic? operator |(ApLogic? left, ApLogic? right) =>
         left is null ? left.Check(right) : // Identity Law
         right is null ? right.Check(left) :
+        left.SingleOrDefault() is { } leftSingle ? leftSingle | right :
+        right.SingleOrDefault() is { } rightSingle ? left | rightSingle :
         left == right ? left.Check(right) : // Idempotent Law
         //    Input  -> Commutative Law -> Idempotent Law
         // A + B + A ->    A + A + B    ->     A + B
@@ -149,6 +151,8 @@ public sealed partial class ApLogic(
     public static ApLogic? operator &(ApLogic? left, ApLogic? right) =>
         left is null ? right.Check(left) : // Annulment Law
         right is null ? left.Check(right) :
+        left.SingleOrDefault() is { } leftSingle ? leftSingle & right :
+        right.SingleOrDefault() is { } rightSingle ? left & rightSingle :
         left == right ? left.Check(right) : // Idempotent Law
         //    Input    ->  Commutative Law -> Absorption Law
         // (A + B) * A ->    A * (A + B)   ->       A

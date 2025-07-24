@@ -49,7 +49,7 @@ public static class ApLogicTrimmer
 #pragma warning restore MA0051
 #if LOGIC_TRIM_CONSOLE_WRITE
     {
-        const int Or = 103, And = Or + 30, Evaluator = 54;
+        const int Or = 120, And = Or + 32, Evaluator = 60;
         const string OrSymbol = "+", AndSymbol = "*", TrueSymbol = "{True}";
         left?.IsOptimized = true;
 
@@ -57,28 +57,28 @@ public static class ApLogicTrimmer
 
         Dictionary<int, string> dictionary = new()
         {
-            [Evaluator] = "Resolving (Left) as FALSE then Annulment Law in AND",
-            [Evaluator + 1] = "Resolving (Right) as FALSE then Annulment Law in AND",
-            [Evaluator + 8] = "Resolving (Left) as FALSE then Identity Law in OR",
-            [Evaluator + 9] = "Resolving (Right) as FALSE then Identity Law in OR",
+            [Evaluator + 1] = "Resolving (Left) as FALSE then Annulment Law in AND",
+            [Evaluator + 2] = "Resolving (Right) as FALSE then Annulment Law in AND",
+            [Evaluator + 9] = "Resolving (Left) as FALSE then Identity Law in OR",
+            [Evaluator + 10] = "Resolving (Right) as FALSE then Identity Law in OR",
 #if LOGIC_TRIM_NULL_CONSOLE_WRITE
-            [Or] = "Identity Law (Left) in OR",
-            [Or + 1] = "Identity Law (Right) in OR",
+            [Or + 1] = "Identity Law (Left) in OR",
+            [Or + 2] = "Identity Law (Right) in OR",
 #endif
-            [Or + 2] = "Idempotent Law in AND",
-            [Or + 5] = "Commutative Law then Idempotent Law in OR",
-            [Or + 8] = "Idempotent Law in OR",
-            [Or + 11] = "Commutative Law then Absorption Law in OR",
-            [Or + 14] = "Absorption Law in OR",
+            [Or + 5] = "Idempotent Law in AND",
+            [Or + 8] = "Commutative Law then Idempotent Law in OR",
+            [Or + 11] = "Idempotent Law in OR",
+            [Or + 14] = "Commutative Law then Absorption Law in OR",
+            [Or + 17] = "Absorption Law in OR",
 #if LOGIC_TRIM_NULL_CONSOLE_WRITE
-            [And] = "Annulment Law (Left) in AND",
-            [And + 1] = "Annulment Law (Right) in AND",
+            [And + 1] = "Annulment Law (Left) in AND",
+            [And + 2] = "Annulment Law (Right) in AND",
 #endif
-            [And + 2] = "Idempotent Law in AND",
-            [And + 5] = "Commutative Law then Absorption Law in AND",
-            [And + 8] = "Absorption Law in AND",
-            [And + 11] = "Commutative Law then Idempotent Law in AND",
-            [And + 14] = "Idempotent Law in AND",
+            [And + 5] = "Idempotent Law in AND",
+            [And + 8] = "Commutative Law then Absorption Law in AND",
+            [And + 11] = "Absorption Law in AND",
+            [And + 14] = "Commutative Law then Idempotent Law in AND",
+            [And + 17] = "Idempotent Law in AND",
         };
 
         if (!dictionary.TryGetValue(line, out var value))
