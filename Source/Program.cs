@@ -15,9 +15,11 @@ AppDomain.CurrentDomain.UnhandledException += (_, e) => File.WriteAllText(
 Process? process;
 
 {
+    ApLogic.OnError += MessageBox.Show;
     using RemoteGame game = new();
     game.Run();
     process = game.ChildProcess;
+    ApLogic.OnError -= MessageBox.Show;
 }
 
 if (process is not null)
@@ -25,4 +27,5 @@ if (process is not null)
     await process.WaitForExitAsync();
     process.Dispose();
 }
+
 #endif

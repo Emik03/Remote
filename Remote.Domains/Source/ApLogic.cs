@@ -84,7 +84,7 @@ public sealed partial class ApLogic(
 
     /// <summary>Invoked when a parse error occurs.</summary>
 #pragma warning disable CA1003
-    public static event Func<string, string, IEnumerable<string>, Task<int>>? OnError;
+    public static event Func<string, string, IEnumerable<string>, Task<int?>>? OnError;
 #pragma warning restore CA1003
     /// <summary>Determines whether this node is optimized.</summary>
     public bool IsOptimized { get; internal set; }
