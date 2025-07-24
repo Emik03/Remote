@@ -269,7 +269,7 @@ public sealed partial class ApLogic(
     static ApLogic? Unary<T>(T tokens, ref int i)
         where T : IReadOnlyList<ApToken>
     {
-        if (tokens[i].IsPipe)
+        if (tokens[i].IsPipe || i is 0 && i-- is var _)
             return Pipe(tokens, ref i);
 
         if (tokens[i].IsLeftCurly)
@@ -292,12 +292,13 @@ public sealed partial class ApLogic(
     static ApLogic? Pipe<T>(T tokens, ref int i)
         where T : IReadOnlyList<ApToken>
     {
+        var isPipeless = i < 0;
         var isCategory = tokens[++i].IsAt && i++ is var _;
 
         if (tokens[i++] is not { IsIdent: true, Ident: var identifier })
             return Error(tokens, i);
 
-        if (tokens[i].IsPipe && i++ is var _)
+        if (isPipeless ? tokens[i].IsEOL : tokens[i].IsPipe && i++ is var _)
             return isCategory ? OfCategory(identifier) : OfItem(identifier);
 
         if (!tokens[i++].IsColon)
