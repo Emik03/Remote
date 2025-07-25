@@ -622,7 +622,7 @@ public sealed partial class Client(ApYaml? yaml = null)
         {
             ref var value = ref this[location];
             var id = helper.GetLocationIdFromName(_yaml.Game, location);
-#pragma warning disable MA0002
+
             (value.Logic, value.Status) = 0 switch
             {
                 _ when id is -1 && !IsGoal(location) => (null, LocationStatus.Hidden),
@@ -633,7 +633,7 @@ public sealed partial class Client(ApYaml? yaml = null)
                 _ => (null, LocationStatus.Reachable),
             };
         }
-#pragma warning restore MA0002
+
         Debug.Assert(_session is not null);
         Debug.Assert(_locationSearch is not null);
 
