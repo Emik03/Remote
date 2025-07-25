@@ -899,6 +899,37 @@ public sealed partial class Client(ApYaml? yaml = null)
             ? new(ItemFlags.None, tuple.Item, 1, int.MaxValue, [])
             : new(GetItems(tuple)), tuple.Count);
 
+    /// <summary>Gets the color that the location should be displayed with.</summary>
+    /// <param name="preferences">The user preferences.</param>
+    /// <param name="location">The location to get the color of.</param>
+    /// <returns>The color that the parameter <paramref name="location"/> should be displayed with.</returns>
+    RemoteColor LocationColor(Preferences preferences, string location)
+    {
+        const float Faded = 0.75f;
+
+        RemoteColor? Find(Preferences preferences, string location, HintMessage[] hints)
+        {
+            Debug.Assert(_session is not null);
+            var expect = _session.Locations.GetLocationIdFromName(_yaml.Game, location);
+
+            foreach (var (hint, _) in hints.AsSpan())
+                if (hint is { ItemFlags: var flags, FindingPlayer: var slot, LocationId: var id } &&
+                    id == expect &&
+                    slot == _session.Players.ActivePlayer.Slot)
+                    return flags is ItemFlags.None
+                        ? new(preferences[flags].Vector with { W = Faded })
+                        : preferences[flags];
+
+            return null;
+        }
+
+        return this[location].Status is var status && status is LocationStatus.Checked ? preferences[status] :
+            LastHints is { } hints && Find(preferences, location, hints) is { } color ? color :
+            _yaml.Prioritized.Contains(location) ? preferences[RemotePalette.Progression] :
+            _yaml.Deprioritized.Contains(location) ? new(preferences[status].Vector with { W = Faded }) :
+            preferences[status];
+    }
+
     /// <summary>Gets the hints asynchronously.</summary>
     /// <returns>The task to get the hints.</returns>
     async Task<HintMessage[]?> GetHintsAsync() =>

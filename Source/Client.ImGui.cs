@@ -351,10 +351,7 @@ public sealed partial class Client
         Debug.Assert(_session is not null);
 
         if (!BeginTabItem("Hints", Tab.Hint))
-        {
-            _hintTask = Task.FromResult<HintMessage[]?>(null);
             return;
-        }
 
         if (!preferences.BeginChild("Hints"))
         {
@@ -1170,7 +1167,7 @@ public sealed partial class Client
     void Checkbox(Preferences preferences, string location, string category, bool? overrideAll = null)
     {
         ref var value = ref this[location];
-        ImGui.PushStyleColor(ImGuiCol.Text, preferences[value.Status]);
+        ImGui.PushStyleColor(ImGuiCol.Text, LocationColor(preferences, location));
         ImGui.Checkbox($"{location}###{location}:|{category}:|Location", ref value.Checked);
         preferences.CopyIfClicked(location);
 

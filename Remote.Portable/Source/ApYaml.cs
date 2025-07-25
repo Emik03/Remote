@@ -8,12 +8,22 @@ public sealed class ApYaml : IDictionary<string, object?>
 #pragma warning restore CA1710
 {
     /// <summary>The field name.</summary>
-    const string DescriptionField = "description", GameField = "game", GoalField = "goal", NameField = "name";
+    const string DescriptionField = "description",
+        DeprioritizedField = "exclude_locations",
+        GameField = "game",
+        GoalField = "goal",
+        NameField = "name",
+        PrioritizedField = "priority_locations";
 
     /// <summary>Contains all of the yaml options. Booleans are coerced as integers.</summary>
-    readonly Dictionary<string, int> _options = []; // ReSharper disable ReplaceWithFieldKeyword
+    readonly Dictionary<string, int> _options = new(FrozenSortedDictionary.Comparer);
+
+    /// <summary>Contains locations whose priority of its item is pre-determined.</summary>
+    readonly HashSet<string> _deprioritized = new(FrozenSortedDictionary.Comparer),
+        _prioritized = new(FrozenSortedDictionary.Comparer);
 
     /// <summary>Contains the field that is contained within a slot.</summary>
+    // ReSharper disable ReplaceWithFieldKeyword¨
     string _description = "", _game = "", _goal = "", _name = "", _path = "";
 
     /// <summary>Retrieves the value from the yaml option.</summary>
@@ -40,10 +50,12 @@ public sealed class ApYaml : IDictionary<string, object?>
             _ = key switch
             {
                 DescriptionField => Description = value as string ?? Description,
+                DeprioritizedField when value is IEnumerable locations => CopyTo(_deprioritized, locations),
                 GameField => Game = value as string ?? Game,
                 GoalField => Goal = GetMostProbableGoal(value) ?? Goal,
                 NameField => Name = value as string ?? Name,
-                _ when value is IDictionary<object, object> d => Add(d),
+                PrioritizedField when value is IEnumerable locations => CopyTo(_prioritized, locations),
+                _ when value is IDictionary<object, object?> d => Add(d),
                 _ when value is int i && (_options[key] = i) is var _ => "",
                 _ when value is long l && (_options[key] = (int)l) is var _ => "",
                 _ when value is bool b && (_options[key] = b ? 1 : 0) is var _ => "",
@@ -73,6 +85,17 @@ public sealed class ApYaml : IDictionary<string, object?>
 
     /// <summary>Gets the file path that was used to create this instance.</summary>
     public ref string Path => ref _path;
+
+    /// <summary>
+    /// Gets the set of locations whose priority will always be
+    /// <see cref="RemotePalette.Neutral"/> (<c>Filler</c>) or <see cref="RemotePalette.Trap"/>.
+    /// </summary>
+    public IReadOnlySet<string> Deprioritized => _deprioritized;
+
+    /// <summary>
+    /// Gets the set of locations whose priority will always be <see cref="RemotePalette.Progression"/>.
+    /// </summary>
+    public IReadOnlySet<string> Prioritized => _prioritized;
 
     /// <inheritdoc />
     ICollection<string> IDictionary<string, object?>.Keys =>
@@ -196,6 +219,17 @@ public sealed class ApYaml : IDictionary<string, object?>
     IEnumerator<KeyValuePair<string, object?>> IEnumerable<KeyValuePair<string, object?>>.GetEnumerator() =>
         Keys.Concat(DowncastOptions).GetEnumerator();
 
+    /// <summary>Copies all values of type <typeparamref name="T"/> into the <see cref="HashSet{T}"/>.</summary>
+    /// <param name="set">The set to copy into.</param>
+    /// <param name="other">The enumerable to copy from.</param>
+    /// <returns>The value <see langword="null"/>.</returns>
+    // ReSharper disable once SuggestBaseTypeForParameter
+    static string? CopyTo<T>(HashSet<T> set, IEnumerable other)
+    {
+        set.UnionWith(other.OfType<T>());
+        return null;
+    }
+
     /// <summary>Gets the goal that is most probable.</summary>
     /// <remarks><para>
     /// I am unaware of how to get the goal, so instead I simply look at the most likely one.
@@ -211,7 +245,7 @@ public sealed class ApYaml : IDictionary<string, object?>
     /// <summary>Adds values from the dictionary into itself.</summary>
     /// <param name="dictionary">The dictionary to copy values from.</param>
     /// <returns>Always <see langword="null"/>.</returns>
-    string? Add(IDictionary<object, object> dictionary)
+    string? Add(IDictionary<object, object?> dictionary)
     {
         foreach (var (k, v) in dictionary)
             if (k is string s)
