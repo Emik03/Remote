@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MPL-2.0
 namespace Remote;
 
-using HintMessage = (Hint Hint, string Message);
-
 /// <inheritdoc cref="Client"/>
 public sealed partial class Client
 {
