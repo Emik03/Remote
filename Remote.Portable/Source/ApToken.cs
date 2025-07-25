@@ -104,7 +104,11 @@ public readonly partial struct ApToken
         switch (memory.Span[i])
         {
             case var c when char.IsWhiteSpace(c):
-                AddAndOr(memory, ref tokens, ref start, i);
+                if (start is 0 && i > 0 && i == memory.Length - 1)
+                    tokens.Add(OfIdent(memory));
+                else
+                    AddAndOr(memory, ref tokens, ref start, i);
+
                 break;
             case '|':
                 AddAndOr(memory, ref tokens, ref start, i);

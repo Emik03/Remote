@@ -197,8 +197,11 @@ public sealed partial class ApLogic(
     public static ApLogic? TokenizeAndParse(ReadOnlyMemory<char> memory)
     {
         // Most compact valid logic possible is a repeated sequence of '|a:1%|OR|a:1%|OR|a:1%|OR|a:1%|…'.
-        const int MinimumValidLogic = 8;
-        RentedTokenArray array = new(memory.Length - (memory.Length + 1) / MinimumValidLogic);
+        // Additionally, if the sequence is strictly an identifier, you can create 2 tokens out of 1 character: 'a'.
+        const int SingleLogic = 2,
+            MinimumValidLogic = 8;
+
+        RentedTokenArray array = new(SingleLogic.Max(memory.Length - (memory.Length + 1) / MinimumValidLogic));
         ApToken.Tokenize(memory, ref array);
         var ret = Parse(array.Segment);
 #pragma warning disable IDISP017
@@ -276,7 +279,7 @@ public sealed partial class ApLogic(
     static ApLogic? Unary<T>(T tokens, ref int i)
         where T : IReadOnlyList<ApToken>
     {
-        if (tokens[i].IsPipe || i is 0 && i-- is var _)
+        if (tokens[i].IsPipe || tokens[i].IsIdent && i is 0 && i-- is var _)
             return Pipe(tokens, ref i);
 
         if (tokens[i].IsLeftCurly)
