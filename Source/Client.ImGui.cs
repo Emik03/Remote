@@ -409,10 +409,10 @@ public sealed partial class Client
         if (ImGui.Button("Open APWorld Directory") &&
             ApReader.Find(_yaml.Game, preferences.Directory, Set) is { } world)
         {
-            ProcessStartInfo startInfo = new()
-                { FileName = Path.GetDirectoryName(world), CreateNoWindow = true, UseShellExecute = true };
-
-            using var _ = Process.Start(startInfo);
+            using var _ = Process.Start(
+                new ProcessStartInfo
+                    { FileName = Path.GetDirectoryName(world), CreateNoWindow = true, UseShellExecute = true }
+            );
         }
 
         ImGui.SameLine();
