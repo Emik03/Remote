@@ -46,7 +46,12 @@ public sealed class HistoryServer
 
     /// <summary>Writes this instance to disk.</summary>
     /// <param name="servers">The servers to save.</param>
-    public static void Save(OrderedDictionary<string, HistoryServer> servers) =>
+    public static void Save(OrderedDictionary<string, HistoryServer> servers)
+    {
+        foreach (var (_, server) in servers)
+            foreach (var (_, slot) in server.Slots)
+                slot.Items.RemoveWhere((KeyValuePair<string, int> kvp) => kvp.Value is 0);
+
         _ = Go(
             x => File.WriteAllText(
                 FilePath,
@@ -55,6 +60,7 @@ public sealed class HistoryServer
             servers,
             out _
         );
+    }
 
     /// <summary>Gets the full path to the file.</summary>
     /// <param name="file">The file path to get.</param>
