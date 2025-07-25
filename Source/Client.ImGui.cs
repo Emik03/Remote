@@ -1042,19 +1042,21 @@ public sealed partial class Client
     {
         Debug.Assert(_session is not null);
 
-        if (_slot.TaggedLocations is not { Count: not 0 and var c } tagged)
+        if (_slot.TaggedLocations is not { Count: not 0 } tagged)
             return;
 
         setter();
 
-        if (!ImGui.CollapsingHeader($"{UserCategorized} ({c})###{UserCategorized}:|LocationCategory"))
-            return;
-
-        var orderedLocations = _locationSort is 0
+        var ordered = _locationSort is 0
             ? tagged.AsEnumerable()
             : tagged.OrderBy(x => _session.Locations.GetLocationIdFromName(_yaml.Game, x));
 
-        foreach (var location in orderedLocations.Where(ShouldBeVisible))
+        IList<string> locations = [..ordered.Where(ShouldBeVisible)];
+
+        if (!ImGui.CollapsingHeader($"{UserCategorized} ({locations.Count})###{UserCategorized}:|LocationCategory"))
+            return;
+
+        foreach (var location in locations)
             Checkbox(preferences, location, UserCategorized, overrideAll);
 
         ImGui.Separator();
