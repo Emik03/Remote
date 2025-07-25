@@ -734,12 +734,14 @@ public sealed partial class Preferences
         if (server.Slots.Remove(yaml.Name, out var slot))
         {
             server.Slots.Add(yaml.Name, slot);
+            slot.UnionWith(yaml);
             return slot;
         }
 
         server.Slots[yaml.Name] = slot = new();
         slot.Color = FindNextAvailableColor();
         slot.Game = yaml.Game;
+        slot.UnionWith(yaml);
         return slot;
     }
 

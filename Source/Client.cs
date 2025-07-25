@@ -925,8 +925,8 @@ public sealed partial class Client(ApYaml? yaml = null)
 
         return this[location].Status is var status && status is LocationStatus.Checked ? preferences[status] :
             LastHints is { } hints && Find(preferences, location, hints) is { } color ? color :
-            _yaml.Prioritized.Contains(location) ? preferences[RemotePalette.Progression] :
-            _yaml.Deprioritized.Contains(location) ? new(preferences[status].Vector with { W = Faded }) :
+            _slot.PrioritizedLocations.Contains(location) ? preferences[RemotePalette.Progression] :
+            _slot.DeprioritizedLocations.Contains(location) ? new(preferences[status].Vector with { W = Faded }) :
             preferences[status];
     }
 

@@ -31,6 +31,14 @@ public sealed class HistorySlot
         init;
     }
 
+    /// <summary>Gets or sets the excluded locations.</summary>
+    [NotNull]
+    public SortedSet<string>? DeprioritizedLocations
+    {
+        get => field ??= new(FrozenSortedDictionary.Comparer);
+        init;
+    }
+
     /// <summary>
     /// Gets or sets the locations that were checked and won't be retrievable by the server, requiring us to store it.
     /// </summary>
@@ -47,5 +55,21 @@ public sealed class HistorySlot
     {
         get => field ??= new(FrozenSortedDictionary.Comparer);
         init;
+    }
+
+    /// <summary>Gets or sets the priority locations.</summary>
+    [NotNull]
+    public SortedSet<string>? PrioritizedLocations
+    {
+        get => field ??= new(FrozenSortedDictionary.Comparer);
+        init;
+    }
+
+    /// <summary>Performs the union operation.</summary>
+    /// <param name="yaml">The yaml to perform the union operation on.</param>
+    public void UnionWith(ApYaml yaml)
+    {
+        DeprioritizedLocations.UnionWith(yaml.Deprioritized);
+        PrioritizedLocations.UnionWith(yaml.Prioritized);
     }
 }
