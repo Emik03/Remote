@@ -1,5 +1,9 @@
 ﻿// SPDX-License-Identifier: MPL-2.0
 #if !ANDROID
+static void Hook() => ApLogic.OnError += MessageBox.Show;
+
+static void Unhook() => ApLogic.OnError -= MessageBox.Show;
+
 static Assembly? LoadFile(string name, ResolveEventArgs args) =>
     args.Name.StartsWith(name)
         ? Assembly.LoadFile(Path.Join(Path.GetDirectoryName(typeof(RemoteGame).Assembly.Location), $"{name}.dll"))
@@ -15,11 +19,11 @@ AppDomain.CurrentDomain.UnhandledException += (_, e) => File.WriteAllText(
 Process? process;
 
 {
-    ApLogic.OnError += MessageBox.Show;
+    Hook();
     using RemoteGame game = new();
     game.Run();
     process = game.ChildProcess;
-    ApLogic.OnError -= MessageBox.Show;
+    Unhook();
 }
 
 if (process is not null)
