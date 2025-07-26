@@ -601,7 +601,7 @@ public sealed partial class Client
         ImGui.Separator();
         var isAnyReleasable = _locations.Any(IsReleasable);
         var showStatus = stuck is null or true;
-        _showLocationFooter = isAnyReleasable || showStatus;
+        _showLocationFooter = isAnyReleasable || showStatus || _canGoal is null;
 
         if (isAnyReleasable)
         {
