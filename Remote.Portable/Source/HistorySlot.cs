@@ -7,6 +7,9 @@ public sealed class HistorySlot
     /// <summary>Gets or sets the value determining whether <c>DeathLink</c> is enabled on this slot.</summary>
     public bool HasDeathLink { get; set; }
 
+    /// <summary>Gets or sets the value determining whether the slot's goal has been reached.</summary>
+    public bool ReachedGoal { get; set; }
+
     /// <summary>Gets or sets the color for this slot's tab or window.</summary>
     [NotNull]
     public string? Color

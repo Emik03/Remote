@@ -639,10 +639,11 @@ public sealed partial class Client
         else
             ImGui.Dummy(new(preferences.Width(100), 1));
 
-        if (!ImGui.Button("Goal"))
+        if (_slot.ReachedGoal || !ImGui.Button("Goal"))
             return;
 
         _canGoal = true;
+        _slot.ReachedGoal = true;
         _session.SetGoalAchieved();
         _session.SetClientState(ArchipelagoClientState.ClientGoal);
     }
