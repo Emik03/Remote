@@ -152,10 +152,7 @@ public sealed record ApReader(
             logger?.Invoke($"Processing item: {name}");
             var nameString = name.ToString();
 
-            itemCount[nameString] = obj.TryGetPropertyValue("count", out var count) &&
-                count?.GetValueKind() is JsonValueKind.Number
-                    ? count.GetValue<int>()
-                    : 1;
+            itemCount[nameString] = Count(obj);
 
             if (GetCategory(obj) is { } categories)
                 foreach (var c in categories)
@@ -203,6 +200,19 @@ public sealed record ApReader(
         obj.TryGetPropertyValue("starting", out var starting) &&
         starting?.GetValueKind() is JsonValueKind.True;
 
+    /// <summary>Gets the count.</summary>
+    /// <param name="obj"></param>
+    /// <returns></returns>
+    static int Count(JsonObject obj) =>
+        obj.TryGetPropertyValue("count", out var count) && count is not null
+            ? count.GetValueKind() switch
+            {
+                JsonValueKind.String when int.TryParse(count.GetValue<string>(), out var i) => i,
+                JsonValueKind.Number => count.GetValue<int>(),
+                _ => 1,
+            }
+            : 1;
+
     /// <summary>Gets the python script that runs <c>Data.py</c>.</summary>
     /// <returns>The python script that runs <c>Data.py</c>.</returns>
     static string? Script()
@@ -220,9 +230,10 @@ public sealed record ApReader(
     /// <summary>Attempts to get the <c>category</c> array field.</summary>
     /// <param name="obj">The node to extract.</param>
     /// <returns>The <c>category</c> array, if it exists.</returns>
-    static JsonArray? GetCategory(JsonObject obj) =>
-        obj.TryGetPropertyValue("category", out var categoriesJson)
-            ? categoriesJson as JsonArray
+    static JsonArray GetCategory(JsonObject obj) =>
+        obj.TryGetPropertyValue("category", out var categories)
+            ? categories as JsonArray ??
+            (categories?.GetValueKind() is JsonValueKind.String ? new(categories.ToString()) : new(Uncategorized))
             : new(Uncategorized);
 
     /// <summary>Constructs the logic based on getting to a specific region from any starting region.</summary>
