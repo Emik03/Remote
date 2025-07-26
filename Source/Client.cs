@@ -242,7 +242,7 @@ public sealed partial class Client(ApYaml? yaml = null)
     /// <remarks><para>
     /// <see langword="false"/> means this slot does not meet its goal.
     /// <see langword="null"/> means this slot can meet its goal.
-    /// <see langword="true"/> means this slot has meet its goal.
+    /// <see langword="true"/> means this slot has met its goal.
     /// </para></remarks>
     bool? _canGoal = false;
 
