@@ -217,9 +217,9 @@
       },
       "Meziantou.Analyzer": {
         "type": "Direct",
-        "requested": "[2.0.205, )",
-        "resolved": "2.0.205",
-        "contentHash": "adw/4fuYeVyu92yHtoKpjtaBe4VVEjc1nMO/Wy2rZ3ZtOGcNvN6SXwJYAxPDUgDPWwAvfoPYE/jO++1sCs3V8w=="
+        "requested": "[2.0.207, )",
+        "resolved": "2.0.207",
+        "contentHash": "iJFV54Pwv2opPxr1hVUsH4Bnxu+4WmvXvdVo8eN27aIRSf/nw/3rzTw+OEqz93hQz0Z29oT+YRRMkdk3DH0low=="
       },
       "Microsoft.CodeAnalysis.Analyzers": {
         "type": "Direct",
