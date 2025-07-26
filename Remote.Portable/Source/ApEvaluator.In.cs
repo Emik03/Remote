@@ -28,9 +28,9 @@ public sealed partial record ApEvaluator
         logic switch
         {
             null => null,
-            { IsGrouping: true, Grouping: var l } => In(l),
-            { IsAnd: true, And: var l } => OnAnd(l),
-            { IsOr: true, Or: var l } => OnOr(l),
+            { IsGrouping: true, Grouping: var l } => In(l, no),
+            { IsAnd: true, And: var l } => OnAnd(l, no),
+            { IsOr: true, Or: var l } => OnOr(l, no),
             { IsItem: true, Item: var l } => OnItem(l) ? null : logic,
             { IsCategory: true, Category: var l } => OnCategory(l) ? null : logic,
             { IsItemCount: true, ItemCount: var l } => OnItemCount(l) ? null : logic,
@@ -56,16 +56,18 @@ public sealed partial record ApEvaluator
 
     /// <summary>Determines whether the <c>AND</c> condition is fulfilled.</summary>
     /// <param name="tuple">The tuple to deconstruct.</param>
+    /// <param name="no">The locations that should not be expanded during <c>canReachLocation</c>.</param>
     /// <returns>Whether the <c>AND</c> condition is fulfilled.</returns>
-    ApLogic? OnAnd((ApLogic? Left, ApLogic? Right) tuple) => // Annulment Law
-        In(tuple.Left) is var left && left is { IsYamlFunction: true } ? left.Check(tuple, this) :
-        In(tuple.Right) is var right && right is { IsYamlFunction: true } ? right.Check(left) : left & right;
+    ApLogic? OnAnd((ApLogic? Left, ApLogic? Right) tuple, HashSet<string>? no) => // Annulment Law
+        In(tuple.Left, no) is var left && left is { IsYamlFunction: true } ? left.Check(tuple, this) :
+        In(tuple.Right, no) is var right && right is { IsYamlFunction: true } ? right.Check(left) : left & right;
 
     /// <summary>Determines whether the <c>OR</c> condition is fulfilled.</summary>
     /// <param name="tuple">The tuple to deconstruct.</param>
+    /// <param name="no">The locations that should not be expanded during <c>canReachLocation</c>.</param>
     /// <returns>Whether the <c>OR</c> condition is fulfilled.</returns>
-    ApLogic? OnOr((ApLogic? Left, ApLogic? Right) tuple) => // Identity Law
-        In(tuple.Left) is var left && In(tuple.Right) is var right && left is { IsYamlFunction: true } ?
+    ApLogic? OnOr((ApLogic? Left, ApLogic? Right) tuple, HashSet<string>? no) => // Identity Law
+        In(tuple.Left, no) is var left && In(tuple.Right, no) is var right && left is { IsYamlFunction: true } ?
             right.Check(left) :
             right is { IsYamlFunction: true } ? left.Check(right) : left | right;
 
@@ -253,10 +255,10 @@ public sealed partial record ApEvaluator
 
     /// <summary>Determines whether the location is reachable.</summary>
     /// <param name="location">The location to check.</param>
-    /// <param name="seen">Locations that were previously processed.</param>
+    /// <param name="no">Locations that were previously processed.</param>
     /// <returns>Whether the parameter <paramref name="location"/> represents an unreachable location.</returns>
-    ApLogic? CanReachLocation(ReadOnlyMemory<char> location, HashSet<string> seen) =>
-        location.Span is var l && seen.GetAlternateLookup<ReadOnlySpan<char>>().Add(l) ? InLogic(l, seen) : null;
+    ApLogic? CanReachLocation(ReadOnlyMemory<char> location, HashSet<string> no) =>
+        location.Span is var l && no.GetAlternateLookup<ReadOnlySpan<char>>().Add(l) ? InLogic(l, no) : null;
 
     /// <summary>Evaluates <see cref="In"/> but with <see cref="IsOpt"/> enabled.</summary>
     /// <param name="logic">The string of characters to parse.</param>
