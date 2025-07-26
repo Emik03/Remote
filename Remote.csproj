@@ -2,7 +2,7 @@
     <PropertyGroup>
         <DebugType>full</DebugType>
         <OutputType>WinExe</OutputType>
-        <FileVersion>1.5.3</FileVersion>
+        <FileVersion>1.5.4</FileVersion>
         <NoWarn>$(NoWarn);CS0419</NoWarn>
         <PublishTrimmed>false</PublishTrimmed>
         <TargetFramework>net10.0</TargetFramework>

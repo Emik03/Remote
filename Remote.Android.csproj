@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <OutputType>Exe</OutputType>
-        <FileVersion>1.5.3</FileVersion>
+        <FileVersion>1.5.4</FileVersion>
         <NoWarn>$(NoWarn);CS0419</NoWarn>
         <RootNamespace>Remote</RootNamespace>
         <AndroidUseAapt2>false</AndroidUseAapt2>

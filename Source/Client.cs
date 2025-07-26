@@ -316,6 +316,13 @@ public sealed partial class Client(ApYaml? yaml = null)
     /// <summary>Gets the color.</summary>
     public RemoteColor? Color => RemoteColor.TryParse(_slot.Color, out var color) ? color : null;
 
+#if ALWAYS_ALLOW_RELEASE
+    static bool AllowRelease => true;
+#else
+    bool AllowRelease =>
+        _evaluator is not null ||
+        _session?.Players.Players.Sum(x => x.Value.Count(x => !x.IsGroup)) <= 3 && !_session.DataStorage.GetRaceMode();
+#endif
     /// <summary>Contains the last retrieved hints.</summary>
     HintMessage[]? LastHints
     {

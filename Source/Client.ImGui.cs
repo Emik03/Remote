@@ -589,10 +589,15 @@ public sealed partial class Client
     void ShowLocations(Preferences preferences)
     {
         Debug.Assert(_session is not null);
+        var shownNoRelease = ShowNoRelease(preferences);
         _ = preferences.Combo("##Location Sort", ref _locationSort, "Sort by Name\0Sort by ID\0\0");
         _ = ImGui.Checkbox("Show Already Checked Locations", ref _showAlreadyChecked);
         var stuck = _evaluator is null ? ShowNonManualLocations(preferences) : ShowManualLocations(preferences);
         ImGui.EndChild();
+
+        if (shownNoRelease)
+            return;
+
         ImGui.Separator();
         var isAnyReleasable = _locations.Any(IsReleasable);
         var showStatus = stuck is null or true;
@@ -827,6 +832,20 @@ public sealed partial class Client
             Checkbox(preferences, location, ApReader.Uncategorized);
 
         return locationHelper.AllMissingLocations.Count is 0;
+    }
+
+    /// <summary>Shows the warning that you cannot release any locations.</summary>
+    /// <param name="preferences">The user preferences.</param>
+    /// <returns>Whether or not this component was shown.</returns>
+    bool ShowNoRelease(Preferences preferences)
+    {
+        if (AllowRelease)
+            return false;
+
+        ImGui.PushStyleColor(ImGuiCol.Text, preferences[RemotePalette.ReleasingOutOfLogic]);
+        ImGui.SeparatorText("You cannot release locations in a larger Archipelago on a non-manual slot.");
+        ImGui.PopStyleColor();
+        return true;
     }
 
     /// <summary>Shows the location list in a manual context.</summary>
@@ -1170,6 +1189,7 @@ public sealed partial class Client
     /// <param name="overrideAll">The value to override the checkbox with.</param>
     void Checkbox(Preferences preferences, string location, string category, bool? overrideAll = null)
     {
+        Debug.Assert(_session is not null);
         ref var value = ref this[location];
         ImGui.PushStyleColor(ImGuiCol.Text, LocationColor(preferences, location));
         ImGui.Checkbox($"{location}###{location}:|{category}:|Location", ref value.Checked);
@@ -1182,7 +1202,7 @@ public sealed partial class Client
             preferences.Tooltip(logic.ToMinimalString(), true);
 
         ImGui.PopStyleColor();
-        value.Checked &= value.Status is not LocationStatus.Checked;
+        value.Checked &= value.Status is not LocationStatus.Checked && AllowRelease;
     }
 
     /// <summary>Clears all checkboxes.</summary>
