@@ -648,7 +648,7 @@ public sealed partial class Client
     /// <param name="isChatTab">Whether this was called from the chat tab.</param>
     void ShowAutocomplete(Preferences preferences, ref readonly string message, bool isChatTab)
     {
-        static bool CaseInsensitive(char x, char y) => x.IsUpper() == y.IsUpper();
+        static bool CaseInsensitive(char x, char y) => x.ToUpper() == y.ToUpper();
 
         Debug.Assert(_session is not null);
 
@@ -659,6 +659,10 @@ public sealed partial class Client
 
         if (suggestions.IsDefaultOrEmpty)
             return;
+
+        foreach (var suggestion in suggestions.AsSpan())
+            if (user.Span.Equals(suggestion, StringComparison.Ordinal))
+                return;
 
         var pos = ImGui.GetCursorPos();
         var size = ImGui.CalcTextSize(message);
@@ -676,10 +680,10 @@ public sealed partial class Client
             return;
 
         ImGui.SetWindowFontScale(preferences.UiScale);
+        var copy = message;
 
-        foreach (var suggestion in suggestions.OrderByDescending(x => x.JaroEmik(user.Span, CaseInsensitive)))
-            if (PasteIfClicked(suggestion, user.Length, message.Nth(^1)))
-                break;
+        _ = suggestions.OrderByDescending(x => x.JaroEmik(user.Span, CaseInsensitive))
+           .Any(suggestion => PasteIfClicked(suggestion, copy, user.Length));
 
         if (_hoverFrameCount > 0)
             _hoverFrameCount--;
@@ -1202,9 +1206,9 @@ public sealed partial class Client
 
     /// <summary>Adds the text provided if the selectable is clicked.</summary>
     /// <param name="match">The match.</param>
+    /// <param name="user">The full user input.</param>
     /// <param name="userLength">The length of the user input to clear before typing out the suggestion.</param>
-    /// <param name="last">The last character from the user input.</param>
-    bool PasteIfClicked(string match, int userLength, char? last)
+    bool PasteIfClicked(string match, string user, int userLength)
     {
         const int Frames = 3;
         _ = ImGui.Selectable(match);
@@ -1215,16 +1219,26 @@ public sealed partial class Client
             _lastSuggestion = match;
         }
 
-        if (!ImGui.IsMouseDown(ImGuiMouseButton.Left) || !match.Equals(_lastSuggestion, StringComparison.Ordinal))
+        if (!ImGui.IsMouseDown(ImGuiMouseButton.Left) ||
+            !FrozenSortedDictionary.Comparer.Equals(match, _lastSuggestion))
             return false;
 
         ImGui.CloseCurrentPopup();
         _sentChatMessageLastFrame = true;
 
-        if (last?.IsWhitespace() is false && !s_commands.Contains(match, FrozenSortedDictionary.Comparer))
+        if (_hoverFrameCount > 0)
+            return true;
+
+        for (var i = 0; i < userLength; i++)
+        {
+            ImGui.GetIO().AddKeyEvent(ImGuiKey.Backspace, true);
+            ImGui.GetIO().AddKeyEvent(ImGuiKey.Backspace, false);
+        }
+
+        if (!s_commands.Contains(match, FrozenSortedDictionary.Comparer) && !user[^(userLength + 1)].IsWhitespace())
             ImGui.GetIO().AddInputCharactersUTF8([' ']);
 
-        ImGui.GetIO().AddInputCharactersUTF8(match.AsSpan(userLength));
+        ImGui.GetIO().AddInputCharactersUTF8(match);
 
         if (match is "!getitem" or "!hint" or "!hint_location" or "!missing")
             ImGui.GetIO().AddInputCharactersUTF8([' ']);

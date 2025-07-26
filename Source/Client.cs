@@ -888,7 +888,7 @@ public sealed partial class Client(ApYaml? yaml = null)
             "!getitem" or "!hint" when (next = rest.Body) is var _ => _itemSuggestions,
             "!hint_location" or "!missing" when (next = rest.Body) is var _ => _locationSuggestions,
             [] or ['!', ..] when (next = first) is var _ && rest.Body.IsEmpty => s_commands,
-            _ => (next = default) is var _ ? [] : throw Unreachable,
+            _ => (next = default) is var _ ? [] : default,
         };
 
     /// <summary>Gets the item info.</summary>
