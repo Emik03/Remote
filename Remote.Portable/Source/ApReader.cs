@@ -48,20 +48,63 @@ public sealed record ApReader(
     {
         var world = $"{game}.apworld";
 
-        string? Enumerate(string root, string? relative)
+        static bool ReadZip(string x, string game, Action<string>? logger)
         {
-            logger?.Invoke($"Locating {world} within {relative ?? "root"}...");
+            using ZipArchive zip = new(File.OpenRead(x), ZipArchiveMode.Read);
 
-            return Path.Join(root, relative) is var directory &&
-                Directory.Exists(directory)
-                    ? Directory.EnumerateFiles(directory)
-                       .FirstOrDefault(
-                            x => world.Equals(Path.GetFileName(x.AsSpan()), StringComparison.OrdinalIgnoreCase)
-                        )
-                    : null;
+            if (Path.GetFileName(x.AsSpan()) is var fileName &&
+                Extract<JsonObject>(zip, "/data/game.json", logger) is not { } obj)
+            {
+                logger?.Invoke($"{fileName} does not have a game.json.");
+                return false;
+            }
+
+            if (!obj.TryGetPropertyValue("game", out var g) || g?.GetValueKind() is not JsonValueKind.String)
+            {
+                logger?.Invoke($"{fileName} does not have a string on the 'game' field.");
+                return false;
+            }
+
+            if (!obj.TryGetPropertyValue("creator", out var p) && !obj.TryGetPropertyValue("player", out p) ||
+                p?.GetValueKind() is not JsonValueKind.String)
+            {
+                logger?.Invoke($"{fileName} does not have a string on the 'player' field.");
+                return false;
+            }
+
+            if ($"Manual_{g}_{p}" is var gameName && FrozenSortedDictionary.Comparer.Equals(game, gameName))
+                return true;
+
+            logger?.Invoke($"{game} is not {gameName}.");
+            return false;
         }
 
-        return Enumerate(directory, "worlds") ?? Enumerate(directory, "custom_worlds") ?? Enumerate(directory, null);
+        bool ByFileName(string x) => world.Equals(Path.GetFileName(x.AsSpan()), StringComparison.OrdinalIgnoreCase);
+
+        bool ByGameJson(string x)
+        {
+            if (!Go(ReadZip, x, game, logger, out _, out var result))
+                return result;
+
+            logger?.Invoke($"Unable to read {Path.GetFileName(x.AsSpan())}.");
+            return false;
+        }
+
+        string? First(string root, string? relative, Func<string, bool> f)
+        {
+            logger?.Invoke($"Locating {game} within {relative ?? "root"} by {f.Method.Name}...");
+
+            return Path.Join(root, relative) is var d && Directory.Exists(d)
+                ? Directory.EnumerateFiles(d).Where(x => Path.GetExtension(x.AsSpan()) is ".apworld").FirstOrDefault(f)
+                : null;
+        }
+
+        return First(directory, "worlds", ByFileName) ??
+            First(directory, "custom_worlds", ByFileName) ??
+            First(directory, null, ByFileName) ??
+            First(directory, "worlds", ByGameJson) ??
+            First(directory, "custom_worlds", ByGameJson) ??
+            First(directory, null, ByGameJson);
     }
 
     /// <summary>Extracts all categories.</summary>
@@ -73,9 +116,8 @@ public sealed record ApReader(
 
         return Categories is not null
             ? (Categories.Where(IsHiddenTrue).Select(x => x.Key).ToFrozenSet(FrozenSortedDictionary.Comparer),
-                FrozenSortedDictionary.From(
-                    Categories.Select(GetOptions).ToDictionary(FrozenSortedDictionary.Comparer)
-                ))
+                FrozenSortedDictionary
+                   .From(Categories.Select(GetOptions).ToDictionary(FrozenSortedDictionary.Comparer)))
             : (FrozenSet<string>.Empty, FrozenSortedDictionary.Empty);
     }
 
@@ -173,7 +215,7 @@ public sealed record ApReader(
 
             foreach (var (phantomItem, countNode) in phantomItems)
                 if (countNode?.GetValueKind() is JsonValueKind.Number &&
-                    countNode.GetValue<int>() is var c)
+                    (int)countNode.GetValue<double>() is var c)
                     (CollectionsMarshal.GetValueRefOrAddDefault(itemValues, nameString, out _) ??=
                         ImmutableArray.CreateBuilder<(string PhantomItem, int Count)>()).Add((phantomItem, c));
         }
@@ -216,7 +258,7 @@ public sealed record ApReader(
             ? count.GetValueKind() switch
             {
                 JsonValueKind.String when int.TryParse(count.GetValue<string>(), out var i) => i,
-                JsonValueKind.Number => count.GetValue<int>(),
+                JsonValueKind.Number => (int)count.GetValue<double>(),
                 _ => 1,
             }
             : 1;
@@ -399,7 +441,7 @@ public sealed record ApReader(
     {
         logger?.Invoke("Locating Data.py...");
 
-        if (zip.Entries.FirstOrDefault(x => x.FullName.EndsWith("/hooks/Data.py")) is not { } data)
+        if (Extract(zip, "/hooks/Data.py") is not { } data)
             return null;
 
         logger?.Invoke("Opening Data.py...");
@@ -496,6 +538,15 @@ public sealed record ApReader(
         return Index<JsonObject>(obj, "game.json");
     }
 
+    /// <summary>Finds the <see cref="ZipArchiveEntry"/> that ends with the specified path.</summary>
+    /// <param name="zip">The zip archive.</param>
+    /// <param name="endsWith">The string to match.</param>
+    /// <returns>
+    /// The <see cref="ZipArchiveEntry"/> whose path ends with the parameter <paramref name="endsWith"/>.
+    /// </returns>
+    static ZipArchiveEntry? Extract(ZipArchive zip, string endsWith) =>
+        zip.Entries.FirstOrDefault(x => x.FullName.EndsWith(endsWith));
+
     /// <summary>Attempts to find the entry to deserialize.</summary>
     /// <typeparam name="T">The type to deserialize to.</typeparam>
     /// <param name="zip">The zip archive.</param>
@@ -507,7 +558,7 @@ public sealed record ApReader(
     {
         logger?.Invoke($"Locating {file}...");
 
-        if (zip.Entries.FirstOrDefault(x => x.FullName.EndsWith(file)) is not { } entry)
+        if (Extract(zip, file) is not { } entry)
             return null;
 
         logger?.Invoke($"Opening {file}...");
