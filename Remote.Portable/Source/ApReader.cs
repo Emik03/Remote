@@ -31,6 +31,14 @@ public sealed record ApReader(
     public ApReader(string path, string? ap = null, string? python = "python", Action<string>? logger = null)
         : this(Read(path, ap, python, logger, out var c, out var i, out var l, out var o, out var r), c, i, l, o, r) { }
 
+    /// <summary>Contains the SHA512 hash of the unmodified <c>Data.py</c>.</summary>
+    static ReadOnlySpan<byte> Hash =>
+    [
+        208, 117, 59, 232, 186, 95, 105, 76, 159, 101, 237, 184, 62, 111, 15, 130, 61, 131, 37, 110, 4, 3,
+        189, 140, 185, 222, 175, 11, 140, 162, 189, 167, 62, 71, 25, 134, 137, 116, 44, 236, 243, 168, 59,
+        55, 197, 193, 149, 216, 107, 234, 24, 94, 114, 206, 30, 123, 71, 207, 37, 84, 94, 94, 38, 193,
+    ];
+
     /// <summary>Attempts to find the <c>.apworld</c>.</summary>
     /// <param name="game">The game to search for.</param>
     /// <param name="directory">The directory to search in.</param>
@@ -374,25 +382,36 @@ public sealed record ApReader(
             ? (kvp.Key, JsonArrayToHashSet(array))
             : (kvp.Key, FrozenSet<string>.Empty);
 
-    /// <summary>Fail case. Sets all parameters to <see langword="null"/> and returns <see langword="null"/>.</summary>
-    /// <param name="categories">The categories that will be set to <see langword="null"/>.</param>
-    /// <param name="options">The options that will be set to <see langword="null"/>.</param>
-    /// <param name="regions">The regions that will be set to <see langword="null"/>.</param>
-    /// <returns>The value <see langword="null"/>.</returns>
-    static JsonObject? Fail(out JsonObject? categories, out JsonObject? options, out JsonObject? regions)
-    {
-        (categories, options, regions) = (null, null, null);
-        return null;
-    }
-
     /// <summary>Attempts to get the world data from executing python.</summary>
+    /// <param name="zip">The zip archive.</param>
     /// <param name="path">The path to the <c>.apworld</c>.</param>
     /// <param name="ap">The path to the archipelago repository.</param>
     /// <param name="python">The path to the python binary to execute python.</param>
     /// <param name="logger">The logger.</param>
     /// <returns>The world data, or <see langword="null"/> if it was unable to execute the script.</returns>
-    static JsonObject? GetWorldDataFromPython(string path, string? ap, string? python, Action<string>? logger)
+    static JsonObject? GetWorldDataFromPython(
+        ZipArchive zip,
+        string path,
+        string? ap,
+        string? python,
+        Action<string>? logger
+    )
     {
+        if (zip.Entries.FirstOrDefault(x => x.FullName.EndsWith("/hooks/Data.py")) is not { } data)
+            return null;
+
+        logger?.Invoke("Finding Data.py...");
+        using var stream = data.Open();
+        logger?.Invoke("Computing hash for Data.py...");
+        Span<byte> span = stackalloc byte[64];
+        SHA512.HashData(stream, span);
+
+        if (span.SequenceEqual(Hash))
+        {
+            logger?.Invoke("Data.py has been left unmodified, extracting from json files directly...");
+            return null;
+        }
+
         if (string.IsNullOrWhiteSpace(python) || string.IsNullOrWhiteSpace(ap))
         {
             logger?.Invoke("The .apworld uses Manual Hooks but the Archipelago repository does not exist! Exiting...");
@@ -431,7 +450,7 @@ public sealed record ApReader(
     }
 
     /// <summary>Reads the <c>.apworld</c>.</summary>
-    /// <param name="path"></param>
+    /// <param name="path">The path to read.</param>
     /// <param name="ap">The path to the archipelago repository.</param>
     /// <param name="python">The path to the python binary to execute python.</param>
     /// <param name="logger">The logger.</param>
@@ -455,19 +474,16 @@ public sealed record ApReader(
     {
         logger?.Invoke("Opening the zip file...");
         using ZipArchive zip = new(File.OpenRead(path));
-        items = Extract<JsonArray>(zip, "/data/items.json", logger);
-        locations = Extract<JsonArray>(zip, "/data/locations.json", logger);
 
-        if (items?.Count > 0 || locations?.Count > 0)
+        if (GetWorldDataFromPython(zip, path, ap, python, logger) is not { } obj)
         {
+            items = Extract<JsonArray>(zip, "/data/items.json", logger);
+            locations = Extract<JsonArray>(zip, "/data/locations.json", logger);
             categories = Extract<JsonObject>(zip, "/data/categories.json", logger);
             options = Extract<JsonObject>(zip, "/data/options.json", logger);
             regions = Extract<JsonObject>(zip, "/data/regions.json", logger);
             return Extract<JsonObject>(zip, "/data/game.json", logger);
         }
-
-        if (GetWorldDataFromPython(path, ap, python, logger) is not { } obj)
-            return Fail(out categories, out options, out regions);
 
         logger?.Invoke("Extracting values from the json object...");
         items = Index<JsonArray>(obj, "items.json");

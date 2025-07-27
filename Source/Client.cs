@@ -316,6 +316,7 @@ public sealed partial class Client(ApYaml? yaml = null)
     /// <summary>Gets the color.</summary>
     public RemoteColor? Color => RemoteColor.TryParse(_slot.Color, out var color) ? color : null;
 
+    /// <summary>Determines whether this connection is allowed to release locations.</summary>
 #if ALWAYS_ALLOW_RELEASE
     static bool AllowRelease => true;
 #else
