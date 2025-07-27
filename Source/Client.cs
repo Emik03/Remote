@@ -199,6 +199,9 @@ public sealed partial class Client(ApYaml? yaml = null)
                     For example !hint_location atomic-bomb to get a spoiler peek for that location.
             """;
 
+    /// <summary>Whether to print the client evaluator.</summary>
+    static readonly bool s_debugClientEvaluator = ApLogicTrimmer.IsTrue("REMOTE_DEBUG_CLIENT_EVALUATOR");
+
     /// <summary>The commands.</summary>
     static readonly ImmutableArray<string> s_commands =
     [
@@ -250,7 +253,7 @@ public sealed partial class Client(ApYaml? yaml = null)
     int _itemSort, _releaseIndex;
 
     /// <summary>Contains the window name.</summary>
-    string _connectionMessage = "", _windowName = $"Client###{s_instances}";
+    string _windowName = $"Client###{s_instances}";
 
     /// <summary>Contains all errors to display.</summary>
     string[]? _errors;
@@ -324,6 +327,20 @@ public sealed partial class Client(ApYaml? yaml = null)
         _evaluator is not null ||
         _session?.Players.Players.Sum(x => x.Value.Count(x => !x.IsGroup)) <= 3 && !_session.DataStorage.GetRaceMode();
 #endif
+    /// <summary>Gets or sets the connection message.</summary>
+    [NotNull]
+    string? ConnectionMessage
+    {
+        get => field ?? "";
+        set
+        {
+            field = value;
+
+            if (s_debugClientEvaluator)
+                Console.WriteLine(value);
+        }
+    }
+
     /// <summary>Contains the last retrieved hints.</summary>
     HintMessage[]? LastHints
     {
@@ -403,9 +420,9 @@ public sealed partial class Client(ApYaml? yaml = null)
             var session = ArchipelagoSessionFactory.CreateSession(address, port);
             session.MessageLog.OnMessageReceived += OnMessageReceived;
             string[] tags = ["AP", nameof(Remote)];
-            _connectionMessage = "Attempting new connection.\nConnecting... (1/6)";
+            ConnectionMessage = "Attempting new connection.\nConnecting... (1/6)";
             _ = await session.ConnectAsync();
-            _connectionMessage = "Connected!\nLogging in... (2/6)";
+            ConnectionMessage = "Connected!\nLogging in... (2/6)";
             var login = await session.LoginAsync(_yaml.Game, _yaml.Name, Flags, tags: tags, password: password);
 
             if (login is LoginFailure failure)
@@ -415,7 +432,7 @@ public sealed partial class Client(ApYaml? yaml = null)
                 return;
             }
 
-            _connectionMessage = "Logged in!\nConfiguring DeathLink... (3/6)";
+            ConnectionMessage = "Logged in!\nConfiguring DeathLink... (3/6)";
             _windowName = $"{_yaml.Name}###{_instance}";
             _errors = null;
             _deathLink = session.CreateDeathLinkService();
@@ -428,12 +445,12 @@ public sealed partial class Client(ApYaml? yaml = null)
             else
                 _deathLink.DisableDeathLink();
 
-            _connectionMessage = "Configured DeathLink!\nReading slot data... (4/6)";
+            ConnectionMessage = "Configured DeathLink!\nReading slot data... (4/6)";
 
             foreach (var (key, value) in await session.DataStorage.GetSlotDataAsync())
                 ((IDictionary<string, object?>)_yaml)[key] = value;
 
-            _connectionMessage = "Slot data has been read!\nReading APWorld... (5/6)";
+            ConnectionMessage = "Slot data has been read!\nReading APWorld... (5/6)";
 
             _evaluator = ApEvaluator.Read(
                 new ItemNameCollection(session.Items),
@@ -445,9 +462,9 @@ public sealed partial class Client(ApYaml? yaml = null)
                 Set
             );
 
-            _connectionMessage = "APWorld has been read!\nSaving history in memory... (6/6)";
+            ConnectionMessage = "APWorld has been read!\nSaving history in memory... (6/6)";
             _sessionCreatedTimestamp = DateTime.Now;
-            _connectionMessage = "";
+            ConnectionMessage = "";
 
             if (_evaluator is not null)
                 UpdateStatus();
@@ -478,7 +495,7 @@ public sealed partial class Client(ApYaml? yaml = null)
             }
         }
 
-        _connectionMessage = "";
+        ConnectionMessage = "";
         _connectingTask = Task.Run(TryConnectAsync);
     }
 
@@ -615,7 +632,7 @@ public sealed partial class Client(ApYaml? yaml = null)
 
     /// <summary>Sets the connection message.</summary>
     /// <param name="message">The message to set.</param>
-    void Set(string message) => _connectionMessage = $"Slot data has been read!\nReading APWorld... (5/6)\n{message}";
+    void Set(string message) => ConnectionMessage = $"Slot data has been read!\nReading APWorld... (5/6)\n{message}";
 
     /// <summary>Resets the timer.</summary>
     /// <param name="outOfLogic">Whether to use the time span for in- or out-of-logic.</param>

@@ -95,7 +95,7 @@ public sealed partial class Client
         ImGui.SetWindowFontScale(preferences.UiScale);
 
         if (!_connectingTask.IsCompleted)
-            ImGui.TextDisabled(_connectionMessage);
+            ImGui.TextDisabled(ConnectionMessage);
         else if (_session is null)
             ShowBuilder(preferences);
 
