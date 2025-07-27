@@ -160,7 +160,7 @@ public sealed class ApYaml : IDictionary<string, object?>
                 {
                     JsonValueKind.True => 1,
                     JsonValueKind.False => 0,
-                    JsonValueKind.Number => def.GetValue<int>(),
+                    JsonValueKind.Number => (int)def.GetValue<double>(),
                     _ => null,
                 }
                 : null;
