@@ -397,10 +397,12 @@ public sealed record ApReader(
         Action<string>? logger
     )
     {
+        logger?.Invoke("Locating Data.py...");
+
         if (zip.Entries.FirstOrDefault(x => x.FullName.EndsWith("/hooks/Data.py")) is not { } data)
             return null;
 
-        logger?.Invoke("Finding Data.py...");
+        logger?.Invoke("Opening Data.py...");
         using var stream = data.Open();
         logger?.Invoke("Computing hash for Data.py...");
         Span<byte> span = stackalloc byte[64];
