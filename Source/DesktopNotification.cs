@@ -40,8 +40,20 @@ public static partial class DesktopNotification
             display notification b with title t
             """;
 
-        using var process = Process.Start("osascript", ["-e", Script, "-", title, body]);
-        await process.WaitForExitAsync().ConfigureAwait(false);
+        using var process = Process.Start(
+            new ProcessStartInfo("osascript", ["-e", Script, "-", title, body])
+            {
+                ErrorDialog = false,
+                CreateNoWindow = false,
+                UseShellExecute = false,
+                RedirectStandardError = true,
+                RedirectStandardInput = true,
+                RedirectStandardOutput = true,
+            }
+        );
+
+        if (process is not null)
+            await process.WaitForExitAsync().ConfigureAwait(false);
     }
 
     /// <summary>Creates the desktop notification for Windows.</summary>
