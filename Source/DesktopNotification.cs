@@ -62,12 +62,9 @@ public static partial class DesktopNotification
             """
             [void] [System.Reflection.Assembly]::LoadWithPartialName("System.Windows.Forms")
             $icon = New-Object System.Windows.Forms.NotifyIcon
-            $icon.Icon = [System.Drawing.SystemIcons].$Env:ICON_LONG
-            $icon.BalloonTipIcon = $Env:ICON
-            $icon.BalloonTipText = $Env:BODY
-            $icon.BalloonTipTitle = $Env:TITLE
+            $icon.Icon = [System.Drawing.SystemIcons]::$Env:ICON_LONG
             $icon.Visible = $True
-            $icon.ShowBalloonTip(10000)
+            $icon.ShowBalloonTip(10000, $Env:TITLE, $Env:BODY, [System.Windows.Forms.ToolTipIcon]::$Env:ICON)
             """;
 
         using var process = Process.Start(
@@ -83,7 +80,7 @@ public static partial class DesktopNotification
                 {
                     ["BODY"] = body,
                     ["TITLE"] = title,
-                    ["ICON"] = isWarning ? "Warning" : "Info",
+                    ["ICON"] = isWarning ? "WARNING" : "INFO",
                     ["ICON_LONG"] = isWarning ? "Warning" : "Information",
                 },
             }
