@@ -880,7 +880,7 @@ public sealed partial class Client
 
         foreach (var (category, locations) in orderedCategories)
         {
-            if (_evaluator.HiddenCategories.Contains(category))
+            if (_evaluator.HiddenCategories.Contains(category) || _evaluator.IsCategoryDisabled(category) is true)
                 continue;
 
             var count = 0;
@@ -1119,7 +1119,7 @@ public sealed partial class Client
 
         foreach (var (category, items) in _evaluator.CategoryToItems)
         {
-            if (_evaluator.HiddenCategories.Contains(category))
+            if (_evaluator.HiddenCategories.Contains(category) || _evaluator.IsCategoryDisabled(category) is true)
                 continue;
 
             IList<ReceivedItem> filtered =
