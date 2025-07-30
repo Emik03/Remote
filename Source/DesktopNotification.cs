@@ -52,31 +52,40 @@ public static partial class DesktopNotification
         // - Trying to reference Microsoft.Toolkit.Uwp.Notifications causes compiler errors about it being windows-only.
         // - Trying to reference Microsoft.Windows.SDK.NET would always end up failing to link during runtime.
         // Massive thanks to https://superuser.com/a/1523925 because I don't normally write powershell scripts!
-        var script =
-            $"""
-             [void] [System.Reflection.Assembly]::LoadWithPartialName("System.Windows.Forms")
-             $objNotifyIcon = New-Object System.Windows.Forms.NotifyIcon
-             $objNotifyIcon.Icon = [System.Drawing.SystemIcons]::{(isWarning ? "Warning" : "Information")}
-             $objNotifyIcon.BalloonTipIcon = "{(isWarning ? "Warn" : "Info")}"
-             $objNotifyIcon.BalloonTipText = "{WindowsEscape(body)}"
-             $objNotifyIcon.BalloonTipTitle = "{WindowsEscape(title)}"
-             $objNotifyIcon.Visible = $True
-             $objNotifyIcon.ShowBalloonTip(10000)
-             """;
+        const string Script =
+            """
+            [void] [System.Reflection.Assembly]::LoadWithPartialName("System.Windows.Forms")
+            $objNotifyIcon = New-Object System.Windows.Forms.NotifyIcon
+            $objNotifyIcon.Icon = [Enum]::ToObject([System.Drawing.SystemIcons], $Env:ICON)
+            $objNotifyIcon.BalloonTipIcon = $Env:ICON_LONG
+            $objNotifyIcon.BalloonTipText = $Env:BODY
+            $objNotifyIcon.BalloonTipTitle = $Env:TITLE
+            $objNotifyIcon.Visible = $True
+            $objNotifyIcon.ShowBalloonTip(10000)
+            """;
 
-        using var process = Process.Start("powershell", ["-NoNewWindow", script]);
-        await process.WaitForExitAsync().ConfigureAwait(false);
+        using var process = Process.Start(
+            new ProcessStartInfo("powershell", [Script])
+            {
+                CreateNoWindow = false,
+                Environment =
+                {
+                    ["BODY"] = body,
+                    ["TITLE"] = title,
+                    ["ICON"] = isWarning ? "Warn" : "Info",
+                    ["ICON_LONG"] = isWarning ? "Warning" : "Information",
+                },
+            }
+        );
+
+        if (process is not null)
+            await process.WaitForExitAsync().ConfigureAwait(false);
     }
 
     /// <summary>Gets the escaped string.</summary>
     /// <param name="text">The text to escape.</param>
     /// <returns>The escaped version of the parameter <paramref name="text"/>.</returns>
     static string MacEscape(string text) => OsaScript().Replace(text, "\\$&").SplitSpanWhitespace().ToString(" ");
-
-    /// <summary>Gets the escaped string.</summary>
-    /// <param name="text">The text to escape.</param>
-    /// <returns>The escaped version of the parameter <paramref name="text"/>.</returns>
-    static string WindowsEscape(string text) => Powershell().Replace(text, "`$&").SplitSpanWhitespace().ToString(" ");
 
     /// <summary>Gets the regex of special characters that need to be escaped.</summary>
     /// <returns>The special characters that need to be escaped.</returns>
