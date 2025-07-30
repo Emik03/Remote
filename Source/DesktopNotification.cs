@@ -56,8 +56,8 @@ public static partial class DesktopNotification
             """
             [void] [System.Reflection.Assembly]::LoadWithPartialName("System.Windows.Forms")
             $objNotifyIcon = New-Object System.Windows.Forms.NotifyIcon
-            $objNotifyIcon.Icon = [Enum]::ToObject([System.Drawing.SystemIcons], $Env:ICON)
-            $objNotifyIcon.BalloonTipIcon = $Env:ICON_LONG
+            $objNotifyIcon.Icon = ([System.Drawing.SystemIcons])[System.Drawing.SystemIcons].GetField($Env:ICON_LONG).GetValue(null)
+            $objNotifyIcon.BalloonTipIcon = $Env:ICON
             $objNotifyIcon.BalloonTipText = $Env:BODY
             $objNotifyIcon.BalloonTipTitle = $Env:TITLE
             $objNotifyIcon.Visible = $True
@@ -67,7 +67,12 @@ public static partial class DesktopNotification
         using var process = Process.Start(
             new ProcessStartInfo("powershell", [Script])
             {
+                ErrorDialog = false,
                 CreateNoWindow = false,
+                UseShellExecute = false,
+                RedirectStandardError = true,
+                RedirectStandardInput = true,
+                RedirectStandardOutput = true,
                 Environment =
                 {
                     ["BODY"] = body,
