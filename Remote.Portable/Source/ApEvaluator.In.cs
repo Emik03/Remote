@@ -19,6 +19,49 @@ public sealed partial record ApEvaluator
     /// <summary>Gets <see cref="LocationsToLogic"/> with a <see cref="ReadOnlySpan{T}"/> lookup.</summary>
     public FrozenDictionary<string, ApLogic>.AlternateLookup<ReadOnlySpan<char>> LocationsToLogicSpan =>
         LocationsToLogic.GetAlternateLookup<ReadOnlySpan<char>>();
+
+    /// <summary>Determines whether the item has been disabled by yaml options.</summary>
+    /// <param name="item">The item to check.</param>
+    /// <returns>Whether the item has been disabled by yaml options.</returns>
+    public bool IsItemDisabled(ReadOnlySpan<char> item)
+    {
+        if (!ItemToCategories.TryGetValue(item, out var categories))
+            return false;
+
+        var ret = false;
+
+        foreach (var category in categories)
+            switch (IsCategoryDisabled(category))
+            {
+                case false: return false;
+                case null: continue;
+                case true:
+                    ret = true;
+                    break;
+            }
+
+        return ret;
+    }
+
+    /// <summary>Determines whether the category has been disabled by yaml options.</summary>
+    /// <remarks><para>
+    /// <see langword="false"/> means the setting is explicitly enabled.
+    /// <see langword="null"/> means the setting is implicitly enabled, without outright specifying.
+    /// <see langword="true"/> means the setting is disabled.
+    /// </para></remarks>
+    /// <param name="category">The category to check.</param>
+    /// <returns>Whether the category has been disabled by yaml options.</returns>
+    public bool? IsCategoryDisabled(ReadOnlySpan<char> category)
+    {
+        if (!CategoryToYaml.TryGetValue(category, out var yaml))
+            return null;
+
+        foreach (var y in yaml)
+            if (YamlSpan.TryGetValue(y, out var i) && i > 0)
+                return false;
+
+        return true;
+    }
 #pragma warning disable MA0016
     /// <summary>Determines whether the logic is fulfilled.</summary>
     /// <param name="logic">The logic to check.</param>
@@ -173,49 +216,6 @@ public sealed partial record ApEvaluator
             x => ItemToPhantoms.TryGetValue(x, out var value) &&
                 value.Any(x => Eq(x.PhantomItem, item) && (c -= x.Count) <= 0)
         );
-
-    /// <summary>Determines whether the item has been disabled by yaml options.</summary>
-    /// <param name="item">The item to check.</param>
-    /// <returns>Whether the item has been disabled by yaml options.</returns>
-    bool IsItemDisabled(ReadOnlySpan<char> item)
-    {
-        if (!ItemToCategories.TryGetValue(item, out var categories))
-            return false;
-
-        var ret = false;
-
-        foreach (var category in categories)
-            switch (IsCategoryDisabled(category))
-            {
-                case false: return false;
-                case null: continue;
-                case true:
-                    ret = true;
-                    break;
-            }
-
-        return ret;
-    }
-
-    /// <summary>Determines whether the category has been disabled by yaml options.</summary>
-    /// <remarks><para>
-    /// <see langword="false"/> means the setting is explicitly enabled.
-    /// <see langword="null"/> means the setting is implicitly enabled, without outright specifying.
-    /// <see langword="true"/> means the setting is disabled.
-    /// </para></remarks>
-    /// <param name="category">The category to check.</param>
-    /// <returns>Whether the category has been disabled by yaml options.</returns>
-    bool? IsCategoryDisabled(ReadOnlySpan<char> category)
-    {
-        if (!CategoryToYaml.TryGetValue(category, out var yaml))
-            return null;
-
-        foreach (var y in yaml)
-            if (YamlSpan.TryGetValue(y, out var i) && i > 0)
-                return false;
-
-        return true;
-    }
 
     /// <summary>Counts the maximum amount in a category, factoring in whether the category is disabled.</summary>
     /// <param name="category">The category to check.</param>
