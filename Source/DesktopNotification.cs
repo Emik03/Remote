@@ -33,8 +33,14 @@ public static partial class DesktopNotification
     /// <param name="body">The body.</param>
     static async Task Mac(string title, string body)
     {
-        var script = $"display notification \"{MacEscape(body)}\" with title \"{MacEscape(title)}\"";
-        using var process = Process.Start("osascript", ["-e", script]);
+        const string Script =
+            """
+            set t of item 1 to argv
+            set b of item 2 to argv
+            display notification b with title t
+            """;
+
+        using var process = Process.Start("osascript", ["-e", Script, "-", title, body]);
         await process.WaitForExitAsync().ConfigureAwait(false);
     }
 
@@ -55,13 +61,14 @@ public static partial class DesktopNotification
         const string Script =
             """
             [void] [System.Reflection.Assembly]::LoadWithPartialName("System.Windows.Forms")
-            $objNotifyIcon = New-Object System.Windows.Forms.NotifyIcon
-            $objNotifyIcon.Icon = ([System.Drawing.SystemIcons])[System.Drawing.SystemIcons].GetField($Env:ICON_LONG).GetValue(null)
-            $objNotifyIcon.BalloonTipIcon = $Env:ICON
-            $objNotifyIcon.BalloonTipText = $Env:BODY
-            $objNotifyIcon.BalloonTipTitle = $Env:TITLE
-            $objNotifyIcon.Visible = $True
-            $objNotifyIcon.ShowBalloonTip(10000)
+            $icon = New-Object System.Windows.Forms.NotifyIcon
+            $icon = [System.Drawing.SystemIcons].$Env:ICON_LONG
+            $icon.BalloonTipIcon = $Env:ICON
+            $icon.BalloonTipText = $Env:BODY
+            $icon.BalloonTipTitle = $Env:TITLE
+            $icon.Visible = $True
+            $icon.ShowBalloonTip(10000)
+
             """;
 
         using var process = Process.Start(
@@ -86,19 +93,4 @@ public static partial class DesktopNotification
         if (process is not null)
             await process.WaitForExitAsync().ConfigureAwait(false);
     }
-
-    /// <summary>Gets the escaped string.</summary>
-    /// <param name="text">The text to escape.</param>
-    /// <returns>The escaped version of the parameter <paramref name="text"/>.</returns>
-    static string MacEscape(string text) => OsaScript().Replace(text, "\\$&").SplitSpanWhitespace().ToString(" ");
-
-    /// <summary>Gets the regex of special characters that need to be escaped.</summary>
-    /// <returns>The special characters that need to be escaped.</returns>
-    [GeneratedRegex("""[\\"]""")]
-    private static partial Regex OsaScript();
-
-    /// <summary>Gets the regex of special characters that need to be escaped.</summary>
-    /// <returns>The special characters that need to be escaped.</returns>
-    [GeneratedRegex(@"[*\\~;(%?.:@/]")]
-    private static partial Regex Powershell();
 }
