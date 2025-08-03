@@ -4,6 +4,18 @@ namespace Remote.Portable;
 /// <inheritdoc cref="ApEvaluator"/>
 public sealed partial record ApEvaluator
 {
+    /// <summary>Gets <see cref="DisabledCategories"/> with a <see cref="ReadOnlySpan{T}"/> lookup.</summary>
+    public FrozenSet<string>.AlternateLookup<ReadOnlySpan<char>> DisabledCategoriesSpan =>
+        DisabledCategories.GetAlternateLookup<ReadOnlySpan<char>>();
+
+    /// <summary>Gets <see cref="DisabledLocations"/> with a <see cref="ReadOnlySpan{T}"/> lookup.</summary>
+    public FrozenSet<string>.AlternateLookup<ReadOnlySpan<char>> DisabledLocationsSpan =>
+        DisabledLocations.GetAlternateLookup<ReadOnlySpan<char>>();
+
+    /// <summary>Gets <see cref="DisabledItems"/> with a <see cref="ReadOnlySpan{T}"/> lookup.</summary>
+    public FrozenSet<string>.AlternateLookup<ReadOnlySpan<char>> DisabledItemsSpan =>
+        DisabledItems.GetAlternateLookup<ReadOnlySpan<char>>();
+
     /// <summary>Gets <see cref="ItemCount"/> with a <see cref="ReadOnlySpan{T}"/> lookup.</summary>
     public FrozenDictionary<string, int>.AlternateLookup<ReadOnlySpan<char>> ItemCountSpan =>
         ItemCount.GetAlternateLookup<ReadOnlySpan<char>>();
@@ -19,49 +31,6 @@ public sealed partial record ApEvaluator
     /// <summary>Gets <see cref="LocationsToLogic"/> with a <see cref="ReadOnlySpan{T}"/> lookup.</summary>
     public FrozenDictionary<string, ApLogic>.AlternateLookup<ReadOnlySpan<char>> LocationsToLogicSpan =>
         LocationsToLogic.GetAlternateLookup<ReadOnlySpan<char>>();
-
-    /// <summary>Determines whether the item has been disabled by yaml options.</summary>
-    /// <param name="item">The item to check.</param>
-    /// <returns>Whether the item has been disabled by yaml options.</returns>
-    public bool IsItemDisabled(ReadOnlySpan<char> item)
-    {
-        if (!ItemToCategories.TryGetValue(item, out var categories))
-            return false;
-
-        var ret = false;
-
-        foreach (var category in categories)
-            switch (IsCategoryDisabled(category))
-            {
-                case false: return false;
-                case null: continue;
-                case true:
-                    ret = true;
-                    break;
-            }
-
-        return ret;
-    }
-
-    /// <summary>Determines whether the category has been disabled by yaml options.</summary>
-    /// <remarks><para>
-    /// <see langword="false"/> means the setting is explicitly enabled.
-    /// <see langword="null"/> means the setting is implicitly enabled, without outright specifying.
-    /// <see langword="true"/> means the setting is disabled.
-    /// </para></remarks>
-    /// <param name="category">The category to check.</param>
-    /// <returns>Whether the category has been disabled by yaml options.</returns>
-    public bool? IsCategoryDisabled(ReadOnlySpan<char> category)
-    {
-        if (!CategoryToYaml.TryGetValue(category, out var yaml))
-            return null;
-
-        foreach (var y in yaml)
-            if (YamlSpan.TryGetValue(y, out var i) && i > 0)
-                return false;
-
-        return true;
-    }
 #pragma warning disable MA0016
     /// <summary>Determines whether the logic is fulfilled.</summary>
     /// <param name="logic">The logic to check.</param>
@@ -117,19 +86,20 @@ public sealed partial record ApEvaluator
     /// <summary>Determines whether any of an item is obtained.</summary>
     /// <param name="item">The item to check.</param>
     /// <returns>Whether the item is obtained.</returns>
-    bool OnItem(ReadOnlyMemory<char> item) => IsOpt && IsItemDisabled(item.Span) || CurrentItems.Any(x => Eq(x, item));
+    bool OnItem(ReadOnlyMemory<char> item) =>
+        IsOpt && DisabledItemsSpan.Contains(item.Span) || CurrentItems.Any(x => Eq(x, item));
 
     /// <summary>Determines whether any of a category is obtained.</summary>
     /// <param name="category">The category to check.</param>
     /// <returns>Whether any of a category is obtained.</returns>
     bool OnCategory(ReadOnlyMemory<char> category) =>
-        IsOpt && IsCategoryDisabled(category.Span) is true || CurrentItems.Any(IsItemInCategory(category));
+        IsOpt && DisabledCategoriesSpan.Contains(category.Span) || CurrentItems.Any(IsItemInCategory(category));
 
     /// <summary>Determines whether the specific quantity of an item is obtained.</summary>
     /// <param name="tuple">The tuple to deconstruct.</param>
     /// <returns>Whether the specific quantity of an item is obtained.</returns>
     bool OnItemCount((ReadOnlyMemory<char> Item, ReadOnlyMemory<char> Count) tuple) =>
-        IsOpt && IsItemDisabled(tuple.Item.Span) ||
+        IsOpt && DisabledItemsSpan.Contains(tuple.Item.Span) ||
         tuple.Count.Span.Into<int>() is var i &&
         (i is 0 || CurrentItems.Where(x => Eq(x, tuple.Item)).Skip(i - 1).Any());
 
@@ -144,7 +114,7 @@ public sealed partial record ApEvaluator
     /// <param name="tuple">The tuple to deconstruct.</param>
     /// <returns>Whether the specific percentage of an item is obtained.</returns>
     bool OnItemPercent((ReadOnlyMemory<char> Item, ReadOnlyMemory<char> Percent) tuple) =>
-        IsOpt && IsItemDisabled(tuple.Item.Span) ||
+        IsOpt && DisabledItemsSpan.Contains(tuple.Item.Span) ||
         tuple.Percent.Span.Into<int>() / 100d <=
         CurrentItems.Count(x => Eq(x, tuple.Item)) / (double)ItemCountSpan[tuple.Item.Span];
 
@@ -228,7 +198,7 @@ public sealed partial record ApEvaluator
         var sum = 0;
 
         foreach (var item in items)
-            if (ItemCount.TryGetValue(item, out var count) && !IsItemDisabled(item))
+            if (ItemCount.TryGetValue(item, out var count) && !DisabledItems.Contains(item))
                 sum += count;
 
         return sum;

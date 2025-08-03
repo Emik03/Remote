@@ -3,6 +3,9 @@ namespace Remote.Portable;
 
 /// <summary>The record for processing <see cref="OnAnd"/> and whether something is in logic.</summary>
 /// <param name="CurrentItems">The list of items received.</param>
+/// <param name="DisabledCategories">The set of categories that are disabled.</param>
+/// <param name="DisabledLocations">The set of locations that are disabled.</param>
+/// <param name="DisabledItems">The set of items that are disabled.</param>
 /// <param name="HiddenCategories">The set of categories that shouldn't be visible to the user.</param>
 /// <param name="LocationsToLogic">The conversion from locations to its <see cref="OnAnd"/> instances.</param>
 /// <param name="CategoryToLocations">The conversion from categories to its set of locations.</param>
@@ -18,6 +21,9 @@ namespace Remote.Portable;
 [CLSCompliant(false)]
 public sealed partial record ApEvaluator(
     IReadOnlyCollection<string> CurrentItems,
+    FrozenSet<string> DisabledCategories,
+    FrozenSet<string> DisabledLocations,
+    FrozenSet<string> DisabledItems,
     FrozenSet<string> HiddenCategories,
     FrozenDictionary<string, ApLogic> LocationsToLogic,
     FrozenSortedDictionary CategoryToLocations,
@@ -34,6 +40,7 @@ public sealed partial record ApEvaluator(
 {
     /// <summary>Initializes a new instance of the <see cref="ApEvaluator"/> record.</summary>
     /// <param name="currentItems">The list of items received.</param>
+    /// <param name="disabledCategories">The set of categories that are disabled.</param>
     /// <param name="hiddenCategories">The set of categories that shouldn't be visible to the user.</param>
     /// <param name="locationsToLogic">The conversion from locations to its <see cref="OnAnd"/> instances.</param>
     /// <param name="categoryToLocations">The conversion from categories to its set of locations.</param>
@@ -44,6 +51,7 @@ public sealed partial record ApEvaluator(
     /// <param name="yaml">The yaml options.</param>
     public ApEvaluator(
         IReadOnlyCollection<string> currentItems,
+        FrozenSet<string> disabledCategories,
         FrozenSet<string> hiddenCategories,
         FrozenDictionary<string, ApLogic> locationsToLogic,
         FrozenSortedDictionary categoryToLocations,
@@ -55,6 +63,9 @@ public sealed partial record ApEvaluator(
     )
         : this(
             currentItems,
+            disabledCategories,
+            Infer(disabledCategories, categoryToLocations, true),
+            Infer(disabledCategories, itemToCategories, false),
             hiddenCategories,
             locationsToLogic,
             categoryToLocations,
@@ -133,7 +144,7 @@ public sealed partial record ApEvaluator(
         logger?.Invoke("Copying yaml options found .apworld...");
         yaml.CopyFrom(reader.Options);
 
-        if (reader.ExtractCategories(logger) is not ({ } hiddenCategories, var categoryToYaml) ||
+        if (reader.ExtractCategories(yaml, logger) is not ({ } disabled, { } hidden, var categoryToYaml) ||
             reader.ExtractItems(logger) is not (var itemToCategories, { } itemCount, { } itemValues) ||
             reader.ExtractLocations(yaml, goalGetter, logger) is not ({ } locationsToLogic, var categoryToLocations))
             return null;
@@ -142,7 +153,8 @@ public sealed partial record ApEvaluator(
 
         return new(
             currentItems,
-            hiddenCategories,
+            disabled,
+            hidden,
             locationsToLogic,
             categoryToLocations,
             categoryToYaml,
@@ -153,11 +165,29 @@ public sealed partial record ApEvaluator(
         );
     }
 
+    /// <summary>Gets the disabled elements.</summary>
+    /// <param name="disabledCategories">The set of disabled categories.</param>
+    /// <param name="dictionary">The conversion.</param>
+    /// <param name="isForward">
+    /// Whether the conversion is forward, i.e. from the category to the set of elements, and not the other way around.
+    /// </param>
+    /// <returns>The disabled elements.</returns>
+    // ReSharper disable ParameterTypeCanBeEnumerable.Local SuggestBaseTypeForParameter
+    static FrozenSet<string> Infer(
+        FrozenSet<string> disabledCategories,
+        FrozenSortedDictionary dictionary,
+        bool isForward
+    ) =>
+        isForward
+            ? disabledCategories.SelectMany(x => dictionary[x]).ToFrozenSet(FrozenSortedDictionary.Comparer)
+            : dictionary.Array.Where(x => x.Value.Any(disabledCategories.Contains))
+               .Select(x => x.Key)
+               .ToFrozenSet(FrozenSortedDictionary.Comparer);
+
     /// <summary>Infers the category count.</summary>
     /// <param name="itemToPhantoms">The conversion from items to the set of categories it falls under.</param>
     /// <returns>The category count.</returns>
     static FrozenDictionary<string, ImmutableArray<(string Item, int Count)>> Infer(
-        // ReSharper disable once SuggestBaseTypeForParameter
         FrozenDictionary<string, ImmutableArray<(string PhantomItem, int Count)>> itemToPhantoms
     )
     {
@@ -175,7 +205,7 @@ public sealed partial record ApEvaluator(
     /// <param name="itemToCategories">The conversion from items to the set of categories it falls under.</param>
     /// <param name="itemCount">The conversion from items to the amount of that item.</param>
     /// <returns>The category count.</returns>
-    static FrozenDictionary<string, int> Infer( // ReSharper disable once SuggestBaseTypeForParameter
+    static FrozenDictionary<string, int> Infer(
         FrozenSortedDictionary itemToCategories,
         FrozenDictionary<string, int> itemCount
     )

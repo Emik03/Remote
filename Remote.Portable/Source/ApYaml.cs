@@ -189,6 +189,28 @@ public sealed class ApYaml : IDictionary<string, object?>
     bool IDictionary<string, object?>.ContainsKey(string key) =>
         key is DescriptionField or GameField or GoalField or NameField || _options.ContainsKey(key);
 
+    /// <summary>Determines whether the key-value-pair is enabled.</summary>
+    /// <param name="kvp">The pair to check.</param>
+    /// <returns>Whether the parameter <paramref name="kvp"/> is enabled.</returns>
+    public bool IsEnabled(KeyValuePair<string, JsonNode?> kvp)
+    {
+        if (kvp.Value is not JsonObject obj ||
+            obj.TryGetPropertyValue("yaml_option", out var options) ||
+            options is not JsonArray array)
+            return true;
+
+        foreach (var option in array)
+            if (option?.GetValueKind() is JsonValueKind.String && option.ToString() is var optionStr)
+            {
+                if (this[optionStr] > 0)
+                    continue;
+
+                return false;
+            }
+
+        return true;
+    }
+
     /// <inheritdoc />
     bool IDictionary<string, object?>.Remove(string key) =>
         key switch

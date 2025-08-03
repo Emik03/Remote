@@ -108,17 +108,20 @@ public sealed record ApReader(
     }
 
     /// <summary>Extracts all categories.</summary>
+    /// <param name="yaml">The yaml options.</param>
     /// <param name="logger">The logger.</param>
     /// <returns>The categories.</returns>
-    public (FrozenSet<string>, FrozenSortedDictionary) ExtractCategories(Action<string>? logger)
+    public (FrozenSet<string>, FrozenSet<string>, FrozenSortedDictionary)
+        ExtractCategories(ApYaml yaml, Action<string>? logger)
     {
         logger?.Invoke("Creating fast lookup tables for categories...");
 
-        return Categories is not null
-            ? (Categories.Where(IsHiddenTrue).Select(x => x.Key).ToFrozenSet(FrozenSortedDictionary.Comparer),
-                FrozenSortedDictionary
-                   .From(Categories.Select(GetOptions).ToDictionary(FrozenSortedDictionary.Comparer)))
-            : (FrozenSet<string>.Empty, FrozenSortedDictionary.Empty);
+        // ReSharper disable once InlineTemporaryVariable
+        return Categories is { } c
+            ? (c.Where(yaml.IsEnabled).Select(x => x.Key).ToFrozenSet(FrozenSortedDictionary.Comparer),
+                c.Where(IsHiddenTrue).Select(x => x.Key).ToFrozenSet(FrozenSortedDictionary.Comparer),
+                FrozenSortedDictionary.From(c.Select(GetOptions).ToDictionary(FrozenSortedDictionary.Comparer)))
+            : (FrozenSet<string>.Empty, FrozenSet<string>.Empty, FrozenSortedDictionary.Empty);
     }
 
     /// <summary>Extracts all locations.</summary>

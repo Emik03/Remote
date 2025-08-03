@@ -747,7 +747,8 @@ public sealed partial class Client(ApYaml? yaml = null)
             LocationStatus.OutOfLogic => _showOutOfLogic,
             LocationStatus.Checked => _showAlreadyChecked,
             _ => throw new ArgumentOutOfRangeException(nameof(location), this[location].Status, null),
-        };
+        } &&
+        _evaluator?.DisabledLocations.Contains(location) is not true;
 
     /// <summary>Whether the hint should be visible.</summary>
     /// <param name="hint">The hint.</param>
