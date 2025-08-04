@@ -113,7 +113,7 @@ public sealed partial record ApEvaluator(
         catch (Exception e)
 #pragma warning restore CA1031
         {
-            logger?.Invoke(e.Message);
+            logger?.Invoke(e.ToString());
             return null;
         }
     }
