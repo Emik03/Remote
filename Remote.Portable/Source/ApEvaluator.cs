@@ -26,7 +26,7 @@ public sealed partial record ApEvaluator(
     FrozenSet<string> DisabledItems,
     FrozenSet<string> HiddenCategories,
     FrozenDictionary<string, ApLogic> LocationsToLogic,
-    FrozenSortedDictionary CategoryToLocations,
+    FrozenSortedDictionary CategoryToLocations, // ReSharper disable once NotAccessedPositionalProperty.Global
     FrozenSortedDictionary CategoryToYaml,
     FrozenSortedDictionary CategoryToItems,
     FrozenSortedDictionary ItemToCategories,

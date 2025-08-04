@@ -167,9 +167,9 @@ public sealed partial class ApLogic(
         // A * A * B ->     A * B
         right is { IsAnd: true, And: var (arl, arr) } && (arl == right || arr == right) ? right.Check(left) :
         // This code was never in the bible.
-        left is { IsAnd: true, And: var (alll, alrl) } && (alll & right) is { IsOptimized: true } ll ? OfAnd(ll, alrl) :
+        left is { IsAnd: true, And: var (alll, alrl) } && (alrl & right) is { IsOptimized: true } ll ? OfAnd(ll, alll) :
         left is { IsAnd: true, And: var (allr, alrr) } && (allr & right) is { IsOptimized: true } rl ? OfAnd(rl, alrr) :
-        right is { IsAnd: true, And: var (arll, arrl) } && (left & arll) is { IsOptimized: true } lr ? OfAnd(arrl, lr) :
+        right is { IsAnd: true, And: var (arll, arrl) } && (left & arrl) is { IsOptimized: true } lr ? OfAnd(arll, lr) :
         right is { IsAnd: true, And: var (arlr, arrr) } && (left & arlr) is { IsOptimized: true } rr ? OfAnd(arrr, rr) :
         // We cannot optimize this.
         OfAnd(left, right);
