@@ -118,7 +118,7 @@ public sealed record ApReader(
 
         // ReSharper disable once InlineTemporaryVariable
         return Categories is { } c
-            ? (c.Where(yaml.IsEnabled).Select(x => x.Key).ToFrozenSet(FrozenSortedDictionary.Comparer),
+            ? (c.Omit(yaml.IsEnabled).Select(x => x.Key).ToFrozenSet(FrozenSortedDictionary.Comparer),
                 c.Where(IsHiddenTrue).Select(x => x.Key).ToFrozenSet(FrozenSortedDictionary.Comparer),
                 FrozenSortedDictionary.From(c.Select(GetOptions).ToDictionary(FrozenSortedDictionary.Comparer)))
             : (FrozenSet<string>.Empty, FrozenSet<string>.Empty, FrozenSortedDictionary.Empty);

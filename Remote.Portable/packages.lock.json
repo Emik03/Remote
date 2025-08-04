@@ -137,11 +137,11 @@
       },
       "InlineIL.Fody": {
         "type": "Direct",
-        "requested": "[1.10.0, )",
-        "resolved": "1.10.0",
-        "contentHash": "BndPPxQ0mwbWPP61pk29UE5/qLtbsC0ZL4SUst5Lrmde9KWjnjYcQlfIZVbzoIY+wyfPsH6B7dPzOadABC435Q==",
+        "requested": "[1.10.1, )",
+        "resolved": "1.10.1",
+        "contentHash": "t7fTKLi+5tuYzH8PItQm7m0QU6xma7+NPZCDPbn1ebEvtymKmduuueeSOv8Jwm5UmLt1JOUERP/abH4P1AiRLQ==",
         "dependencies": {
-          "Fody": "6.9.0"
+          "Fody": "6.9.2"
         }
       },
       "InlineMethod.Fody": {
@@ -183,9 +183,9 @@
       },
       "Meziantou.Analyzer": {
         "type": "Direct",
-        "requested": "[2.0.207, )",
-        "resolved": "2.0.207",
-        "contentHash": "iJFV54Pwv2opPxr1hVUsH4Bnxu+4WmvXvdVo8eN27aIRSf/nw/3rzTw+OEqz93hQz0Z29oT+YRRMkdk3DH0low=="
+        "requested": "[2.0.210, )",
+        "resolved": "2.0.210",
+        "contentHash": "c5x1jlgL+E6HRJcQQ6zwytR71iijs3cyYSUDT/HlH7k+wr8MxkfarjbodP6RxxfC7YNgqv/J7awnnd/nq0PqjQ=="
       },
       "Microsoft.CodeAnalysis.Analyzers": {
         "type": "Direct",
@@ -228,15 +228,15 @@
       },
       "Roslynator.Analyzers": {
         "type": "Direct",
-        "requested": "[4.13.1, )",
-        "resolved": "4.13.1",
-        "contentHash": "KZpLy6ZlCebMk+d/3I5KU2R7AOb4LNJ6tPJqPtvFXmO8bEBHQvCIAvJOnY2tu4C9/aVOROTDYUFADxFqw1gh/g=="
+        "requested": "[4.14.0, )",
+        "resolved": "4.14.0",
+        "contentHash": "AEWQMrb1rcmjv9FGzrwYSBb4INhDhsauS+wwTumG0wq8N1Il+CIQHqUZJ7bt0zYJEA1qXSqgpg8Fgwc88WrR/Q=="
       },
       "Roslynator.CodeAnalysis.Analyzers": {
         "type": "Direct",
-        "requested": "[4.13.1, )",
-        "resolved": "4.13.1",
-        "contentHash": "PwbuGlRFp87pdx9GVIjDmFwkYEfxVQKs0yWuIedTrUht2JwIzLe0Y7QNzgeJaE7E3YsCVED09h1X6WBqQ95XIA=="
+        "requested": "[4.14.0, )",
+        "resolved": "4.14.0",
+        "contentHash": "iUiC7mfaLWgUxnKyG90sCIwd4fLLrnDtOsVqh1PuAL+drDNi8If+2lG9B+gPjRrP/pYSfcu9TMRYSDMKOEpnoQ=="
       },
       "Scifa.CheckedExceptions": {
         "type": "Direct",
@@ -352,7 +352,6 @@
         }
       }
     },
-    "net10.0/linux-x64": {},
     "net9.0": {
       "Absence.Fody": {
         "type": "Direct",
@@ -489,11 +488,11 @@
       },
       "InlineIL.Fody": {
         "type": "Direct",
-        "requested": "[1.10.0, )",
-        "resolved": "1.10.0",
-        "contentHash": "BndPPxQ0mwbWPP61pk29UE5/qLtbsC0ZL4SUst5Lrmde9KWjnjYcQlfIZVbzoIY+wyfPsH6B7dPzOadABC435Q==",
+        "requested": "[1.10.1, )",
+        "resolved": "1.10.1",
+        "contentHash": "t7fTKLi+5tuYzH8PItQm7m0QU6xma7+NPZCDPbn1ebEvtymKmduuueeSOv8Jwm5UmLt1JOUERP/abH4P1AiRLQ==",
         "dependencies": {
-          "Fody": "6.9.0"
+          "Fody": "6.9.2"
         }
       },
       "InlineMethod.Fody": {
@@ -535,9 +534,9 @@
       },
       "Meziantou.Analyzer": {
         "type": "Direct",
-        "requested": "[2.0.207, )",
-        "resolved": "2.0.207",
-        "contentHash": "iJFV54Pwv2opPxr1hVUsH4Bnxu+4WmvXvdVo8eN27aIRSf/nw/3rzTw+OEqz93hQz0Z29oT+YRRMkdk3DH0low=="
+        "requested": "[2.0.210, )",
+        "resolved": "2.0.210",
+        "contentHash": "c5x1jlgL+E6HRJcQQ6zwytR71iijs3cyYSUDT/HlH7k+wr8MxkfarjbodP6RxxfC7YNgqv/J7awnnd/nq0PqjQ=="
       },
       "Microsoft.CodeAnalysis.Analyzers": {
         "type": "Direct",
@@ -580,15 +579,15 @@
       },
       "Roslynator.Analyzers": {
         "type": "Direct",
-        "requested": "[4.13.1, )",
-        "resolved": "4.13.1",
-        "contentHash": "KZpLy6ZlCebMk+d/3I5KU2R7AOb4LNJ6tPJqPtvFXmO8bEBHQvCIAvJOnY2tu4C9/aVOROTDYUFADxFqw1gh/g=="
+        "requested": "[4.14.0, )",
+        "resolved": "4.14.0",
+        "contentHash": "AEWQMrb1rcmjv9FGzrwYSBb4INhDhsauS+wwTumG0wq8N1Il+CIQHqUZJ7bt0zYJEA1qXSqgpg8Fgwc88WrR/Q=="
       },
       "Roslynator.CodeAnalysis.Analyzers": {
         "type": "Direct",
-        "requested": "[4.13.1, )",
-        "resolved": "4.13.1",
-        "contentHash": "PwbuGlRFp87pdx9GVIjDmFwkYEfxVQKs0yWuIedTrUht2JwIzLe0Y7QNzgeJaE7E3YsCVED09h1X6WBqQ95XIA=="
+        "requested": "[4.14.0, )",
+        "resolved": "4.14.0",
+        "contentHash": "iUiC7mfaLWgUxnKyG90sCIwd4fLLrnDtOsVqh1PuAL+drDNi8If+2lG9B+gPjRrP/pYSfcu9TMRYSDMKOEpnoQ=="
       },
       "Scifa.CheckedExceptions": {
         "type": "Direct",
@@ -703,7 +702,6 @@
           "System.Composition.Runtime": "8.0.0"
         }
       }
-    },
-    "net9.0/linux-x64": {}
+    }
   }
 }
