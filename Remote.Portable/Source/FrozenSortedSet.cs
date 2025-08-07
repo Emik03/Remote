@@ -10,6 +10,9 @@ namespace Remote.Portable;
 public readonly record struct FrozenSortedSet(FrozenSet<string> Set, ImmutableArray<string> Array)
     : IReadOnlySet<string>, IEqualityOperators<FrozenSortedSet, FrozenSortedSet, bool>
 {
+    /// <summary>Gets the empty set.</summary>
+    public static FrozenSortedSet Empty => new(FrozenSet<string>.Empty, ImmutableArray<string>.Empty);
+
     /// <inheritdoc />
     int IReadOnlyCollection<string>.Count => Array.Length;
 
