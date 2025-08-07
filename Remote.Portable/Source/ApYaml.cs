@@ -195,7 +195,7 @@ public sealed class ApYaml : IDictionary<string, object?>
     public bool IsEnabled(KeyValuePair<string, JsonNode?> kvp)
     {
         if (kvp.Value is not JsonObject obj ||
-            obj.TryGetPropertyValue("yaml_option", out var options) ||
+            !obj.TryGetPropertyValue("yaml_option", out var options) ||
             options is not JsonArray array)
             return true;
 
