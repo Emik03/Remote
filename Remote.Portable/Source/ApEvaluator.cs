@@ -64,13 +64,13 @@ public sealed partial record ApEvaluator(
         : this(
             currentItems,
             disabledCategories,
-            Infer(disabledCategories, categoryToLocations, true),
-            Infer(disabledCategories, itemToCategories, false),
+            Infer(disabledCategories, categoryToLocations),
+            Infer(disabledCategories, itemToCategories.Invert() is var categoryToItems ? categoryToItems : default),
             hiddenCategories,
             locationsToLogic,
             categoryToLocations,
             categoryToYaml,
-            itemToCategories.Invert(),
+            categoryToItems,
             itemToCategories,
             itemCount,
             Infer(itemToCategories, itemCount),
@@ -168,21 +168,11 @@ public sealed partial record ApEvaluator(
     /// <summary>Gets the disabled elements.</summary>
     /// <param name="disabledCategories">The set of disabled categories.</param>
     /// <param name="dictionary">The conversion.</param>
-    /// <param name="isForward">
-    /// Whether the conversion is forward, i.e. from the category to the set of elements, and not the other way around.
-    /// </param>
     /// <returns>The disabled elements.</returns>
     // ReSharper disable ParameterTypeCanBeEnumerable.Local SuggestBaseTypeForParameter
-    static FrozenSet<string> Infer(
-        FrozenSet<string> disabledCategories,
-        FrozenSortedDictionary dictionary,
-        bool isForward
-    ) =>
-        isForward
-            ? disabledCategories.SelectMany(x => dictionary[x]).ToFrozenSet(FrozenSortedDictionary.Comparer)
-            : dictionary.Array.Where(x => x.Value.Any(disabledCategories.Contains))
-               .Select(x => x.Key)
-               .ToFrozenSet(FrozenSortedDictionary.Comparer);
+    static FrozenSet<string> Infer(FrozenSet<string> disabledCategories, FrozenSortedDictionary dictionary) =>
+        disabledCategories.SelectMany(x => dictionary.TryGetValue(x, out var set) ? set : FrozenSortedSet.Empty)
+           .ToFrozenSet(FrozenSortedDictionary.Comparer);
 
     /// <summary>Infers the category count.</summary>
     /// <param name="itemToPhantoms">The conversion from items to the set of categories it falls under.</param>
