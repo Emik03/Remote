@@ -217,9 +217,9 @@
       },
       "Meziantou.Analyzer": {
         "type": "Direct",
-        "requested": "[2.0.210, )",
-        "resolved": "2.0.210",
-        "contentHash": "c5x1jlgL+E6HRJcQQ6zwytR71iijs3cyYSUDT/HlH7k+wr8MxkfarjbodP6RxxfC7YNgqv/J7awnnd/nq0PqjQ=="
+        "requested": "[2.0.212, )",
+        "resolved": "2.0.212",
+        "contentHash": "U91ktjjTRTccUs3Lk+hrLD9vW+2+lhnsOf4G1GpRSJi1pLn3uK5CU6wGP9Bmz1KlJs6Oz1GGoMhxQBoqQsmAuQ=="
       },
       "Microsoft.CodeAnalysis.Analyzers": {
         "type": "Direct",
@@ -235,11 +235,11 @@
       },
       "MonoGame.Framework.DesktopGL": {
         "type": "Direct",
-        "requested": "[3.8.5-develop.4, )",
-        "resolved": "3.8.5-develop.4",
-        "contentHash": "6EgmKk/IIUKy9r8Ug9ykHjvwEOLFdQLUlGpeaDuKuCdJT6L+3LnL1Mkl68zdCfu/tTi5cr+JwYrYaRhTmwzLaw==",
+        "requested": "[3.8.5-develop.6, )",
+        "resolved": "3.8.5-develop.6",
+        "contentHash": "jmZkVdKw2gEjJA3u8Gs32+NMbjC7y8fVVZ4DD7ppahqOSh2WUkDx9Hc52h5LuR5LkSxR3kCw3xT3dithTBfwtA==",
         "dependencies": {
-          "MonoGame.Library.OpenAL": "1.24.3.1",
+          "MonoGame.Library.OpenAL": "1.24.3.2",
           "MonoGame.Library.SDL": "2.32.2.1",
           "NVorbis": "0.10.4"
         }
@@ -354,8 +354,8 @@
       },
       "MonoGame.Library.OpenAL": {
         "type": "Transitive",
-        "resolved": "1.24.3.1",
-        "contentHash": "EZI5R3WbrjGkdjeLUEDimdSTNX4K2wtLdgJ9RQqfq//BKC4/3fLq8vJ0Ji3kjvxpfZjMH1b3h/VPOJ42fTkhyw=="
+        "resolved": "1.24.3.2",
+        "contentHash": "nGRsXQXs+NSUC3C5w90hFQfyKdZPpBnHnyg2w+Dw/2pUH7s+CoRWTJNYbzzdJf3+aeUvfvG4rTbFvMKDDj5olA=="
       },
       "MonoGame.Library.SDL": {
         "type": "Transitive",
