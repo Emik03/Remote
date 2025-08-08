@@ -452,6 +452,24 @@
           "CommunityToolkit.HighPerformance": "[8.4.0, )"
         }
       }
+    },
+    "net10.0/linux-x64": {
+      "ImGui.NET": {
+        "type": "Direct",
+        "requested": "[1.91.6.1, )",
+        "resolved": "1.91.6.1",
+        "contentHash": "Ph3j8pO6UM28PPJWP+5LEJSPVPkd8ivpVS8tRyY9b0IHn1HDIrMZ2o/FdiXaYW6YhNxMHmbevw6Jcfs+IDKi0Q=="
+      },
+      "MonoGame.Library.OpenAL": {
+        "type": "Transitive",
+        "resolved": "1.24.3.2",
+        "contentHash": "nGRsXQXs+NSUC3C5w90hFQfyKdZPpBnHnyg2w+Dw/2pUH7s+CoRWTJNYbzzdJf3+aeUvfvG4rTbFvMKDDj5olA=="
+      },
+      "MonoGame.Library.SDL": {
+        "type": "Transitive",
+        "resolved": "2.32.2.1",
+        "contentHash": "T4E2ppGlSTC2L9US1rxtdg3qTbarRzNId31xZoumUW9cf9Nq8nRQPMu9GzvZGrhfSySf0+UWPEj1rlicps+P/w=="
+      }
     }
   }
 }
