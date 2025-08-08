@@ -302,6 +302,11 @@ public sealed record ApReader(
     {
         ApLogic? path = null;
 
+        if (regions.All(x => !IsStarting(x.Value)))
+            return (regions[target] as JsonObject)?.TryGetPropertyValue("requires", out var requires) is true
+                ? TokenizeAndParse(requires)
+                : null;
+
         foreach (var (name, value) in regions)
         {
             if (!IsStarting(value))
