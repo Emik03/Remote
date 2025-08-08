@@ -416,6 +416,7 @@ public sealed partial class Client
         {
             Close(false);
             Connect(preferences);
+            return;
         }
 
         ImGui.SeparatorText("Theming");
