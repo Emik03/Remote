@@ -352,6 +352,7 @@
         }
       }
     },
+    "net10.0/linux-x64": {},
     "net9.0": {
       "Absence.Fody": {
         "type": "Direct",
@@ -702,6 +703,7 @@
           "System.Composition.Runtime": "8.0.0"
         }
       }
-    }
+    },
+    "net9.0/linux-x64": {}
   }
 }
