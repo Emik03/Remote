@@ -166,12 +166,13 @@ public sealed partial record ApEvaluator
     /// <summary>Determines whether the yaml option is disabled.</summary>
     /// <param name="yamlOption">The yaml option to check.</param>
     /// <returns>Whether the yaml option is disabled.</returns>
-    bool YamlDisabled(ReadOnlyMemory<char> yamlOption) => YamlSpan[yamlOption.Span] is 0;
+    bool YamlDisabled(ReadOnlyMemory<char> yamlOption) => !YamlEnabled(yamlOption);
 
     /// <summary>Determines whether the yaml option is enabled.</summary>
     /// <param name="yamlOption">The yaml option to check.</param>
     /// <returns>Whether the yaml option is enabled.</returns>
-    bool YamlEnabled(ReadOnlyMemory<char> yamlOption) => YamlSpan[yamlOption.Span] is not 0;
+    bool YamlEnabled(ReadOnlyMemory<char> yamlOption) =>
+        YamlSpan.TryGetValue(yamlOption.Span, out var value) && value is not 0;
 
     /// <summary>Determines whether the amount of a phantom item is sufficiently obtained.</summary>
     /// <param name="phantomItem">The phantom item to check.</param>
@@ -211,7 +212,7 @@ public sealed partial record ApEvaluator
     (int Yaml, int Logic, bool Inverted)? Split(ReadOnlyMemory<char> expression, string comparator) =>
         expression.Span.SplitOn(comparator) is (var setting, { Body: not [] and var body }) &&
         int.TryParse(body, out var logic)
-            ? (YamlSpan[setting.TrimStart('!').Trim()], logic, setting.StartsWith('!'))
+            ? (YamlSpan.TryGetValue(setting.TrimStart('!').Trim(), out var y) ? y : 0, logic, setting.StartsWith('!'))
             : null;
 
     /// <summary>Returns the function to evaluate whether the specific item is in the provided category.</summary>
