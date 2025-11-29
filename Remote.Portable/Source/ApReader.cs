@@ -117,7 +117,7 @@ public sealed record ApReader(
         logger?.Invoke("Creating fast lookup tables for categories...");
 
         // ReSharper disable once InlineTemporaryVariable
-        return Categories is { } c
+        return Categories is { Count: not 0 } c
             ? (c.Omit(yaml.IsEnabled).Select(x => x.Key).ToFrozenSet(FrozenSortedDictionary.Comparer),
                 c.Where(IsHiddenTrue).Select(x => x.Key).ToFrozenSet(FrozenSortedDictionary.Comparer),
                 FrozenSortedDictionary.From(c.Select(GetOptions).ToDictionary(FrozenSortedDictionary.Comparer)))
