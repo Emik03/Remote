@@ -1168,7 +1168,7 @@ public sealed partial class Client
             var last = found is [] ? int.MaxValue : found.Max(x => x.Item.LastOrderReceived);
 
             ReceivedItem received =
-                new(ItemFlags.None, phantomItem, sum, last, [..found.SelectMany(x => x.Item.Locations ?? [])]);
+                new(ItemFlags.None, phantomItem, sum, last, [..found.SelectMany(x => x.Item.Locations ?? [])], true);
 
             if (!received.IsMatch(_slot, _showUsedItems))
                 continue;
