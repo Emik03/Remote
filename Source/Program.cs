@@ -12,7 +12,7 @@ static Assembly? LoadFile(string name, ResolveEventArgs args) =>
 AppDomain.CurrentDomain.AssemblyResolve += (_, a) => LoadFile("Remote.Portable", a) ?? LoadFile("Remote.Resources", a);
 
 AppDomain.CurrentDomain.UnhandledException += (_, e) => File.WriteAllText(
-    Path.Join(Path.GetTempPath(), $"{nameof(Remote)}.{DateTime.Now.ToString("s").Replace(':', '_')}.crash.txt"),
+    Path.Join(Path.GetTempPath(), $"{nameof(Remote)}.{Client.Now}.crash.txt"),
     e.ExceptionObject.ToString()
 );
 

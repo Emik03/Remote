@@ -497,6 +497,12 @@ public sealed record ApReader(
         process.StandardInput.Close();
         logger?.Invoke("Waiting for python...");
         var str = process.StandardOutput.ReadToEnd();
+        logger?.Invoke("--- BEGIN PYTHON STANDARD OUTPUT ---");
+        logger?.Invoke(str);
+        logger?.Invoke("--- END PYTHON STANDARD OUTPUT ---");
+        logger?.Invoke("--- BEGIN PYTHON STANDARD ERROR ---");
+        logger?.Invoke(process.StandardError.ReadToEnd());
+        logger?.Invoke("--- END PYTHON STANDARD ERROR ---");
         logger?.Invoke("Deserializing the output from python...");
         return JsonSerializer.Deserialize<JsonNode>(str, RemoteJsonSerializerContext.Default.JsonNode) as JsonObject;
     }

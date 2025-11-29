@@ -83,7 +83,7 @@ public static partial class DesktopNotification
             new ProcessStartInfo("powershell", [Script])
             {
                 ErrorDialog = false,
-                CreateNoWindow = false,
+                CreateNoWindow = true,
                 UseShellExecute = false,
                 RedirectStandardError = true,
                 RedirectStandardInput = true,

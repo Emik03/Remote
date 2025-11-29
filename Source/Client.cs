@@ -350,6 +350,9 @@ public sealed partial class Client(ApYaml? yaml = null)
         }
     }
 
+    /// <summary>Gets the time right now as a file-name-friendly string.</summary>
+    public static string Now => DateTime.Now.ToString("s").Replace(':', '_');
+
     /// <summary>Gets the color.</summary>
     public RemoteColor? Color => RemoteColor.TryParse(_slot.Color, out var color) ? color : null;
 
@@ -370,10 +373,17 @@ public sealed partial class Client(ApYaml? yaml = null)
         {
             field = value;
 
-            if (s_debugClientEvaluator)
-                Console.WriteLine(value);
+            if (!s_debugClientEvaluator)
+                return;
+
+            Console.WriteLine(value);
+            File.AppendAllText(LogFile, value);
         }
     }
+
+    /// <summary>Gets the time at the time the client was first created.</summary>
+    [field: MaybeNull]
+    string LogFile => field ??= Path.Join(Path.GetTempPath(), $"{Now}.{_yaml.Game}.{_yaml.Name}.logic.txt");
 
     /// <summary>Contains the last retrieved hints.</summary>
     HintMessage[]? LastHints
@@ -681,11 +691,12 @@ public sealed partial class Client(ApYaml? yaml = null)
         {
             ref var value = ref this[location];
             var id = helper.GetLocationIdFromName(_yaml.Game, location);
+            var isValidLocation = helper.AllLocations.Contains(id);
 
             (value.Logic, value.Status) = 0 switch
             {
-                _ when id is -1 && !IsGoal(location) => (null, LocationStatus.Hidden),
-                _ when helper.AllLocations.Contains(id) && !helper.AllMissingLocations.Contains(id) ||
+                _ when !isValidLocation || id is -1 && !IsGoal(location) => (null, LocationStatus.Hidden),
+                _ when isValidLocation && !helper.AllMissingLocations.Contains(id) ||
                     _slot.CheckedLocations.Contains(location) => (null, LocationStatus.Checked),
                 _ when _evaluator is null => (null, LocationStatus.ProbablyReachable),
                 _ when _evaluator.InLogic(location) is { } logic => (logic, LocationStatus.OutOfLogic),
