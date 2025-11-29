@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: MPL-2.0
 # Thanks to Darius for writing this for me: https://github.com/itsMapleLeaf/
 import importlib
+import importlib.util
 import json
 import os
 from pathlib import Path
@@ -27,13 +28,32 @@ apworld_zip = ZipFile(apworld_path, mode="r")
 with TemporaryDirectory() as temp_world_folder:
     apworld_zip.extractall(temp_world_folder)
     apworld_name = os.listdir(temp_world_folder)[0]
+    world_src_root = Path(temp_world_folder) / apworld_name
 
-    original_path = sys.path
+    module_file_path = world_src_root / f"Data.py"
+
+    # key by the manual project name,
+    # so it doesn't cache other manual project modules by the same name
+    module_key = f"manual_data_{apworld_name}"
+
+    module_spec = importlib.util.spec_from_file_location(
+        name=module_key,
+        location=module_file_path,
+        submodule_search_locations=[str(world_src_root)],
+    )
+
+    if not module_spec or not module_spec.loader:
+        raise Exception(f"Failed to create module spec for {module_file_path}")
+
+    data_module = importlib.util.module_from_spec(module_spec)
+    sys.modules[module_key] = data_module
+
+    original_sys_path = sys.path.copy()
     try:
-        sys.path += [temp_world_folder, archipelago_repo_path]
-        data_module = importlib.import_module(".Data", apworld_name)
+        sys.path.append(archipelago_repo_path)
+        module_spec.loader.exec_module(data_module)
     finally:
-        sys.path = original_path
+        sys.path = original_sys_path
 
     json.dump(
         {
@@ -41,9 +61,19 @@ with TemporaryDirectory() as temp_world_folder:
             "items.json": data_module.item_table,
             "locations.json": data_module.location_table,
             "regions.json": data_module.region_table,
-            "categories.json": data_module.category_table if hasattr(data_module, "category_table") else None,
-            "options.json": data_module.option_table if hasattr(data_module, "option_table") else None,
-            "meta.json": data_module.meta_table if hasattr(data_module, "meta_table") else None,
+            "categories.json": (
+                data_module.category_table
+                if hasattr(data_module, "category_table")
+                else None
+            ),
+            "options.json": (
+                data_module.option_table
+                if hasattr(data_module, "option_table")
+                else None
+            ),
+            "meta.json": (
+                data_module.meta_table if hasattr(data_module, "meta_table") else None
+            ),
         },
         fp=sys.stdout,
         indent=debug_indent,
