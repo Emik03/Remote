@@ -993,7 +993,7 @@ public sealed partial class Client(ApYaml? yaml = null)
     /// <summary>Gets the hints asynchronously.</summary>
     /// <returns>The task to get the hints.</returns>
     async Task<HintMessage[]?> GetHintsAsync() =>
-        _session?.DataStorage?.GetHintsAsync() is { } task && await task is { } hints
+        _session?.Hints?.GetHintsAsync() is { } task && await task is { } hints
             ? [..hints.Select(Message).OrderBy(x => x.Message, FrozenSortedDictionary.Comparer)]
             : null;
 }

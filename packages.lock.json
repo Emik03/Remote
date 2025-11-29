@@ -10,15 +10,15 @@
       },
       "Archipelago.MultiClient.Net": {
         "type": "Direct",
-        "requested": "[6.6.1, )",
-        "resolved": "6.6.1",
-        "contentHash": "CvojDLce6/ZkDTa/JNeCX4fM7X0gDdVAI5oIOKOtZjsOk4xJ9kTBix6ajnV2tIABEgpKzmMQm21Oz93Bu0m7IA=="
+        "requested": "[6.7.0, )",
+        "resolved": "6.7.0",
+        "contentHash": "fsK7kx3dC4EwvEA7kMTUwbP+kYeanYVWHyTXOjYKxl6zj4elHMj42YCjvOYqHee+V2NrRm0f0pljhWEY+BI72g=="
       },
       "Archipelago.MultiClient.Net.Analyzers": {
         "type": "Direct",
-        "requested": "[1.5.0, )",
-        "resolved": "1.5.0",
-        "contentHash": "4tQEOY5xrrq0Tzct4gP0ceeZkLF3aim+nSBS9KiHxkR7wTqSjU23nn7V0I0SSHpRtIP/DalZq8t7bSMmdv9npg=="
+        "requested": "[2.0.1, )",
+        "resolved": "2.0.1",
+        "contentHash": "a/YdkF1higP34UtDKUOfd7fSheWyV1tAFg449zYWxDvwGLUQ6JKHh6U2ozjpwHDUGbwmin16Rb1sN01moxqsDg=="
       },
       "AsyncFixer": {
         "type": "Direct",
@@ -102,9 +102,9 @@
       },
       "DotNetProjectFile.Analyzers": {
         "type": "Direct",
-        "requested": "[1.7.0, )",
-        "resolved": "1.7.0",
-        "contentHash": "eyJL+587l3ChUk8L0hqaXSU9l4ecVTEqc2VdeWYFFCVtkEmv7B7unqMkIer3EaeiCfE8PzGUEMxq42PweURd+Q=="
+        "requested": "[1.8.0, )",
+        "resolved": "1.8.0",
+        "contentHash": "Gtu1uwGjnzKe8YbBGzdghpaZAe3O3jpSd5Z49xTmGYYXdoHVdrHNZCGHTHlytRAFsTa5GhjYfbepAUItwqyVdQ=="
       },
       "Emik.Analyzers.Matches": {
         "type": "Direct",
@@ -138,9 +138,9 @@
       },
       "Fody": {
         "type": "Direct",
-        "requested": "[6.9.2, )",
-        "resolved": "6.9.2",
-        "contentHash": "YBHobPGogb0vYhGYIxn/ndWqTjNWZveDi5jdjrcshL2vjwU3gQGyDeI7vGgye+2rAM5fGRvlLgNWLW3DpviS/w=="
+        "requested": "[6.9.3, )",
+        "resolved": "6.9.3",
+        "contentHash": "1CUGgFdyECDKgi5HaUBhdv6k+VG9Iy4OCforGfHyar3xQXAJypZkzymgKtWj/4SPd6nSG0Qi7NH71qHrDSZLaA=="
       },
       "GlobalUsingsAnalyzer": {
         "type": "Direct",
@@ -186,9 +186,9 @@
       },
       "JetBrains.Annotations": {
         "type": "Direct",
-        "requested": "[2025.2.0, )",
-        "resolved": "2025.2.0",
-        "contentHash": "2BvMkOSW+50EbQFhWFIPWTqmcDLiyyjwkMN7lN386bhP2vN/7ts5t59qu11HtenmHFxqDzaD8J1fFoh+QTOzVA=="
+        "requested": "[2025.2.4, )",
+        "resolved": "2025.2.4",
+        "contentHash": "TwbgxAkXxY+vNEhNVx/QXjJ4vqxmepOjsgRvvImQPbHkHMMb4W+ahL3laMsxXKtNT7iMy+E1B3xkqao2hf1n3A=="
       },
       "JetBrainsAnnotations.Fody": {
         "type": "Direct",
@@ -217,9 +217,9 @@
       },
       "Meziantou.Analyzer": {
         "type": "Direct",
-        "requested": "[2.0.212, )",
-        "resolved": "2.0.212",
-        "contentHash": "U91ktjjTRTccUs3Lk+hrLD9vW+2+lhnsOf4G1GpRSJi1pLn3uK5CU6wGP9Bmz1KlJs6Oz1GGoMhxQBoqQsmAuQ=="
+        "requested": "[2.0.257, )",
+        "resolved": "2.0.257",
+        "contentHash": "HADbzZ4rto3boQpWyXIFFc9bxDPviscCXiSQWOTICKD1OJ4gwa9aMfANoQngOk/2en3I9YAHwQ0WXxVMzCTJ+A=="
       },
       "Microsoft.CodeAnalysis.Analyzers": {
         "type": "Direct",
@@ -229,18 +229,18 @@
       },
       "Microsoft.CodeAnalysis.NetAnalyzers": {
         "type": "Direct",
-        "requested": "[10.0.0-preview.25358.103, )",
-        "resolved": "10.0.0-preview.25358.103",
-        "contentHash": "yNUAHIaMZ3uxL2qiRAXOZ4nOXQ5Tzui+bIIYIwUgih4iAdmuCa+Byu2+1rdK6W3/F0vfwU5gyAQ6YhO49KMkPw=="
+        "requested": "[10.0.100, )",
+        "resolved": "10.0.100",
+        "contentHash": "uj9VuyvqylnNueJfU7u2PkI/hEMpZl8Wg9BXyI0eatNEldU5jDYPdwsM8aDL18+1oLovju25MiqOPaGRBnG72A=="
       },
       "MonoGame.Framework.DesktopGL": {
         "type": "Direct",
-        "requested": "[3.8.5-develop.6, )",
-        "resolved": "3.8.5-develop.6",
-        "contentHash": "jmZkVdKw2gEjJA3u8Gs32+NMbjC7y8fVVZ4DD7ppahqOSh2WUkDx9Hc52h5LuR5LkSxR3kCw3xT3dithTBfwtA==",
+        "requested": "[3.8.5-develop.13, )",
+        "resolved": "3.8.5-develop.13",
+        "contentHash": "62DELrAFtTyS1hg1Mdmi8eHbkUoNaZ9opyCvd8OnfPGeGQIR2C+alIDqU7fQLhzl8D4uEfVXVBNnPZLeD/ySPg==",
         "dependencies": {
           "MonoGame.Library.OpenAL": "1.24.3.2",
-          "MonoGame.Library.SDL": "2.32.2.1",
+          "MonoGame.Library.SDL": "2.32.10.1",
           "NVorbis": "0.10.4"
         }
       },
@@ -273,15 +273,15 @@
       },
       "Roslynator.Analyzers": {
         "type": "Direct",
-        "requested": "[4.14.0, )",
-        "resolved": "4.14.0",
-        "contentHash": "AEWQMrb1rcmjv9FGzrwYSBb4INhDhsauS+wwTumG0wq8N1Il+CIQHqUZJ7bt0zYJEA1qXSqgpg8Fgwc88WrR/Q=="
+        "requested": "[4.14.1, )",
+        "resolved": "4.14.1",
+        "contentHash": "yMSjze/xMYDF6PCE60/ULWx0tttNyKAndw2KijNxbKil0FX8nvDeEneDZGma8Uifk17RlfZqIXxf1mmBmhRHjg=="
       },
       "Roslynator.CodeAnalysis.Analyzers": {
         "type": "Direct",
-        "requested": "[4.14.0, )",
-        "resolved": "4.14.0",
-        "contentHash": "iUiC7mfaLWgUxnKyG90sCIwd4fLLrnDtOsVqh1PuAL+drDNi8If+2lG9B+gPjRrP/pYSfcu9TMRYSDMKOEpnoQ=="
+        "requested": "[4.14.1, )",
+        "resolved": "4.14.1",
+        "contentHash": "axessewcgSLn+UAtKyMKPgXpzIldnivynjRe9qsRjrVtrxjctDpFDEjAkcbpDjhR0ccm8/+ihOna60wnXJ/66A=="
       },
       "Scifa.CheckedExceptions": {
         "type": "Direct",
@@ -359,8 +359,8 @@
       },
       "MonoGame.Library.SDL": {
         "type": "Transitive",
-        "resolved": "2.32.2.1",
-        "contentHash": "T4E2ppGlSTC2L9US1rxtdg3qTbarRzNId31xZoumUW9cf9Nq8nRQPMu9GzvZGrhfSySf0+UWPEj1rlicps+P/w=="
+        "resolved": "2.32.10.1",
+        "contentHash": "mklIUC50O8y2zQ+BcT7tmnBrVT8ZQuHiODW3LxGWJ5UZIZM0PaePJfGuzZB9bSbdP3WvV+RtyvTfnMY7wz0f0w=="
       },
       "NETStandard.Library": {
         "type": "Transitive",
@@ -451,24 +451,6 @@
           "CommunityToolkit.Diagnostics": "[8.4.0, )",
           "CommunityToolkit.HighPerformance": "[8.4.0, )"
         }
-      }
-    },
-    "net10.0/linux-x64": {
-      "ImGui.NET": {
-        "type": "Direct",
-        "requested": "[1.91.6.1, )",
-        "resolved": "1.91.6.1",
-        "contentHash": "Ph3j8pO6UM28PPJWP+5LEJSPVPkd8ivpVS8tRyY9b0IHn1HDIrMZ2o/FdiXaYW6YhNxMHmbevw6Jcfs+IDKi0Q=="
-      },
-      "MonoGame.Library.OpenAL": {
-        "type": "Transitive",
-        "resolved": "1.24.3.2",
-        "contentHash": "nGRsXQXs+NSUC3C5w90hFQfyKdZPpBnHnyg2w+Dw/2pUH7s+CoRWTJNYbzzdJf3+aeUvfvG4rTbFvMKDDj5olA=="
-      },
-      "MonoGame.Library.SDL": {
-        "type": "Transitive",
-        "resolved": "2.32.2.1",
-        "contentHash": "T4E2ppGlSTC2L9US1rxtdg3qTbarRzNId31xZoumUW9cf9Nq8nRQPMu9GzvZGrhfSySf0+UWPEj1rlicps+P/w=="
       }
     }
   }

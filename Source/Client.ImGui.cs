@@ -449,7 +449,7 @@ public sealed partial class Client
             if (_crashOnDeathLink != crashOnDeathLink)
                 _session?.ConnectionInfo.UpdateConnectionOptions(
                     _crashOnDeathLink
-                        ? ["AP", nameof(Remote), nameof(DeathLink), "Will Crash on DeathLink"]
+                        ? ["AP", nameof(Remote), nameof(DeathLink), "Crashes on DeathLink"]
                         : ["AP", nameof(Remote), nameof(DeathLink)]
                 );
         }
