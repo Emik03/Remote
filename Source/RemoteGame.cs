@@ -32,11 +32,13 @@ public sealed class RemoteGame : Game
     /// <summary>Initializes a new instance of the <see cref="Game"/> class.</summary>
     public RemoteGame()
     {
+        const double UnfocusedFps = 10;
+
         new GraphicsDeviceManager(this)
         {
             PreferredBackBufferWidth = 1600,
             PreferredBackBufferHeight = 900,
-            SynchronizeWithVerticalRetrace = false,
+            SynchronizeWithVerticalRetrace = true,
         }.ApplyChanges();
 
         _renderer = new(this, true);
@@ -48,6 +50,7 @@ public sealed class RemoteGame : Game
         IsFixedTimeStep = false;
         Window.Title = s_name;
         Window.AllowUserResizing = true;
+        TargetElapsedTime = TimeSpan.FromSeconds(1 / UnfocusedFps);
 #if !ANDROID
         Window.FileDrop += OnFileDrop;
 #endif
@@ -75,6 +78,9 @@ public sealed class RemoteGame : Game
 
         base.Dispose(disposing);
     }
+
+    /// <inheritdoc />
+    protected override void Update(GameTime gameTime) => IsFixedTimeStep = !IsActive;
 
     /// <inheritdoc />
     protected override void Draw(GameTime gameTime)
