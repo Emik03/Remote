@@ -60,6 +60,7 @@ public sealed partial class Client(ApYaml? yaml = null)
     /// <param name="Count">The number of times this item was obtained.</param>
     /// <param name="LastOrderReceived">The last time the specific item was obtained.</param>
     /// <param name="Locations">The locations that obtained this item.</param>
+    /// <param name="IsPhantom">Whether it is a phantom item.</param>
 #pragma warning disable MA0097
     readonly record struct ReceivedItem(
 #pragma warning restore MA0097
@@ -67,19 +68,22 @@ public sealed partial class Client(ApYaml? yaml = null)
         string? Name,
         int Count,
         int LastOrderReceived,
-        IReadOnlyList<(string LocationDisplayName, string LocationGame)>? Locations
+        IReadOnlyList<(string LocationDisplayName, string LocationGame)>? Locations,
+        bool IsPhantom
     ) : IComparable<ReceivedItem>
     {
         /// <summary>Initializes a new instance of the <see cref="ReceivedItem"/> struct.</summary>
         /// <param name="info">The <see cref="ItemInfo"/> to deconstruct.</param>
-        public ReceivedItem(ICollection<(int Index, ItemInfo? Item)> info)
+        /// <param name="isPhantom">Indicates whether this is a phantom item.</param>
+        public ReceivedItem(ICollection<(int Index, ItemInfo? Item)> info, bool isPhantom = false)
             : this(
                 info.Nth(0).Item?.Flags,
                 info.Nth(0).Item?.ItemName,
                 info.Count,
                 info.Count is 0 ? int.MaxValue : info.Max(x => x.Index),
                 // ReSharper disable NullableWarningSuppressionIsUsed
-                [..info.Where(x => x.Item is not null).Select(x => (x.Item!.LocationDisplayName, x.Item!.LocationGame))]
+                [..info.Where(x => x.Item is not null).Select(x => (x.Item!.LocationDisplayName, x.Item!.LocationGame))],
+                isPhantom
             ) { } // ReSharper restore NullableWarningSuppressionIsUsed
 
         /// <summary>Determines whether this instance matches the search result.</summary>
@@ -99,12 +103,14 @@ public sealed partial class Client(ApYaml? yaml = null)
 
         /// <summary>Displays this instance as text with a tooltip.</summary>
         /// <param name="preferences">The user preferences.</param>
+        /// <param name="locations">The locations.</param>
         /// <param name="info">The connection info to display and update the counter.</param>
         /// <param name="header">Whether to display this with <see cref="ImGui.CollapsingHeader(string)"/>.</param>
         /// <param name="category">The category of the item, used in combination with itself to make an ID.</param>
         /// <returns>Whether the parameter <paramref name="info"/> was updated.</returns>
         public bool Show(
             Preferences preferences,
+            Dictionary<string, CheckboxStatus> locations,
             ref HistorySlot info,
             bool header = false,
             string category = ApReader.Uncategorized
@@ -120,7 +126,15 @@ public sealed partial class Client(ApYaml? yaml = null)
             ImGui.InputInt($"###{category}:|{internalName}:|Input", ref used);
             ImGui.SameLine();
             info.Items[internalName] = used = used.Clamp(0, Count);
-            var tooltip = Locations?.Select(ToString).Conjoin('\n');
+            var locked = locations.Where(OnlyLockedBehindThis).Select(x => x.Key).Conjoin('\n');
+
+            var tooltip = string.IsNullOrEmpty(locked) || ImGui.IsKeyDown(ImGuiKey.LeftAlt)
+                ? Locations?.Select(ToString).Conjoin('\n')
+                : $"""
+                   Hold LEFT ALT to see the source of this item.
+                   Obtaining this makes the following locations immediately reachable:
+                   {locked}
+                   """;
 
             if (!header)
             {
@@ -145,6 +159,20 @@ public sealed partial class Client(ApYaml? yaml = null)
 
         /// <inheritdoc />
         public int CompareTo(ReceivedItem other) => FrozenSortedDictionary.Comparer.Compare(Name, other.Name);
+
+        /// <summary>Gets a value indicating whether this is solely locking the location.</summary>
+        /// <param name="kvp">The key-value pair.</param>
+        /// <returns>Whether this is the singular reason why a location is considered unreachable.</returns>
+        bool OnlyLockedBehindThis(KeyValuePair<string, CheckboxStatus> kvp) =>
+            (IsPhantom, kvp.Value.Logic) switch
+            {
+                (true, { IsItem: true, Item.Span: var item }) => item.SequenceEqual(Name),
+                (true, { IsItemCount: true, ItemCount.Item.Span: var item }) => item.SequenceEqual(Name),
+                (true, { IsItemPercent: true, ItemPercent.Item.Span: var item }) => item.SequenceEqual(Name),
+                (false, { IsFunction: true, Function: { Name.Span: "ItemValue", Args.Span: var args } }) =>
+                    args.SplitOn(':')[..^1].Body.SequenceEqual(Name),
+                _ => false,
+            };
 
         /// <summary>Gets the string representation of the tuple.</summary>
         /// <param name="tuple">The tuple to get the string representation of.</param>
@@ -902,7 +930,7 @@ public sealed partial class Client(ApYaml? yaml = null)
                     else
                         list.RemoveAt(i);
 
-            list.Add(new(null, next, max, int.MaxValue, null));
+            list.Add(new(null, next, max, int.MaxValue, null, true));
         NoAdding: ;
         }
 
@@ -928,8 +956,8 @@ public sealed partial class Client(ApYaml? yaml = null)
     /// <returns>The item info.</returns>
     (ReceivedItem Item, int Count) GetItemInfo((string Item, int Count) tuple) =>
         (_showYetToReceive
-            ? new(ItemFlags.None, tuple.Item, 1, int.MaxValue, [])
-            : new(GetItems(tuple)), tuple.Count);
+            ? new(ItemFlags.None, tuple.Item, 1, int.MaxValue, [], true)
+            : new(GetItems(tuple), true), tuple.Count);
 
     /// <summary>Gets the color that the location should be displayed with.</summary>
     /// <param name="preferences">The user preferences.</param>

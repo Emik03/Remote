@@ -1093,7 +1093,7 @@ public sealed partial class Client
 
         foreach (var item in GroupItems(ApReader.Uncategorized, default)
            .Where(x => x.IsMatch(_itemSearch) && x.IsMatch(_slot, _showUsedItems)))
-            _ = item.Show(preferences, ref _slot);
+            _ = item.Show(preferences, _locations, ref _slot);
     }
 
     /// <summary>Shows manual items.</summary>
@@ -1142,7 +1142,7 @@ public sealed partial class Client
                 continue;
 
             foreach (var item in filtered)
-                _ = item.Show(preferences, ref _slot, category: ApReader.Uncategorized);
+                _ = item.Show(preferences, _locations, ref _slot, category: ApReader.Uncategorized);
         }
     }
 
@@ -1175,14 +1175,14 @@ public sealed partial class Client
 
             setter();
 
-            switch (received.Show(preferences, ref _slot, true))
+            switch (received.Show(preferences, _locations, ref _slot, true))
             {
                 case false: goto Next;
             }
 
             foreach (var (item, count) in found.Where(x => x.Item.Count is not 0))
             {
-                _ = item.Show(preferences, ref _slot);
+                _ = item.Show(preferences, _locations, ref _slot);
                 ImGui.SameLine();
                 preferences.ShowText($"= {item.Count * count}");
             }
