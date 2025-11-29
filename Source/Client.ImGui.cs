@@ -1142,7 +1142,7 @@ public sealed partial class Client
                 continue;
 
             foreach (var item in filtered)
-                _ = item.Show(preferences, ref _slot);
+                _ = item.Show(preferences, ref _slot, category: ApReader.Uncategorized);
         }
     }
 

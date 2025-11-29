@@ -101,8 +101,14 @@ public sealed partial class Client(ApYaml? yaml = null)
         /// <param name="preferences">The user preferences.</param>
         /// <param name="info">The connection info to display and update the counter.</param>
         /// <param name="header">Whether to display this with <see cref="ImGui.CollapsingHeader(string)"/>.</param>
+        /// <param name="category">The category of the item, used in combination with itself to make an ID.</param>
         /// <returns>Whether the parameter <paramref name="info"/> was updated.</returns>
-        public bool Show(Preferences preferences, ref HistorySlot info, bool header = false)
+        public bool Show(
+            Preferences preferences,
+            ref HistorySlot info,
+            bool header = false,
+            string category = ApReader.Uncategorized
+        )
         {
             if (Name is null)
                 return false;
@@ -111,7 +117,7 @@ public sealed partial class Client(ApYaml? yaml = null)
             var used = info.Items.GetValueOrDefault(internalName);
             var text = $"{Name}{(used is 0 ? Count is 1 ? "" : $" ({Count})" : $" ({Count - used}/{Count})")}";
             ImGui.SetNextItemWidth(0);
-            ImGui.InputInt($"###{internalName}:|Input", ref used);
+            ImGui.InputInt($"###{category}:|{internalName}:|Input", ref used);
             ImGui.SameLine();
             info.Items[internalName] = used = used.Clamp(0, Count);
             var tooltip = Locations?.Select(ToString).Conjoin('\n');
