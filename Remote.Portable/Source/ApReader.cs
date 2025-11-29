@@ -572,7 +572,10 @@ public sealed record ApReader(
         logger?.Invoke($"Opening {file}...");
         using var stream = entry.Open();
         logger?.Invoke($"Deserializing {file}...");
-        return JsonSerializer.Deserialize<JsonNode>(stream, RemoteJsonSerializerContext.Default.JsonNode) as T;
+
+        var node = JsonSerializer.Deserialize<JsonNode>(stream, RemoteJsonSerializerContext.Default.JsonNode);
+        (node as JsonObject)?.Remove("$schema");
+        return (node is JsonObject o && typeof(T) == typeof(JsonArray) ? Index<JsonArray>(o, "data") : node) as T;
     }
 
     /// <summary>Attempts to extract the value from the <see cref="GetWorldDataFromPython"/>.</summary>
