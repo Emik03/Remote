@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MPL-2.0
-# Thanks to Darius for writing this for me: https://github.com/itsMapleLeaf/
+# Thanks to MapleLeaf for writing this for me: https://github.com/itsMapleLeaf/
 import importlib
 import importlib.util
 import json
@@ -55,26 +55,21 @@ with TemporaryDirectory() as temp_world_folder:
     finally:
         sys.path = original_sys_path
 
-    json.dump(
-        {
-            "game.json": data_module.game_table,
-            "items.json": data_module.item_table,
-            "locations.json": data_module.location_table,
-            "regions.json": data_module.region_table,
-            "categories.json": (
-                data_module.category_table
-                if hasattr(data_module, "category_table")
-                else None
-            ),
-            "options.json": (
-                data_module.option_table
-                if hasattr(data_module, "option_table")
-                else None
-            ),
-            "meta.json": (
-                data_module.meta_table if hasattr(data_module, "meta_table") else None
-            ),
-        },
-        fp=sys.stdout,
-        indent=debug_indent,
+    print(
+        json.dumps(
+            {
+                "game.json": getattr(data_module, "game_table", None),
+                "items.json": getattr(data_module, "item_table", None),
+                "locations.json": getattr(data_module, "location_table", None),
+                "regions.json": getattr(data_module, "region_table", None),
+                "categories.json": getattr(data_module, "category_table", None),
+                "options.json": getattr(data_module, "option_table", None),
+                "meta.json": getattr(data_module, "meta_table", None),
+            },
+            indent=debug_indent,
+        )
     )
+
+# AP repo has some thing _somewhere_ which prompts "Press enter to exit."
+# including this to ensure the script exits
+exit(0)
