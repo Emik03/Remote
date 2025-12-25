@@ -759,10 +759,9 @@ public sealed partial class Preferences
             _ => $"{nameof(Remote)}.{nameof(Resources)}.Fonts.main.ttf",
         };
 
-        if (typeof(AssemblyMarker).Assembly.GetManifestResourceStream(resource) is not { } stream)
+        if (GetManifestResourceBytes(resource) is not { } font)
             return default;
 
-        var font = Read(stream);
         var io = ImGui.GetIO();
         var fonts = io.Fonts;
 
@@ -860,22 +859,6 @@ public sealed partial class Preferences
             }
 
         PushRange(span[last..], colored, ref braces, ref isIdentifier);
-    }
-
-    /// <summary>Reads the stream into a byte array.</summary>
-    /// <param name="input">The stream to read.</param>
-    /// <returns>The byte array.</returns>
-    static byte[] Read(Stream input)
-    {
-        var buffer = ArrayPool<byte>.Shared.Rent(1 << 14);
-        using MemoryStream ms = new();
-
-        while (input.Read(buffer) is > 0 and var read)
-            ms.Write(buffer.AsSpan(0, read));
-
-        var ret = ms.ToArray();
-        ArrayPool<byte>.Shared.Return(buffer);
-        return ret;
     }
 
     /// <summary>Gets the names separated by the null (<c>\0</c>) character.</summary>

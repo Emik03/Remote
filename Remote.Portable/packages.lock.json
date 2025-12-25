@@ -247,6 +247,12 @@
           "Scifa.CheckedExceptions.Attributes": "1.0.14"
         }
       },
+      "StaticLambda.Fody": {
+        "type": "Direct",
+        "requested": "[1.0.1, )",
+        "resolved": "1.0.1",
+        "contentHash": "s2bChA0KmmIcbZiwwHQR6K7+o+Y97MZ+FG9qiWBV4AFhUFwe0X6FNapb7QwnXlvc4E1qTI0P0Yaw2xArUXhubg=="
+      },
       "Text.Analyzers": {
         "type": "Direct",
         "requested": "[5.0.0-1.25277.114, )",
@@ -352,7 +358,6 @@
         }
       }
     },
-    "net10.0/linux-x64": {},
     "net9.0": {
       "Absence.Fody": {
         "type": "Direct",
@@ -599,6 +604,12 @@
           "Scifa.CheckedExceptions.Attributes": "1.0.14"
         }
       },
+      "StaticLambda.Fody": {
+        "type": "Direct",
+        "requested": "[1.0.1, )",
+        "resolved": "1.0.1",
+        "contentHash": "s2bChA0KmmIcbZiwwHQR6K7+o+Y97MZ+FG9qiWBV4AFhUFwe0X6FNapb7QwnXlvc4E1qTI0P0Yaw2xArUXhubg=="
+      },
       "Text.Analyzers": {
         "type": "Direct",
         "requested": "[5.0.0-1.25277.114, )",
@@ -703,7 +714,6 @@
           "System.Composition.Runtime": "8.0.0"
         }
       }
-    },
-    "net9.0/linux-x64": {}
+    }
   }
 }

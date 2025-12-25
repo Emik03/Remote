@@ -292,6 +292,12 @@
           "Scifa.CheckedExceptions.Attributes": "1.0.14"
         }
       },
+      "StaticLambda.Fody": {
+        "type": "Direct",
+        "requested": "[1.0.1, )",
+        "resolved": "1.0.1",
+        "contentHash": "s2bChA0KmmIcbZiwwHQR6K7+o+Y97MZ+FG9qiWBV4AFhUFwe0X6FNapb7QwnXlvc4E1qTI0P0Yaw2xArUXhubg=="
+      },
       "Text.Analyzers": {
         "type": "Direct",
         "requested": "[5.0.0-1.25277.114, )",
@@ -451,24 +457,6 @@
           "CommunityToolkit.Diagnostics": "[8.4.0, )",
           "CommunityToolkit.HighPerformance": "[8.4.0, )"
         }
-      }
-    },
-    "net10.0/linux-x64": {
-      "ImGui.NET": {
-        "type": "Direct",
-        "requested": "[1.91.6.1, )",
-        "resolved": "1.91.6.1",
-        "contentHash": "Ph3j8pO6UM28PPJWP+5LEJSPVPkd8ivpVS8tRyY9b0IHn1HDIrMZ2o/FdiXaYW6YhNxMHmbevw6Jcfs+IDKi0Q=="
-      },
-      "MonoGame.Library.OpenAL": {
-        "type": "Transitive",
-        "resolved": "1.24.3.2",
-        "contentHash": "nGRsXQXs+NSUC3C5w90hFQfyKdZPpBnHnyg2w+Dw/2pUH7s+CoRWTJNYbzzdJf3+aeUvfvG4rTbFvMKDDj5olA=="
-      },
-      "MonoGame.Library.SDL": {
-        "type": "Transitive",
-        "resolved": "2.32.10.1",
-        "contentHash": "mklIUC50O8y2zQ+BcT7tmnBrVT8ZQuHiODW3LxGWJ5UZIZM0PaePJfGuzZB9bSbdP3WvV+RtyvTfnMY7wz0f0w=="
       }
     }
   }

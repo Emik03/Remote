@@ -21,7 +21,8 @@ public sealed record ApReader(
     public const string Uncategorized = "(No Category)";
 
     /// <summary>Contains the python script that runs <c>Data.py</c>.</summary>
-    static readonly string? s_script = Script();
+    static readonly string? s_script =
+        GetManifestResourceString($"{nameof(Remote)}.{nameof(Portable)}.Resources.Values.Extractor.py");
 
     /// <summary>Initializes a new instance of the <see cref="ApReader"/> class.</summary>
     /// <param name="path">The path to read.</param>
@@ -265,20 +266,6 @@ public sealed record ApReader(
                 _ => 1,
             }
             : 1;
-
-    /// <summary>Gets the python script that runs <c>Data.py</c>.</summary>
-    /// <returns>The python script that runs <c>Data.py</c>.</returns>
-    static string? Script()
-    {
-        const string Extractor = $"{nameof(Remote)}.{nameof(Portable)}.Resources.Values.Extractor.py";
-        using var stream = typeof(ApReader).Assembly.GetManifestResourceStream(Extractor);
-
-        if (stream is null)
-            return null;
-
-        using StreamReader sr = new(stream);
-        return sr.ReadToEnd();
-    }
 
     /// <summary>Attempts to get the <c>category</c> array field.</summary>
     /// <param name="obj">The node to extract.</param>
