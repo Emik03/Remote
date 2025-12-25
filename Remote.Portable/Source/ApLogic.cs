@@ -406,7 +406,7 @@ public sealed partial class ApLogic(
                    .Conjoin('\n')
                 }\n";
 
-            if (await onError(Title, description, buttons) is not 1)
+            if (await onError(Title, description, buttons).ConfigureAwait(false) is not 1)
                 s_displayErrors = false;
         }
 

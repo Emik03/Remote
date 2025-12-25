@@ -465,11 +465,11 @@ public sealed partial class Client(ApYaml? yaml = null)
             session.MessageLog.OnMessageReceived += OnMessageReceived;
             string[] tags = ["AP", nameof(Remote)];
             ConnectionMessage = "Attempting new connection.\nConnecting... (1/6)";
-            _ = await session.ConnectAsync();
+            _ = await session.ConnectAsync().ConfigureAwait(false);
             ConnectionMessage = "Connected!\nLogging in... (2/6)";
-            var login = await session.LoginAsync(_yaml.Game, _yaml.Name, Flags, tags: tags, password: password);
 
-            if (login is LoginFailure failure)
+            if (await session.LoginAsync(_yaml.Game, _yaml.Name, Flags, tags: tags, password: password)
+               .ConfigureAwait(false) is LoginFailure failure)
             {
                 session.MessageLog.OnMessageReceived -= OnMessageReceived;
                 _errors = failure.Errors;
@@ -491,7 +491,7 @@ public sealed partial class Client(ApYaml? yaml = null)
 
             ConnectionMessage = "Configured DeathLink!\nReading slot data... (4/6)";
 
-            foreach (var (key, value) in await session.DataStorage.GetSlotDataAsync())
+            foreach (var (key, value) in await session.DataStorage.GetSlotDataAsync().ConfigureAwait(false))
                 ((IDictionary<string, object?>)_yaml)[key] = value;
 
             ConnectionMessage = "Slot data has been read!\nReading APWorld... (5/6)";
@@ -518,7 +518,7 @@ public sealed partial class Client(ApYaml? yaml = null)
         {
             try
             {
-                await AttemptAsync(address, port, password);
+                await AttemptAsync(address, port, password).ConfigureAwait(false);
             }
 #pragma warning disable CA1031, RCS1075
             catch (Exception e)
@@ -529,7 +529,9 @@ public sealed partial class Client(ApYaml? yaml = null)
                         !FrozenSortedDictionary.Comparer.Equals(address, preferences.Address) ||
                         !FrozenSortedDictionary.Comparer.Equals(password, preferences.Password))
                     {
-                        await AttemptAsync(preferences.Address, preferences.Port, preferences.Password);
+                        await AttemptAsync(preferences.Address, preferences.Port, preferences.Password)
+                           .ConfigureAwait(false);
+
                         return;
                     }
                 } // ReSharper disable once EmptyGeneralCatchClause
@@ -695,7 +697,7 @@ public sealed partial class Client(ApYaml? yaml = null)
 
             (value.Logic, value.Status) = 0 switch
             {
-                _ when !isValidLocation || id is -1 && !IsGoal(location) => (null, LocationStatus.Hidden),
+                _ when (!isValidLocation || id is -1) && !IsGoal(location) => (null, LocationStatus.Hidden),
                 _ when isValidLocation && !helper.AllMissingLocations.Contains(id) ||
                     _slot.CheckedLocations.Contains(location) => (null, LocationStatus.Checked),
                 _ when _evaluator is null => (null, LocationStatus.ProbablyReachable),
@@ -815,7 +817,7 @@ public sealed partial class Client(ApYaml? yaml = null)
             IEnumerable<string> buttons = ["Dismiss all", "Step to next error"];
             var description = $"Name of this location cannot be converted into an id by the session: {kvp.Key}";
 
-            if (await MessageBox.Show(Title, description, buttons) is not 1)
+            if (await MessageBox.Show(Title, description, buttons).ConfigureAwait(false) is not 1)
                 s_displayErrors = false;
         }
 
@@ -1004,7 +1006,7 @@ public sealed partial class Client(ApYaml? yaml = null)
     /// <summary>Gets the hints asynchronously.</summary>
     /// <returns>The task to get the hints.</returns>
     async Task<HintMessage[]?> GetHintsAsync() =>
-        _session?.Hints?.GetHintsAsync() is { } task && await task is { } hints
+        _session?.Hints?.GetHintsAsync() is { } task && await task.ConfigureAwait(false) is { } hints
             ? [..hints.Select(Message).OrderBy(x => x.Message, FrozenSortedDictionary.Comparer)]
             : null;
 }
