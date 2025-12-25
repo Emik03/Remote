@@ -202,7 +202,7 @@ public sealed class ApYaml : IDictionary<string, object?>
         foreach (var option in array)
             if (option?.GetValueKind() is JsonValueKind.String && option.ToString() is var optionStr)
             {
-                if (this[optionStr] > 0)
+                if (optionStr.StartsWith('!') ^ this[optionStr.AsSpan().TrimStart('!')] > 0)
                     continue;
 
                 return false;
