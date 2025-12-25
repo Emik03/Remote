@@ -33,7 +33,7 @@ public static partial class DesktopNotification
     /// <param name="body">The body.</param>
     static async Task Mac(string title, string body)
     {
-        const string Script =
+        const string Script = /* language=sh */
             """
             set t of item 1 to argv
             set b of item 2 to argv
@@ -44,7 +44,7 @@ public static partial class DesktopNotification
             new ProcessStartInfo("osascript", ["-e", Script, "-", title, body])
             {
                 ErrorDialog = false,
-                CreateNoWindow = false,
+                CreateNoWindow = true,
                 UseShellExecute = false,
                 RedirectStandardError = true,
                 RedirectStandardInput = true,
@@ -70,7 +70,7 @@ public static partial class DesktopNotification
         // - Trying to reference Microsoft.Toolkit.Uwp.Notifications causes compiler errors about it being windows-only.
         // - Trying to reference Microsoft.Windows.SDK.NET would always end up failing to link during runtime.
         // Massive thanks to https://superuser.com/a/1523925 because I don't normally write powershell scripts!
-        const string Script =
+        const string Script = /* language=ps1 */
             """
             [void] [System.Reflection.Assembly]::LoadWithPartialName("System.Windows.Forms")
             $icon = New-Object System.Windows.Forms.NotifyIcon
